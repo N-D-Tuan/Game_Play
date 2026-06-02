@@ -1,0 +1,51 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #1a1a2e;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+    padding-top: 30px;
+}
+
+h1 {
+    color: #e94560;
+    margin-bottom: 10px;
+}
+
+#action-status {
+    font-size: 32px;
+    font-weight: bold;
+    color: #f9a826;
+    margin-bottom: 20px;
+    height: 40px;
+}
+
+.camera-container {
+    position: relative;
+    width: 640px;
+    height: 480px;
+    margin: 0 auto;
+    border: 4px solid #0f3460;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(15, 52, 96, 0.8);
+}
+
+/* Lật ngược video như soi gương */
+video, canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1); 
+}
+
+video {
+    object-fit: cover;
+}
