@@ -1,51 +1,60 @@
-* {
-    box-sizing: border-box;
+/* Reset viền */
+body, html {
     margin: 0;
     padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Ẩn thanh cuộn */
+    background-color: #111;
 }
 
-body {
-    background-color: #1a1a2e;
-    color: #fff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    text-align: center;
-    padding-top: 30px;
-}
-
-h1 {
-    color: #e94560;
-    margin-bottom: 10px;
-}
-
-#action-status {
-    font-size: 32px;
-    font-weight: bold;
-    color: #f9a826;
-    margin-bottom: 20px;
-    height: 40px;
-}
-
-.camera-container {
-    position: relative;
-    width: 640px;
-    height: 480px;
-    margin: 0 auto;
-    border: 4px solid #0f3460;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 0 20px rgba(15, 52, 96, 0.8);
-}
-
-/* Lật ngược video như soi gương */
-video, canvas {
+/* KHUNG GAME PHASER */
+#game-container {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    transform: scaleX(-1); 
+    width: 100vw;
+    height: 100vh;
+    z-index: 1; /* Cho Game nằm dưới cùng */
 }
 
-video {
+/* KHUNG CAMERA AI */
+#ai-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 320px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 3px solid #00ffff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px #00ffff;
+    z-index: 100; /* Nổi AI lên trên Game */
+    display: flex;
+    flex-direction: column;
+}
+
+/* ÉP BUỘC ẨN VIDEO GỐC */
+#webcam {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0; /* Trong suốt hoàn toàn */
+    z-index: -1000; /* Đẩy xuống dưới cùng */
+    pointer-events: none; /* Không cho click trúng */
+}
+
+#output_canvas {
+    width: 100%;
+    height: 240px;
     object-fit: cover;
+    transform: scaleX(-1); /* Lật gương cho dễ vẽ */
+}
+
+#action-text {
+    color: #ffcc00;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    font-family: Arial, sans-serif;
 }

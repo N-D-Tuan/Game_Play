@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pháp Sư Tung Chiêu - Phase 1</title>
+    <title>Pháp Sư Tung Chiêu</title>
     <link rel="stylesheet" href="../css/style.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
 
-    <h1>🔮 Chế độ 1: Trại Huấn Luyện Pháp Sư</h1>
-    <div id="action-status">Đang tải AI... Hãy giơ tay lên!</div>
-    
-    <div class="camera-container">
+    <div id="game-container"></div>
+
+    <div id="ai-container">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas"></canvas>
+        <div id="action-text">Khởi động AI...</div>
     </div>
 
     <script type="module" src="../js/main.js"></script>
+    <script src="../js/game.js"></script>
+
 </body>
 </html>
