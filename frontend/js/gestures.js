@@ -1,7 +1,18 @@
 // ==========================================
 // CÁC BIẾN QUẢN LÝ
 // ==========================================
-const COOLDOWNS = { DODGE: 1000, METEOR: 1000, SWORD: 5000, SHIELD: 5000, HEAL: 8000, LIGHTNING: 6000, EARTH: 5000, ARROWS: 5000, ANCHOR: 5000, DOLL: 12000 };
+const COOLDOWNS = { 
+    DODGE: 1000, 
+    METEOR: 3000, 
+    SWORD: 5000, 
+    LIGHTNING: 7000, 
+    ARROWS: 8000, 
+    EARTH: 10000, 
+    SHIELD: 12000, 
+    HEAL: 15000, 
+    ANCHOR: 15000, 
+    DOLL: 20000 
+};
 let lastUsedTimes = { DODGE: 0, METEOR: 0, SWORD: 0, SHIELD: 0, HEAL: 0, LIGHTNING: 0, EARTH: 0, ARROWS: 0, ANCHOR: 0, DOLL: 0 };
 
 let displayState = { text: "MẶC ĐỊNH (Chờ ấn chú...)", expiresAt: 0 };
@@ -247,8 +258,7 @@ export function analyzeHandGestures(multiHandLandmarks) {
                     lastUsedTimes[shapeResult.key] = now;
                     setDisplayText(shapeResult.name, DISPLAY_DURATION, now);
                 } else {
-                    let timeLeft = Math.ceil((cooldownTime - timeSinceLastUse) / 1000);
-                    setDisplayText(`⏳ Đang hồi chiêu (${timeLeft}s)`, 1000, now);
+                    setDisplayText(`⏳ Đang hồi chiêu`, 1000, now);
                 }
             } else {
                 setDisplayText("❌ Ấn chú thất bại (Không rõ hình)!", 1000, now);
