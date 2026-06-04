@@ -1,3 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+
+/* ==========================================
+   GIAO DIỆN TRANG CHỦ (HOME SCREEN)
+   ========================================== */
+#home-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: url('../assets/bg_home.webp') no-repeat center center;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000; 
+    transition: opacity 1s ease;
+}
+
+.overlay-dark {
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(10, 5, 15, 0.65); /* Làm tối nền để nổi bật font mới */
+    z-index: 0;
+}
+
+.game-title {
+    font-family: 'MedievalSharp', cursive; /* Áp dụng font mới */
+    font-size: 80px;
+    color: #ffcc00;
+    text-shadow: 0 0 20px #ff0000, 0 0 40px #ff8800;
+    margin-bottom: 60px;
+    z-index: 1;
+    letter-spacing: 5px;
+    text-align: center;
+}
+
+/* KHUNG CHỨA MENU NẰM DỌC */
+.menu-buttons {
+    display: flex;
+    flex-direction: column; /* Bắt buộc các nút xếp chồng lên nhau (Dọc) */
+    align-items: center;    /* Căn giữa cột dọc */
+    gap: 20px;              /* Khoảng cách giữa các nút */
+    z-index: 1;
+}
+
+/* STYLE NÚT BẤM */
+.menu-btn {
+    font-family: 'MedievalSharp', cursive; /* Áp dụng font mới */
+    font-size: 32px;
+    color: #d4af37; 
+    
+    background: linear-gradient(90deg, transparent, rgba(20, 0, 5, 0.8), transparent);
+    
+    border: none;
+    border-top: 2px solid transparent;
+    border-bottom: 2px solid transparent;
+    border-image: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.4), transparent) 1;
+    
+    /* CHIỀU RỘNG CỐ ĐỊNH ĐỂ MENU DỌC ĐỀU NHAU TĂM TẮP */
+    width: 350px; 
+    padding: 15px 0; 
+    text-align: center; /* Căn giữa chữ trong nút */
+    
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    transition: all 0.4s ease-in-out;
+    position: relative;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 1);
+    overflow: hidden; 
+}
+
+/* Tia sáng lướt qua */
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.4), transparent);
+    transform: skewX(-45deg);
+    transition: left 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Hiệu ứng khi rê chuột vào */
+.menu-btn:hover {
+    color: #fffacd; 
+    background: linear-gradient(90deg, transparent, rgba(120, 5, 5, 0.9), transparent);
+    border-image: linear-gradient(90deg, transparent, rgba(255, 215, 0, 1), transparent) 1;
+    letter-spacing: 8px;
+    text-shadow: 0 0 10px #ffcc00, 0 0 20px #ff0000;
+    box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.5), 0 0 20px rgba(255, 0, 0, 0.3);
+    transform: scale(1.05); 
+}
+
+.menu-btn:hover::before {
+    left: 200%;
+}
+
+/* ==========================================
+   BẢNG CÀI ĐẶT (SETTINGS MODAL)
+   ========================================== */
+#settings-modal {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Nền đen mờ phủ toàn màn hình */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20000; 
+}
+
+.settings-content {
+    background: rgba(15, 5, 10, 0.95);
+    border: 2px solid transparent;
+    border-image: linear-gradient(90deg, #550000, #d4af37, #550000) 1;
+    padding: 30px 50px;
+    width: 500px;
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.15);
+    text-align: center;
+    font-family: 'MedievalSharp', cursive;
+}
+
+.settings-title {
+    color: #d4af37;
+    font-size: 45px;
+    margin-top: 0;
+    margin-bottom: 25px;
+    text-shadow: 0 0 10px #ff0000;
+    letter-spacing: 5px;
+}
+
+/* Các Tab chuyển đổi */
+.settings-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: 1px solid #555;
+    color: #888;
+    padding: 10px 30px;
+    font-family: 'MedievalSharp', cursive;
+    font-size: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.tab-btn.active, .tab-btn:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: #d4af37;
+    color: #d4af37;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Tab Âm lượng */
+.volume-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    color: #d4af37;
+    margin: 40px 0;
+}
+
+/* CUSTOM THANH KÉO (SLIDER) CHUẨN GAME */
+input[type=range] {
+    -webkit-appearance: none;
+    width: 60%;
+    background: transparent;
+}
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: #222;
+    border: 1px solid #550000;
+    border-radius: 4px;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 24px;
+    width: 24px;
+    background: #d4af37;
+    cursor: pointer;
+    margin-top: -9px;
+    border-radius: 50%;
+    box-shadow: 0 0 15px #ffcc00;
+}
+
+#mute-btn {
+    background: none;
+    border: none;
+    color: #d4af37;
+    font-size: 30px;
+    cursor: pointer;
+    transition: 0.2s;
+    filter: drop-shadow(0 0 5px #ffcc00);
+}
+#mute-btn:hover { transform: scale(1.2); }
+
+/* Nút Đóng */
+.close-btn {
+    margin-top: 20px;
+    background: linear-gradient(90deg, transparent, rgba(120, 5, 5, 0.8), transparent);
+    border: 1px solid #d4af37;
+    color: #d4af37;
+    padding: 10px 50px;
+    font-family: 'MedievalSharp', cursive;
+    font-size: 22px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.close-btn:hover {
+    background: rgba(200, 0, 0, 0.8);
+    color: #fffacd;
+    box-shadow: 0 0 15px #ff0000;
+}
+
 /* Reset viền */
 body, html {
     margin: 0;

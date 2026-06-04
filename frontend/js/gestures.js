@@ -2,7 +2,6 @@
 // CÁC BIẾN QUẢN LÝ
 // ==========================================
 const COOLDOWNS = { 
-    DODGE: 1000, 
     METEOR: 3000, 
     SWORD: 5000, 
     LIGHTNING: 7000, 
@@ -13,7 +12,7 @@ const COOLDOWNS = {
     ANCHOR: 15000, 
     DOLL: 20000 
 };
-let lastUsedTimes = { DODGE: 0, METEOR: 0, SWORD: 0, SHIELD: 0, HEAL: 0, LIGHTNING: 0, EARTH: 0, ARROWS: 0, ANCHOR: 0, DOLL: 0 };
+let lastUsedTimes = { METEOR: 0, SWORD: 0, SHIELD: 0, HEAL: 0, LIGHTNING: 0, EARTH: 0, ARROWS: 0, ANCHOR: 0, DOLL: 0 };
 
 let displayState = { text: "MẶC ĐỊNH (Chờ ấn chú...)", expiresAt: 0 };
 const DISPLAY_DURATION = 3000; 
@@ -216,28 +215,6 @@ export function analyzeHandGestures(multiHandLandmarks) {
     const isOpenHand = isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen; 
 
     const leanDistance = middleMCP.x - wrist.x;
-
-    if (isOpenHand && Math.abs(leanDistance) > 0.15) {
-        if (isDrawing) {
-            isDrawing = false;
-            drawingPath = [];
-        }
-
-        const cooldownTime = COOLDOWNS.DODGE;
-        const timeSinceLastUse = now - lastUsedTimes.DODGE;
-
-        if (timeSinceLastUse > cooldownTime) {
-            lastUsedTimes.DODGE = now;
-            // NHỚ SỬA SỐ Ở DÒNG NÀY NỮA NHÉ:
-            let dodgeText = leanDistance > 0.15 ? "⬅ NÉ TRÁI!" : "NÉ PHẢI! ➡";
-            setDisplayText(dodgeText, DISPLAY_DURATION, now);
-            return dodgeText;
-        } else {
-            let timeLeft = Math.ceil((cooldownTime - timeSinceLastUse) / 1000);
-            setDisplayText(`⏳ Đang hồi chiêu Né (${timeLeft}s)`, 1000, now);
-            return displayState.text;
-        }
-    }
 
     if (isHoldingPen) {
         isDrawing = true;

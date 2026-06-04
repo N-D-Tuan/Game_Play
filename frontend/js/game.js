@@ -27,6 +27,7 @@ let bg;
 let monsters; 
 let projectiles; 
 let spawnEvent; 
+let bgMusic;
 
 let playerHealth = 100;
 let isGameOver = false;
@@ -64,6 +65,7 @@ const SKILL_CONFIG = {
 // ==========================================
 function preload() {
     this.load.image('bg', '../assets/bg.png');
+    this.load.audio('bgm', '../assets/bg_music.mp3');
     this.load.image('player', '../assets/player.png'); 
     this.load.image('monster', '../assets/monster.png'); 
     this.load.image('fireball', '../assets/fireball.png'); 
@@ -95,6 +97,18 @@ function create() {
     isDoll = false;
     activeShields = 0;
     shieldSprites = [];
+
+    if (!this.sound.get('bgm')) {
+        // Đọc giá trị hiện tại của thanh slider ngoài HTML
+        let volSlider = document.getElementById('volume-slider');
+        let currentVol = volSlider ? parseFloat(volSlider.value) : 0.5;
+
+        bgMusic = this.sound.add('bgm', { 
+            loop: true,   
+            volume: currentVol 
+        });
+        bgMusic.play();
+    }
     
     // Reset hồi chiêu khi chơi lại
     for(let key in SKILL_CONFIG) { SKILL_CONFIG[key].currentCd = 0; }
@@ -321,23 +335,57 @@ function createPauseMenu() {
     pauseOverlay.fillRect(0, 0, window.innerWidth, window.innerHeight);
     pauseOverlay.setDepth(5000);
     
-    txtPause = this.add.text(window.innerWidth / 2, window.innerHeight / 2 - 120, 'TẠM DỪNG', 
+    txtPause = this.add.text(window.innerWidth / 2, window.innerHeight / 2 - 150, 'TẠM DỪNG', 
         { fontSize: '60px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(5001);
 
-    btnResume = this.add.text(window.innerWidth / 2, window.innerHeight / 2, '[ TIẾP TỤC ]', 
+    btnResume = this.add.text(window.innerWidth / 2, window.innerHeight / 2 - 30, '[ TIẾP TỤC ]', 
         { fontSize: '32px', fill: '#00ff00', backgroundColor: '#333', padding: {x: 20, y: 10} })
         .setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
     btnResume.on('pointerdown', () => togglePause.call(this));
 
-    btnInventory = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 70, '[ KHO ĐỒ ]', 
+    btnInventory = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 40, '[ KHO ĐỒ ]', 
         { fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} })
         .setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
-    btnInventory.on('pointerdown', () => { alert("Tính năng Kho đồ đang được phát triển!"); });
+    btnInventory.on('pointerdown', () => { 
+        alert("Tính năng Kho đồ đang được phát triển!");
+    });
 
-    btnHome = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 140, '[ TRANG CHỦ ]', 
+    btnSetting = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 110, '[ CÀI ĐẶT ]', 
+        { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} })
+        .setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
+    btnSetting.on('pointerdown', () => {
+        const settingsModal = document.getElementById('settings-modal');
+        if (settingsModal) {
+            settingsModal.style.display = 'flex'; 
+        }
+        this.input.enabled = false;
+    });
+
+
+    btnHome = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 180, '[ TRANG CHỦ ]', 
         { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} })
         .setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
-    btnHome.on('pointerdown', () => { window.location.reload(); });
+    btnHome.on('pointerdown', () => {
+        // 1. Đóng băng toàn bộ hoạt động của game để không chạy ngầm
+        this.physics.pause();
+        this.tweens.pauseAll();
+        if (spawnEvent) spawnEvent.paused = true;
+        
+        // 2. Chuyển đổi giao diện
+        const homeScreen = document.getElementById('home-screen');
+        const gameContainer = document.getElementById('game-container');
+        
+        if (homeScreen && gameContainer) {
+            // Hiện Trang chủ lên và tạo hiệu ứng mờ dần (Fade-in)
+            homeScreen.style.display = 'flex';
+            setTimeout(() => { homeScreen.style.opacity = '1'; }, 10);
+            
+            // Đợi 0.8s cho hiệu ứng mờ hoàn tất rồi mới ẩn hẳn Game đi
+            setTimeout(() => { 
+                gameContainer.style.display = 'none'; 
+            }, 800);
+        }
+    });
 
     setPauseMenuVisible(false);
 }
@@ -365,6 +413,7 @@ function setPauseMenuVisible(visible) {
     txtPause.setVisible(visible);
     btnResume.setVisible(visible);
     btnInventory.setVisible(visible);
+    btnSetting.setVisible(visible);
     btnHome.setVisible(visible);
 }
 
