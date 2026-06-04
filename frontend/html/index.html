@@ -14,8 +14,48 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
+    <div id="home-screen">
+        <div class="overlay-dark"></div>
+        <h1 class="game-title">PHÁP SƯ TỐI THƯỢNG</h1>
+        
+        <div class="menu-buttons">
+            <button class="menu-btn" id="btn-practice">Tập luyện</button>
+            <button class="menu-btn" id="btn-campaign">Vượt ải</button>
+            <button class="menu-btn" id="btn-inventory">Kho đồ</button>
+            <button class="menu-btn" id="btn-settings">Cài đặt</button>
+        </div>
+    </div>
 
-    <div id="game-container"></div>
+    <div id="game-container" style="display: none;"></div>
+
+    <div id="settings-modal" style="display: none;">
+        <div class="settings-content">
+            <h2 class="settings-title">CÀI ĐẶT</h2>
+                
+            <div class="settings-tabs">
+                <button class="tab-btn active" id="tab-audio">Âm lượng</button>
+                <button class="tab-btn" id="tab-controls">Điều chỉnh</button>
+            </div>
+                
+            <div class="settings-body">
+                <div id="audio-settings" class="tab-pane active">
+                    <div class="volume-control">
+                        <span style="font-size: 24px;">Nhạc nền:</span>
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
+                        <button id="mute-btn">🔮</button>
+                    </div>
+                </div>
+                    
+                <div id="controls-settings" class="tab-pane" style="display: none;">
+                    <p style="text-align: center; color: #888; margin-top: 30px;">
+                        Tính năng đang được phát triển...
+                    </p>
+                </div>
+            </div>
+                
+            <button id="close-settings" class="close-btn">ĐÓNG</button>
+        </div>
+    </div>
 
     <div id="ai-container">
         <video id="webcam" autoplay playsinline></video>
@@ -25,6 +65,7 @@
 
     <script type="module" src="../js/main.js"></script>
     <script src="../js/game.js"></script>
+    <script src="../js/gestures.js"></script>
 
 </body>
 </html>
