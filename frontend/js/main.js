@@ -1,7 +1,10 @@
+import { CampaignScene } from './campaign.js';
+
 document.addEventListener("DOMContentLoaded", () => {
     const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
     const btnPractice = document.getElementById('btn-practice');
+    const btnCampaign = document.getElementById('btn-campaign');
     
     // Nút Tập luyện (Restart Game)
     btnPractice.addEventListener('click', () => {
@@ -9,14 +12,36 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             homeScreen.style.display = 'none';
             gameContainer.style.display = 'block';
-            if (typeof game !== 'undefined' && game.scene && game.scene.scenes.length > 0) {
-                game.scene.scenes[0].scene.restart();
+
+            if (typeof window.game !== 'undefined') {
+                window.game.scene.stop('CampaignScene'); // Dừng Vượt ải (nếu có)
+                window.game.scene.start('default');      // Khởi động lại Tập luyện
             }
             window.dispatchEvent(new Event('resize')); 
         }, 1000);
     });
 
-    document.getElementById('btn-campaign').addEventListener('click', () => alert("Chế độ Vượt ải đang phát triển!"));
+    btnCampaign.addEventListener('click', () => {
+        homeScreen.style.opacity = '0';
+        setTimeout(() => {
+            homeScreen.style.display = 'none';
+            gameContainer.style.display = 'block';
+            
+            if (typeof window.game !== 'undefined') {
+                window.game.scene.stop('default'); // Bắt buộc dừng Scene Tập luyện
+                
+                // Nếu bộ máy Game chưa biết CampaignScene là gì thì thêm nó vào
+                if (!window.game.scene.keys['CampaignScene']) {
+                    window.game.scene.add('CampaignScene', CampaignScene, false);
+                }
+                
+                // Khởi động Vượt ải
+                window.game.scene.start('CampaignScene');
+            }
+            window.dispatchEvent(new Event('resize')); 
+        }, 1000);
+    });
+
     document.getElementById('btn-inventory').addEventListener('click', () => alert("Kho đồ đang trống!"));
 
     // --- LOGIC BẢNG CÀI ĐẶT ---
@@ -26,10 +51,16 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Đóng mở Cài đặt
     btnSettings.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
+    
     closeSettings.addEventListener('click', () => { 
         settingsModal.style.display = 'none'; 
-        if (typeof game !== 'undefined' && game.scene && game.scene.scenes.length > 0) {
-            game.scene.scenes[0].input.enabled = true; // Bật lại tương tác game
+        // [FIX LỖI ĐƠ PAUSE]: Bật lại tương tác cho TẤT CẢ các scene đang chạy
+        if (typeof window.game !== 'undefined') {
+            window.game.scene.scenes.forEach(scene => {
+                if (scene.sys.isActive() && scene.input) {
+                    scene.input.enabled = true; 
+                }
+            });
         }
     });
 
@@ -89,16 +120,38 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- LOGIC ÂM LƯỢNG (Giữ nguyên như cũ) ---
+    // --- LOGIC ÂM LƯỢNG ---
     const volumeSlider = document.getElementById('volume-slider');
     const muteBtn = document.getElementById('mute-btn');
     let lastVolume = 0.5;
 
-    const updateGameVolume = (vol) => { if (typeof bgMusic !== 'undefined' && bgMusic) bgMusic.setVolume(vol); };
+    // Khi người chơi mở Cài đặt, đồng bộ Slider với nhạc của chế độ hiện tại
+    document.getElementById('btn-settings').addEventListener('click', () => { 
+        let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
+        if (isCampaignActive && window.activeCampaignBgm) {
+            volumeSlider.value = window.activeCampaignBgm.volume;
+        } else if (window.bgMusic) {
+            volumeSlider.value = window.bgMusic.volume;
+        }
+        
+        if (volumeSlider.value > 0) { muteBtn.textContent = '🔮'; lastVolume = volumeSlider.value; } 
+        else { muteBtn.textContent = '💀'; }
+    });
+
+    // Hàm cập nhật đúng luồng nhạc (Phân biệt Luyện tập và Vượt ải)
+    const updateGameVolume = (vol) => {
+        let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
+        if (isCampaignActive) {
+            if (window.activeCampaignBgm) window.activeCampaignBgm.setVolume(vol); // Nhạc map sinh tồn
+        } else {
+            if (window.bgMusic) window.bgMusic.setVolume(vol); // Nhạc bg_music.mp3
+        }
+    };
 
     volumeSlider.addEventListener('input', (e) => {
         let vol = parseFloat(e.target.value);
-        if (vol > 0) { muteBtn.textContent = '🔮'; lastVolume = vol; } else { muteBtn.textContent = '💀'; }
+        if (vol > 0) { muteBtn.textContent = '🔮'; lastVolume = vol; } 
+        else { muteBtn.textContent = '💀'; }
         updateGameVolume(vol);
     });
 
