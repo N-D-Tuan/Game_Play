@@ -17,25 +17,24 @@ const config = {
 window.MOVE_CONFIG = { up: 'ARROWUP', down: 'ARROWDOWN', left: 'ARROWLEFT', right: 'ARROWRIGHT', melee: 'SPACE' };
 
 window.SKILL_CONFIG = {
-    'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000, currentCd: 0, ui: null, hotkey: '1' },
-    'swords':   { name: "⚔️ PHI KIẾM", icon: 'sword',      cd: 5000, currentCd: 0, ui: null, hotkey: '2' },
-    'lightning':{ name: "⚡ SẤM SÉT",          icon: 'lightning1', cd: 7000, currentCd: 0, ui: null, hotkey: '3' },
-    'shield':   { name: "🛡️ LÁ CHẮN",         icon: 'shield',     cd: 12000, currentCd: 0, ui: null, hotkey: '4' },
-    'heal':     { name: "💚 HỒI MÁU",         icon: 'heal',       cd: 15000, currentCd: 0, ui: null, hotkey: '5' },
-    'earth':    { name: "⛰️ THỔ ĐỘN", icon: 'earth2',     cd: 10000, currentCd: 0, ui: null, hotkey: '6' },
-    'arrows':   { name: "🏹 VẠN TIỄN", icon: 'arrows',  cd: 8000, currentCd: 0, ui: null, hotkey: '7' },
-    'anchor':   { name: "⚓ TÀU CHIẾN",icon: 'anchor',  cd: 15000, currentCd: 0, ui: null, hotkey: '8' },
-    'doll':     { name: "🎎 HÌNH NHÂN",          icon: 'doll',       cd: 20000, currentCd: 0, ui: null, hotkey: '9' },
+    'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000,     currentCd: 0, ui: null, hotkey: '1' },
+    'swords':   { name: "⚔️ PHI KIẾM",    icon: 'sword',      cd: 5000,     currentCd: 0, ui: null, hotkey: '2' },
+    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 7000,     currentCd: 0, ui: null, hotkey: '3' },
+    'shield':   { name: "🛡️ LÁ CHẮN",     icon: 'shield',     cd: 12000,    currentCd: 0, ui: null, hotkey: '4' },
+    'heal':     { name: "💚 HỒI MÁU",     icon: 'heal',       cd: 15000,    currentCd: 0, ui: null, hotkey: '5' },
+    'earth':    { name: "⛰️ THỔ ĐỘN",     icon: 'earth2',     cd: 10000,    currentCd: 0, ui: null, hotkey: '6' },
+    'arrows':   { name: "🏹 VẠN TIỄN",    icon: 'arrows',     cd: 8000,     currentCd: 0, ui: null, hotkey: '7' },
+    'anchor':   { name: "⚓ TÀU CHIẾN",   icon: 'anchor',     cd: 15000,    currentCd: 0, ui: null, hotkey: '8' },
+    'doll':     { name: "🎎 HÌNH NHÂN",   icon: 'doll',       cd: 20000,    currentCd: 0, ui: null, hotkey: '9' },
 };
 
-const game = new Phaser.Game(config);
+window.game = new Phaser.Game(config);
 
 let player;
 let bg;
 let monsters; 
 let projectiles; 
 let spawnEvent; 
-let bgMusic;
 
 let playerHealth = 100;
 let isGameOver = false;
@@ -46,6 +45,8 @@ let activeShields = 0, shieldSprites = [], shieldTimer = null;
 let isDoll = false, originalPlayerScale = 1;
 let basicAttacks; 
 let lastBasicAttackTime = 0;
+
+let pauseOverlay, txtPause, btnResume, btnInventory, btnSetting, btnHome;
 
 // [MỚI]: Trạng thái di chuyển
 let moveState = { up: false, down: false, left: false, right: false };
@@ -87,8 +88,8 @@ function create() {
 
     if (!this.sound.get('bgm')) {
         let volSlider = document.getElementById('volume-slider');
-        bgMusic = this.sound.add('bgm', { loop: true, volume: volSlider ? parseFloat(volSlider.value) : 0.5 });
-        bgMusic.play();
+        window.bgMusic = this.sound.add('bgm', { loop: true, volume: volSlider ? parseFloat(volSlider.value) : 0.5 });
+        window.bgMusic.play();
     }
     
     for(let key in window.SKILL_CONFIG) { window.SKILL_CONFIG[key].currentCd = 0; }
