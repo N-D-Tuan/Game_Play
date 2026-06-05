@@ -3,20 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pháp Sư Tung Chiêu</title>
+    <title>Dark Fantasy</title>
     <link rel="stylesheet" href="../css/style.css">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
     <div id="home-screen">
         <div class="overlay-dark"></div>
-        <h1 class="game-title">PHÁP SƯ TỐI THƯỢNG</h1>
+        <h1 class="game-title">DARK FANTASY</h1>
         
         <div class="menu-buttons">
             <button class="menu-btn" id="btn-practice">Tập luyện</button>
@@ -47,9 +42,28 @@
                 </div>
                     
                 <div id="controls-settings" class="tab-pane" style="display: none;">
-                    <p style="text-align: center; color: #888; margin-top: 30px;">
-                        Tính năng đang được phát triển...
-                    </p>
+                    <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Click vào ô để đổi phím</p>
+                    <div class="keybind-grid">
+                        <div class="keybind-group">
+                            <h3 style="color: #ffcc00;">Di chuyển</h3>
+                            <div class="keybind-row"><span>Lên</span><button class="key-btn" data-type="move" data-key="up">ARROWUP</button></div>
+                            <div class="keybind-row"><span>Xuống</span><button class="key-btn" data-type="move" data-key="down">ARROWDOWN</button></div>
+                            <div class="keybind-row"><span>Trái</span><button class="key-btn" data-type="move" data-key="left">ARROWLEFT</button></div>
+                            <div class="keybind-row"><span>Phải</span><button class="key-btn" data-type="move" data-key="right">ARROWRIGHT</button></div>
+                        </div>
+                        <div class="keybind-group">
+                            <h3 style="color: #ffcc00;">Kỹ năng</h3>
+                            <div class="keybind-row"><span>Thiên thạch</span><button class="key-btn" data-type="skill" data-key="meteor">1</button></div>
+                            <div class="keybind-row"><span>Phi kiếm</span><button class="key-btn" data-type="skill" data-key="swords">2</button></div>
+                            <div class="keybind-row"><span>Sấm sét</span><button class="key-btn" data-type="skill" data-key="lightning">3</button></div>
+                            <div class="keybind-row"><span>Lá chắn</span><button class="key-btn" data-type="skill" data-key="shield">4</button></div>
+                            <div class="keybind-row"><span>Hồi máu</span><button class="key-btn" data-type="skill" data-key="heal">5</button></div>
+                            <div class="keybind-row"><span>Thổ độn</span><button class="key-btn" data-type="skill" data-key="earth">6</button></div>
+                            <div class="keybind-row"><span>Vạn tiễn</span><button class="key-btn" data-type="skill" data-key="arrows">7</button></div>
+                            <div class="keybind-row"><span>Tàu chiến</span><button class="key-btn" data-type="skill" data-key="anchor">8</button></div>
+                            <div class="keybind-row"><span>Hình nhân</span><button class="key-btn" data-type="skill" data-key="doll">9</button></div>
+                        </div>
+                    </div>
                 </div>
             </div>
                 
@@ -57,15 +71,8 @@
         </div>
     </div>
 
-    <div id="ai-container">
-        <video id="webcam" autoplay playsinline></video>
-        <canvas id="output_canvas"></canvas>
-        <div id="action-text">Khởi động AI...</div>
-    </div>
-
-    <script type="module" src="../js/main.js"></script>
+    <script src="../js/main.js"></script>
     <script src="../js/game.js"></script>
-    <script src="../js/gestures.js"></script>
 
 </body>
 </html>

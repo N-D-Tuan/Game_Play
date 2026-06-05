@@ -246,43 +246,73 @@ body, html {
     z-index: 1; /* Cho Game nằm dưới cùng */
 }
 
-/* KHUNG CAMERA AI */
-#ai-container {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 320px;
-    background: rgba(0, 0, 0, 0.7);
-    border: 3px solid #00ffff;
-    border-radius: 12px;
-    box-shadow: 0 0 15px #00ffff;
-    z-index: 100; /* Nổi AI lên trên Game */
+/* ==========================================
+   GIAO DIỆN CÀI ĐẶT PHÍM (CONTROLS TAB)
+   ========================================== */
+.keybind-grid {
     display: flex;
-    flex-direction: column;
-}
-
-/* ÉP BUỘC ẨN VIDEO GỐC */
-#webcam {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0; /* Trong suốt hoàn toàn */
-    z-index: -1000; /* Đẩy xuống dưới cùng */
-    pointer-events: none; /* Không cho click trúng */
-}
-
-#output_canvas {
-    width: 100%;
-    height: 240px;
-    object-fit: cover;
-    transform: scaleX(-1); /* Lật gương cho dễ vẽ */
-}
-
-#action-text {
-    color: #ffcc00;
-    font-size: 18px;
-    font-weight: bold;
-    text-align: center;
-    padding: 10px;
+    gap: 30px;
+    text-align: left;
+    color: #d4af37;
+    max-height: 280px; /* Thêm cuộn nếu quá dài */
+    overflow-y: auto;
+    padding-right: 10px;
     font-family: Arial, sans-serif;
 }
+
+.keybind-group {
+    flex: 1;
+}
+
+.keybind-group h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #550000;
+    padding-bottom: 5px;
+    font-family: 'MedievalSharp', cursive;
+}
+
+.keybind-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+/* Nút hiển thị Phím */
+.key-btn {
+    background: #222;
+    color: #fffacd;
+    border: 1px solid #d4af37;
+    padding: 5px 15px;
+    min-width: 80px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 16px;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+.key-btn:hover {
+    background: #d4af37;
+    color: #000;
+}
+
+/* Hiệu ứng khi đang chờ người chơi bấm phím mới */
+.key-btn.waiting {
+    background: #ff0000;
+    color: #fff;
+    border-color: #ff0000;
+    box-shadow: 0 0 10px #ff0000;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0.5; }
+}
+
+/* Custom thanh cuộn dọc cho bảng cài đặt phím */
+.keybind-grid::-webkit-scrollbar { width: 6px; }
+.keybind-grid::-webkit-scrollbar-track { background: #111; }
+.keybind-grid::-webkit-scrollbar-thumb { background: #550000; border-radius: 3px; }
