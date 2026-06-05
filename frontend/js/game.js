@@ -377,7 +377,57 @@ function activateDoll() { player.setVisible(false); let dollImg = this.add.image
 function shootAnchor() { this.cameras.main.shake(1000, 0.008); let anchor = this.add.image(-400, player.y - 50, 'anchor'); anchor.setScale((window.innerHeight / 2) / anchor.height).setDepth(player.y - 50 + 200); this.tweens.add({ targets: anchor, x: window.innerWidth + 400, duration: 3000, ease: 'Linear', onUpdate: (tw, tg) => { let hitRadius = tg.displayWidth / 2; monsters.children.iterate((m) => { if (m && m.active && Math.abs(m.x - tg.x) < hitRadius && Math.abs(m.y - player.y) < 200) m.destroy(); }); }, onComplete: (tw, tgs) => { if (tgs[0]) tgs[0].destroy(); } }); }
 function shootArrows() { this.cameras.main.shake(2000, 0.003); this.time.addEvent({ delay: 100, repeat: 19, callback: () => { let numArrows = Phaser.Math.Between(3, 5); for (let i = 0; i < numArrows; i++) { let arrow = projectiles.create(Phaser.Math.Between(50, window.innerWidth - 50), -100, 'arrows'); arrow.setBlendMode(Phaser.BlendModes.ADD).setScale(Phaser.Math.FloatBetween(0.08, 0.15)); this.tweens.add({ targets: arrow, y: window.innerHeight + 100, duration: Phaser.Math.Between(600, 900), ease: 'Linear', onUpdate: (tw, tg) => { if (tg && tg.active && tg.body) { tg.body.setSize(tg.width, tg.height, true); tg.setDepth(tg.y); } }, onComplete: (tw, tgs) => { if (tgs[0] && tgs[0].active) tgs[0].destroy(); } }); } }, callbackScope: this }); }
 function activateEarth() { let earthBlocks = []; let keys = ['earth1', 'earth2', 'earth3']; let blockWidth = (window.innerWidth / 3) + 200; for (let i = 0; i < 3; i++) { let e = this.add.image((window.innerWidth / 3) * i + (window.innerWidth / 6), window.innerHeight, keys[i]); e.setOrigin(0.5, 0).setDisplaySize(blockWidth, window.innerHeight).setDepth(player.y + 200); earthBlocks.push(e); } this.cameras.main.shake(3000, 0.005); this.tweens.add({ targets: earthBlocks, y: 150, duration: 3000, ease: 'Linear', onUpdate: (tw) => { let curY = earthBlocks[0].y; monsters.children.iterate((m) => { if (m && m.active && m.y >= curY - 50) m.destroy(); }); }, onComplete: (tw, targets) => { this.time.delayedCall(500, () => { this.tweens.add({ targets: targets, y: window.innerHeight + 100, alpha: 0, duration: 1000, onComplete: (tw, tgs) => { tgs.forEach(t => { if(t) t.destroy(); }); } }); }); } }); }
-function activateHeal() { if (playerHealth >= 100) return; let oldHealth = playerHealth; playerHealth = Math.min(100, playerHealth + 50); this.tweens.addCounter({ from: oldHealth, to: playerHealth, duration: 500, onUpdate: (tw) => updateHealthBarWidth(tw.getValue()) }); player.setTint(0x00ff00); setTimeout(() => player.clearTint(), 300); let healIcon = this.add.image(player.x, player.y - 100, 'heal').setScale(0.05).setDepth(2000); this.tweens.add({ targets: healIcon, y: player.y - 250, scale: 0.25, alpha: 0, duration: 2000, onComplete: (tw, tgs) => { if (tgs[0]) tgs[0].destroy(); } }); }
+function activateHeal() {
+    if (playerHealth >= 100) return;
+
+    // Hồi máu
+    let oldHealth = playerHealth;
+    playerHealth = Math.min(100, playerHealth + 50);
+
+    this.tweens.addCounter({
+        from: oldHealth,
+        to: playerHealth,
+        duration: 500,
+        onUpdate: (tw) => updateHealthBarWidth(tw.getValue())
+    });
+
+    // Nhân vật phát sáng xanh
+    player.setTint(0x00ff00);
+    setTimeout(() => player.clearTint(), 500);
+
+    // ==========================================
+    // HIỆU ỨNG TRÁI TIM BAY LÊN
+    // ==========================================
+
+    const heart = this.add.text(
+        player.x,
+        player.y - 120,
+        '❤️',
+        {
+            fontSize: '60px'
+        }
+    ).setOrigin(0.5).setDepth(3000);
+
+    this.tweens.add({
+        targets: heart,
+        scale: { from: 0.5, to: 1.3 },
+        alpha: { from: 1, to: 0 },
+        duration: 1800,
+        ease: 'Sine.easeOut',
+        onComplete: () => heart.destroy()
+    });
+
+    this.time.addEvent({
+        delay: 16,
+        repeat: 110, // ~1.8 giây
+        callback: () => {
+            if (heart.active) {
+                heart.x = player.x;
+                heart.y -= 1.2;
+            }
+        }
+    });
+}
 function activateShield() { if (activeShields > 0) removeShields(); activeShields = 3; for (let i = 0; i < 3; i++) { let shield = this.add.image(player.x, player.y, 'shield').setBlendMode(Phaser.BlendModes.ADD).setScale(0.25); shield.angleOffset = (i * (Math.PI * 2)) / 3; shieldSprites.push(shield); } if (shieldTimer) shieldTimer.remove(); shieldTimer = this.time.delayedCall(5000, () => removeShields()); }
 function removeShields() { activeShields = 0; shieldSprites.forEach(s => { if (s) s.destroy(); }); shieldSprites = []; }
 function shootLightning() { let activeMonsters = []; monsters.children.iterate(m => { if (m && m.active) activeMonsters.push(m); }); Phaser.Utils.Array.Shuffle(activeMonsters); this.cameras.main.shake(250, 0.015); for (let i = 0; i < 4; i++) { let destX = Phaser.Math.Between(50, window.innerWidth - 50); let destY = window.innerHeight - Phaser.Math.Between(50, 150); let destScale = 1; if (activeMonsters.length > 0) { let m = activeMonsters.pop(); destX = m.x; destY = m.y; destScale = Math.max(0.6, m.scale * 2.5); } let lightning = this.add.image(destX, destY, 'lightning' + Phaser.Math.Between(1, 4)).setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(destY + 200).setScale(destScale); const checkDamage = () => { monsters.children.iterate(m => { if (m && m.active && Math.abs(m.x - destX) < 250 && Math.abs(m.y - destY) < 150) m.destroy(); }); }; checkDamage(); let dmgTimer = this.time.addEvent({ delay: 50, callback: checkDamage, callbackScope: this, loop: true }); this.time.delayedCall(2000, () => { dmgTimer.remove(); this.tweens.add({ targets: lightning, alpha: 0, duration: 400, onComplete: (tw, tgs) => { if (tgs[0]) tgs[0].destroy(); } }); }); } }
