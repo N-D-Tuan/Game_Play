@@ -31,7 +31,11 @@ export class CampaignScene extends Phaser.Scene {
         this.load.audio('rain_bgm', '../assets/rain.mp3');
         this.load.audio('snow_bgm', '../assets/snow.mp3');
         this.load.audio('desert_bgm', '../assets/desert.mp3');
-        this.load.image('player', '../assets/player.png');
+        
+        this.load.spritesheet('player_anim', '../assets/player_spritesheet.png', { 
+            frameWidth: 60,  
+            frameHeight: 89  
+        });
     }
 
     create() {
@@ -42,16 +46,51 @@ export class CampaignScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, 4000, 4000);
         this.cameras.main.setBounds(0, 0, 4000, 4000);
 
+        this.player = this.physics.add.sprite(2000, 2000, 'player_anim');
+        this.player.setCollideWorldBounds(true);
+        this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
+
+        // ==========================================
+        // KHỞI TẠO HOẠT ẢNH (ANIMATIONS)
+        // ==========================================
+        // Hàng 1 (Khung 0-3): Đi xuống
+        this.anims.create({
+            key: 'walk-down',
+            frames: this.anims.generateFrameNumbers('player_anim', { start: 0, end: 3 }),
+            frameRate: 8, // Tốc độ lật ảnh (8 hình/giây)
+            repeat: -1    // Lặp lại vô hạn
+        });
+
+        // Hàng 2 (Khung 4-7): Đi sang trái
+        this.anims.create({
+            key: 'walk-left',
+            frames: this.anims.generateFrameNumbers('player_anim', { start: 4, end: 7 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
+        // Hàng 3 (Khung 8-11): Đi sang phải
+        this.anims.create({
+            key: 'walk-right',
+            frames: this.anims.generateFrameNumbers('player_anim', { start: 8, end: 11 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
+        // Hàng 4 (Khung 12-15): Đi lên
+        this.anims.create({
+            key: 'walk-up',
+            frames: this.anims.generateFrameNumbers('player_anim', { start: 12, end: 15 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
         this.weatherType = this.chooseRandomWeather();
         this.applyWeatherAndBackground(this.weatherType);
         
         this.terrainZones = this.physics.add.group();
         this.createPuddles(this.weatherType);
         this.createDecorations(this.weatherType);
-
-        this.player = this.physics.add.sprite(2000, 2000, 'player');
-        this.player.setCollideWorldBounds(true);
-        this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
 
         this.physics.add.overlap(this.player, this.terrainZones, this.onStepTerrain, null, this);
         this.lastStepTime = 0; 
@@ -370,17 +409,35 @@ export class CampaignScene extends Phaser.Scene {
 
         let speed = 200;
 
-        // Cập nhật hướng đi theo phím người dùng đã cài trong Cài đặt
-        let vx = 0, vy = 0;
+        // 1. Xác định hướng bấm (-1, 0, hoặc 1)
+        let dirX = 0, dirY = 0;
         
-        if (this.moveState.left) vx = -speed;
-        if (this.moveState.right) vx = speed;
-        if (this.moveState.up) vy = -speed;
-        if (this.moveState.down) vy = speed;
+        if (this.moveState.left) dirX = -1;
+        else if (this.moveState.right) dirX = 1;
         
-        this.player.setVelocity(vx, vy);
+        if (this.moveState.up) dirY = -1;
+        else if (this.moveState.down) dirY = 1;
+
+        // 2. [FIX ĐI CHÉO]: Chuẩn hóa Vector để đi chéo không bị nhanh hơn đi thẳng
+        let moveVector = new Phaser.Math.Vector2(dirX, dirY);
+        moveVector.normalize();
         
-        // Điều chỉnh z-index để che khuất sau cây/đá
+        // Áp dụng vận tốc
+        this.player.setVelocity(moveVector.x * speed, moveVector.y * speed);
         this.player.setDepth(this.player.y);
+
+        // 3. ĐIỀU KHIỂN HOẠT ẢNH (Ưu tiên nhìn ngang)
+        if (dirX < 0) {
+            this.player.anims.play('walk-left', true); // Chạy hoạt ảnh sang trái
+        } else if (dirX > 0) {
+            this.player.anims.play('walk-right', true); // Chạy hoạt ảnh sang phải
+        } else if (dirY < 0) {
+            this.player.anims.play('walk-up', true); // Quay lưng đi lên
+        } else if (dirY > 0) {
+            this.player.anims.play('walk-down', true); // Đối mặt đi xuống
+        } else {
+            // Khi dừng lại: Tắt hoạt ảnh và đứng im
+            this.player.anims.stop();
+        }
     }
 }
