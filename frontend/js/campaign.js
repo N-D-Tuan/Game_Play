@@ -55,7 +55,27 @@ export class CampaignScene extends Phaser.Scene {
 
         this.physics.add.overlap(this.player, this.terrainZones, this.onStepTerrain, null, this);
         this.lastStepTime = 0; 
-        this.cursors = this.input.keyboard.createCursorKeys();
+        
+        this.moveState = { up: false, down: false, left: false, right: false };
+
+        this.input.keyboard.on('keydown', (event) => {
+            if (this.isPaused || this.isGameOver) return;
+            let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
+
+            if (key === window.MOVE_CONFIG.up) this.moveState.up = true;
+            if (key === window.MOVE_CONFIG.down) this.moveState.down = true;
+            if (key === window.MOVE_CONFIG.left) this.moveState.left = true;
+            if (key === window.MOVE_CONFIG.right) this.moveState.right = true;
+        });
+
+        this.input.keyboard.on('keyup', (event) => {
+            let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
+            
+            if (key === window.MOVE_CONFIG.up) this.moveState.up = false;
+            if (key === window.MOVE_CONFIG.down) this.moveState.down = false;
+            if (key === window.MOVE_CONFIG.left) this.moveState.left = false;
+            if (key === window.MOVE_CONFIG.right) this.moveState.right = false;
+        });
 
         this.playerHealth = 100;
         this.isGameOver = false;
@@ -142,10 +162,12 @@ export class CampaignScene extends Phaser.Scene {
 
             let puddle = this.terrainZones.create(px, py, puddleKey);
             puddle.setAlpha(0.6); 
+            puddle.setScale(Phaser.Math.FloatBetween(0.7, 1.5));
             
-            // [FIX TĂNG KÍCH CỠ HỒ NƯỚC]: Tăng Scale random từ 0.7 đến 1.5 (gấp đôi lúc nãy)
-            puddle.setScale(Phaser.Math.FloatBetween(0.7, 1.5)); 
-            puddle.body.setSize(puddle.width * 0.6, puddle.height * 0.6);
+            // Sử dụng Hitbox HÌNH TRÒN nằm ở chính giữa vũng nước
+            // Bán kính bằng 25% chiều rộng ảnh gốc (đường kính = 50%), đảm bảo phải đi hẳn vào trong mới kêu
+            let radius = puddle.width * 0.25; 
+            puddle.body.setCircle(radius, (puddle.width / 2) - radius, (puddle.height / 2) - radius);
         }
     }
 
@@ -195,6 +217,29 @@ export class CampaignScene extends Phaser.Scene {
         if ((player.body.velocity.x !== 0 || player.body.velocity.y !== 0) && this.time.now - this.lastStepTime > 400) {
             this.lastStepTime = this.time.now;
             this.sound.play('step_water', { volume: 0.6 });
+
+            // HIỆU ỨNG NƯỚC BẮN LÊN DƯỚI GÓT CHÂN
+            // Tọa độ y cộng thêm 30 để hạt nước xuất phát từ dưới chân Pháp sư thay vì bụng
+            let splash = this.add.particles(player.x, player.y + 45, 'rain', {
+                speed: { min: 40, max: 90 },   // Lực văng nước mạnh hơn một chút
+                angle: { min: 0, max: 360 },   // [QUAN TRỌNG]: Góc văng 360 độ tỏa ra mọi hướng
+                gravityY: 250,                 // Trọng lực kéo các giọt nước rớt trở lại mặt đất
+                scale: { start: 0.1, end: 0 }, // Thu nhỏ dần về 0
+                alpha: { start: 0.7, end: 0 }, // Mờ dần đi
+                lifespan: 400,                 // Thời gian tồn tại của giọt nước (0.4s)
+                blendMode: 'NORMAL' 
+            });
+            
+            // Đặt Depth cao hơn nhân vật một chút để nước che khuất chân khi văng lên
+            splash.setDepth(player.y + 50); 
+            
+            // Phát nổ tạo ra 8 giọt nước bắn ra cùng lúc xung quanh
+            splash.explode(8); 
+
+            // Dọn dẹp bộ nhớ: Hủy hạt hệ thống này sau 0.5s để chống giật lag
+            this.time.delayedCall(500, () => {
+                if (splash) splash.destroy();
+            });
         }
     }
 
@@ -277,10 +322,15 @@ export class CampaignScene extends Phaser.Scene {
             if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
             if (window.bgMusic) window.bgMusic.play();
             
-            this.scene.start('default'); 
+            // 1. Kích hoạt lớp che của màn hình Trang chủ
             document.getElementById('home-screen').style.display = 'flex';
             setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10);
-            setTimeout(() => { document.getElementById('game-container').style.display = 'none'; }, 800);
+            
+            // 2. Đợi 800ms cho màn hình tối hẳn lại rồi mới giấu Game và chuyển Scene
+            setTimeout(() => { 
+                document.getElementById('game-container').style.display = 'none'; 
+                this.scene.start('default'); 
+            }, 800);
         });
 
         this.setPauseMenuVisible(false);
@@ -318,15 +368,19 @@ export class CampaignScene extends Phaser.Scene {
     update() {
         if (this.isPaused || this.isGameOver) return;
 
-        let speed = 300;
-        this.player.setVelocity(0);
+        let speed = 200;
 
-        if (this.cursors.left.isDown) this.player.setVelocityX(-speed);
-        else if (this.cursors.right.isDown) this.player.setVelocityX(speed);
-
-        if (this.cursors.up.isDown) this.player.setVelocityY(-speed);
-        else if (this.cursors.down.isDown) this.player.setVelocityY(speed);
+        // Cập nhật hướng đi theo phím người dùng đã cài trong Cài đặt
+        let vx = 0, vy = 0;
         
+        if (this.moveState.left) vx = -speed;
+        if (this.moveState.right) vx = speed;
+        if (this.moveState.up) vy = -speed;
+        if (this.moveState.down) vy = speed;
+        
+        this.player.setVelocity(vx, vy);
+        
+        // Điều chỉnh z-index để che khuất sau cây/đá
         this.player.setDepth(this.player.y);
     }
 }
