@@ -14,7 +14,7 @@ const config = {
 };
 
 // [MỚI]: Đưa cấu hình Phím lên window để main.js có thể chỉnh sửa
-window.MOVE_CONFIG = { up: 'ARROWUP', down: 'ARROWDOWN', left: 'ARROWLEFT', right: 'ARROWRIGHT' };
+window.MOVE_CONFIG = { up: 'ARROWUP', down: 'ARROWDOWN', left: 'ARROWLEFT', right: 'ARROWRIGHT', melee: 'SPACE' };
 
 window.SKILL_CONFIG = {
     'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000, currentCd: 0, ui: null, hotkey: '1' },
@@ -44,6 +44,8 @@ let isPaused = false;
 let healthBarBg, healthBarFill, hpFrame, hpText;
 let activeShields = 0, shieldSprites = [], shieldTimer = null;  
 let isDoll = false, originalPlayerScale = 1;
+let basicAttacks; 
+let lastBasicAttackTime = 0;
 
 // [MỚI]: Trạng thái di chuyển
 let moveState = { up: false, down: false, left: false, right: false };
@@ -53,9 +55,10 @@ let moveState = { up: false, down: false, left: false, right: false };
 // ==========================================
 function preload() {
     this.load.image('bg', '../assets/bg.png');
-    this.load.audio('bgm', '../assets/bg_music.mp3'); // Sửa lại tên nếu nhạc bạn là bgm.mp3
+    this.load.audio('bgm', '../assets/bg_music.mp3'); 
     this.load.image('player', '../assets/player.png'); 
     this.load.image('monster', '../assets/monster.png'); 
+    this.load.image('aa', '../assets/aa.png');
     this.load.image('fireball', '../assets/fireball.png'); 
     this.load.image('sword', '../assets/sword.png'); 
     this.load.image('lightning1', '../assets/lightning1.png'); 
@@ -101,6 +104,12 @@ function create() {
     monsters = this.physics.add.group();
     projectiles = this.physics.add.group(); 
 
+    basicAttacks = this.physics.add.group();
+    this.physics.add.overlap(basicAttacks, monsters, (aa, monster) => {
+        aa.destroy();      
+        monster.destroy(); 
+    }, null, this);
+
     spawnEvent = this.time.addEvent({ delay: 3500, callback: spawnMonster, callbackScope: this, loop: true });
 
     this.physics.add.overlap(player, monsters, hitPlayer, null, this);
@@ -120,6 +129,11 @@ function create() {
     this.input.keyboard.on('keydown', (event) => {
         if (isGameOver || isDoll || isPaused) return;
         let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
+
+        if (key === window.MOVE_CONFIG.melee) {
+            shootBasicAttack.call(this);
+            return;
+        }
 
         // 1. Kiểm tra xuất chiêu Kỹ năng
         for (let skKey in window.SKILL_CONFIG) {
@@ -296,6 +310,69 @@ function togglePause() {
 function setPauseMenuVisible(v) { pauseOverlay.setVisible(v); txtPause.setVisible(v); btnResume.setVisible(v); btnInventory.setVisible(v); btnSetting.setVisible(v); btnHome.setVisible(v); }
 
 // (CÁC HÀM SKILL CHỨC NĂNG GIỮ NGUYÊN)
+function shootBasicAttack() {
+    let now = this.time.now;
+    if (now - lastBasicAttackTime < 200) return; 
+    lastBasicAttackTime = now;
+
+    let closestMonster = null;
+    let minDist = Infinity;
+    
+    monsters.children.iterate(m => {
+        if (m && m.active) {
+            let dist = Phaser.Math.Distance.Between(player.x, player.y, m.x, m.y);
+            if (dist < minDist) {
+                minDist = dist;
+                closestMonster = m;
+            }
+        }
+    });
+
+    let aa = basicAttacks.create(player.x, player.y - 50, 'aa');
+    let scale = 40 / Math.max(aa.width, aa.height); 
+    aa.setScale(scale);
+
+    // ===============================================
+    // [MỚI]: TẠO HIỆU ỨNG VỆT MỜ MÀU XANH (TRAIL)
+    // ===============================================
+    let trail = this.add.particles(0, 0, 'aa', {
+        speed: 0,
+        scale: { start: scale * 0.8, end: 0 }, // Thu nhỏ dần về 0
+        alpha: { start: 0.6, end: 0 },         // Mờ dần biến mất
+        tint: 0x00ffff,                        // Phủ màu xanh lơ (Cyan) phát sáng
+        blendMode: 'ADD',                      // Hiệu ứng hòa trộn ánh sáng (Glow)
+        lifespan: 400,                         // Thời gian đuôi tồn tại (0.4s là đủ mượt, 1s sẽ hơi dài)
+        frequency: 20                          // Cứ 20ms đẻ ra 1 vệt
+    }).setDepth(player.y - 51);
+    
+    // Bắt vệt sáng bám theo tọa độ của viên đạn
+    trail.startFollow(aa); 
+
+    // Ghi đè hàm destroy: Khi đạn nổ/biến mất thì vệt sáng tan dần rồi mới xóa
+    const originalDestroy = aa.destroy;
+    aa.destroy = function() {
+        trail.stopFollow(); // Ngừng bám theo đạn
+        trail.stop();       // Ngừng sinh hạt mới
+        
+        // Đợi 0.5s cho các hạt cũ tan hết rồi mới xóa bộ nhớ Emitter để chống giật lag
+        setTimeout(() => { if (trail) trail.destroy(); }, 500); 
+        
+        originalDestroy.call(aa); // Xóa viên đạn
+    };
+    // ===============================================
+
+    if (closestMonster) {
+        let angle = Phaser.Math.Angle.Between(player.x, player.y, closestMonster.x, closestMonster.y);
+        aa.setRotation(angle + Math.PI / 2);
+        this.physics.moveToObject(aa, closestMonster, 800);
+    } else {
+        aa.setVelocityY(-800);
+    }
+
+    this.time.delayedCall(1500, () => {
+        if (aa && aa.active) aa.destroy();
+    });
+}
 function activateDoll() { player.setVisible(false); let dollImg = this.add.image(player.x, player.y, 'doll'); dollImg.setScale(250 / dollImg.height).setDepth(player.y); isDoll = true; this.time.delayedCall(4000, () => { this.cameras.main.shake(600, 0.02); let blastRadius = 350; let shockwave = this.add.graphics().setDepth(3000); this.tweens.addCounter({ from: 20, to: blastRadius, duration: 300, onUpdate: (tw) => { shockwave.clear(); shockwave.lineStyle(15, 0xffaa00, 1 - tw.progress); shockwave.strokeCircle(player.x, player.y, tw.getValue()); }, onComplete: () => { shockwave.destroy(); } }); monsters.children.iterate((m) => { if (m && m.active && Math.abs(m.x - player.x) < blastRadius && Math.abs(m.y - player.y) < 150) m.destroy(); }); dollImg.destroy(); player.setVisible(true); isDoll = false; }); }
 function shootAnchor() { this.cameras.main.shake(1000, 0.008); let anchor = this.add.image(-400, player.y - 50, 'anchor'); anchor.setScale((window.innerHeight / 2) / anchor.height).setDepth(player.y - 50 + 200); this.tweens.add({ targets: anchor, x: window.innerWidth + 400, duration: 3000, ease: 'Linear', onUpdate: (tw, tg) => { let hitRadius = tg.displayWidth / 2; monsters.children.iterate((m) => { if (m && m.active && Math.abs(m.x - tg.x) < hitRadius && Math.abs(m.y - player.y) < 200) m.destroy(); }); }, onComplete: (tw, tgs) => { if (tgs[0]) tgs[0].destroy(); } }); }
 function shootArrows() { this.cameras.main.shake(2000, 0.003); this.time.addEvent({ delay: 100, repeat: 19, callback: () => { let numArrows = Phaser.Math.Between(3, 5); for (let i = 0; i < numArrows; i++) { let arrow = projectiles.create(Phaser.Math.Between(50, window.innerWidth - 50), -100, 'arrows'); arrow.setBlendMode(Phaser.BlendModes.ADD).setScale(Phaser.Math.FloatBetween(0.08, 0.15)); this.tweens.add({ targets: arrow, y: window.innerHeight + 100, duration: Phaser.Math.Between(600, 900), ease: 'Linear', onUpdate: (tw, tg) => { if (tg && tg.active && tg.body) { tg.body.setSize(tg.width, tg.height, true); tg.setDepth(tg.y); } }, onComplete: (tw, tgs) => { if (tgs[0] && tgs[0].active) tgs[0].destroy(); } }); } }, callbackScope: this }); }
