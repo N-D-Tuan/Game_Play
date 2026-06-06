@@ -71,7 +71,7 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
 
         // Vị trí thanh máu bám theo đầu quái
         let barX = this.x - 20;
-        let barY = this.y - 30;
+        let barY = this.y - 65;
         this.hpBarBg.x = barX; this.hpBarBg.y = barY;
         this.hpBarFill.x = barX; this.hpBarFill.y = barY;
 
