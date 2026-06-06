@@ -36,6 +36,15 @@ export class CampaignScene extends Phaser.Scene {
 
         this.load.image('hp_frame', '../assets/hp_frame.png'); 
         this.load.image('aa', '../assets/aa.png');
+        this.load.image('fireball', '../assets/fireball.png'); 
+        this.load.image('sword', '../assets/sword.png'); 
+        this.load.image('lightning1', '../assets/lightning1.png'); 
+        this.load.image('shield', '../assets/shield.png'); 
+        this.load.image('heal', '../assets/heal.png'); 
+        this.load.image('earth2', '../assets/earth2.png'); 
+        this.load.image('arrows', '../assets/arrows.png'); 
+        this.load.image('anchor', '../assets/anchor.png'); 
+        this.load.image('doll', '../assets/doll.png');
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
         this.load.audio('rain_bgm', '../assets/rain.mp3');
@@ -59,6 +68,13 @@ export class CampaignScene extends Phaser.Scene {
         // Tắt nhạc sảnh chờ
         if (window.bgMusic && window.bgMusic.isPlaying) window.bgMusic.stop();
         this.sound.stopAll(); 
+
+        // ĐƯA CẤU HÌNH VƯỢT ẢI LÊN WINDOW ĐỂ ĐỒNG BỘ TOÀN CỤC
+        window.SKILL_CAMPAIGN_CONFIG = SKILL_CAMPAIGN_CONFIG;
+
+        for(let key in SKILL_CAMPAIGN_CONFIG) { 
+            SKILL_CAMPAIGN_CONFIG[key].currentCd = 0; 
+        }
 
         this.physics.world.setBounds(0, 0, 4000, 4000);
         this.cameras.main.setBounds(0, 0, 4000, 4000);
@@ -123,6 +139,13 @@ export class CampaignScene extends Phaser.Scene {
                 return; 
             }
 
+            for (let skKey in SKILL_CAMPAIGN_CONFIG) {
+                if (SKILL_CAMPAIGN_CONFIG[skKey].hotkey === key) {
+                    this.checkAndCastSkill(skKey);
+                    return;
+                }
+            }
+
             if (key === window.MOVE_CONFIG.up) this.moveState.up = true;
             if (key === window.MOVE_CONFIG.down) this.moveState.down = true;
             if (key === window.MOVE_CONFIG.left) this.moveState.left = true;
@@ -146,6 +169,7 @@ export class CampaignScene extends Phaser.Scene {
         this.lastAATime = 0;         // Thời gian hồi chiêu đánh thường
         
         this.drawHealthBar();
+        this.createSkillUI();
         this.createPauseMenu();
 
         this.input.keyboard.on('keydown-ESC', () => this.togglePause());
@@ -491,7 +515,8 @@ export class CampaignScene extends Phaser.Scene {
         this.btnInventory.on('pointerdown', () => alert("Kho đồ đang phát triển!"));
         
         this.btnSetting = this.add.text(cx, cy + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0);
-        this.btnSetting.on('pointerdown', () => {
+        this.btnSetting.on('pointerdown', (pointer, localX, localY, e) => {
+            if (e) e.stopPropagation();
             document.getElementById('settings-modal').style.display = 'flex'; 
             this.input.enabled = false;
         });
@@ -555,7 +580,7 @@ export class CampaignScene extends Phaser.Scene {
         }
     }
 
-    update() {
+    update(time, delta) {
         if (this.isPaused || this.isGameOver) return;
 
         let speed = 200;
@@ -598,6 +623,101 @@ export class CampaignScene extends Phaser.Scene {
         this.monsters.getChildren().forEach(mon => {
             mon.updateAI(this.player);
         });
+
+        // ==========================================
+        // CẬP NHẬT ĐẾM NGƯỢC HỒI CHIÊU
+        // ==========================================
+        for (let key in SKILL_CAMPAIGN_CONFIG) {
+            let skill = SKILL_CAMPAIGN_CONFIG[key];
+            if (skill.currentCd > 0) {
+                if (delta) skill.currentCd -= delta; 
+                
+                if (skill.currentCd <= 0) {
+                    skill.currentCd = 0;
+                    skill.ui.overlay.clear(); 
+                    skill.ui.text.setVisible(false);
+                    skill.ui.glow.setVisible(true);
+                } else {
+                    let progress = skill.currentCd / skill.cd; 
+                    let startAngle = Phaser.Math.DegToRad(-90); 
+                    let endAngle = startAngle + (Math.PI * 2 * progress); 
+                    skill.ui.overlay.clear().fillStyle(0x000000, 0.75).beginPath()
+                        .moveTo(skill.posX, skill.startY).arc(skill.posX, skill.startY, 28, startAngle, endAngle, false).closePath().fillPath();
+                    skill.ui.text.setText(Math.ceil(skill.currentCd / 1000));
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // TẠO GIAO DIỆN HỒI CHIÊU (KỸ NĂNG VƯỢT ẢI)
+    // ==========================================
+    createSkillUI() {
+        let screenW = this.cameras.main.width;
+        let screenH = this.cameras.main.height;
+        let startX = screenW / 2 - 300; 
+        let startY = screenH - 60; 
+        let spacing = 75; 
+        let index = 0;
+
+        for (let key in SKILL_CAMPAIGN_CONFIG) {
+            let skill = SKILL_CAMPAIGN_CONFIG[key];
+            let posX = startX + (index * spacing);
+            skill.posX = posX; skill.startY = startY; 
+
+            // Nền đen
+            let bgCircle = this.add.graphics().setDepth(10000).setScrollFactor(0);
+            bgCircle.fillStyle(0x000000, 0.6);
+            bgCircle.fillCircle(posX, startY, 28);
+
+            // Icon kỹ năng
+            let icon = this.add.image(posX, startY, skill.icon).setDepth(10001).setScrollFactor(0);
+            let scale = 35 / Math.max(icon.width, icon.height);
+            icon.setScale(scale);
+
+            // Lớp phủ đen khi hồi chiêu
+            let cdOverlay = this.add.graphics().setDepth(10002).setScrollFactor(0);
+
+            // Chữ số đếm ngược
+            let cdText = this.add.text(posX, startY, '', { fontSize: '22px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 })
+                .setOrigin(0.5).setDepth(10003).setScrollFactor(0).setVisible(false);
+
+            // Vòng viền phát sáng (Level 0 - Màu Xanh Lục/Cyan)
+            let glow = this.add.graphics().setDepth(10004).setScrollFactor(0);
+            glow.lineStyle(3, 0x00ffff, 1);
+            glow.strokeCircle(posX, startY, 29);
+
+            // Phím tắt
+            let hotkeyText = this.add.text(posX, startY - 45, skill.hotkey, { 
+                fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
+            }).setOrigin(0.5).setDepth(10005).setScrollFactor(0);
+
+            skill.ui = { overlay: cdOverlay, text: cdText, glow: glow, hotkeyText: hotkeyText };
+            index++;
+        }
+        window.refreshCampaignSkillHotkeysUI = () => {
+            for (let k in SKILL_CAMPAIGN_CONFIG) {
+                let ui = SKILL_CAMPAIGN_CONFIG[k].ui;
+                // [ĐÃ FIX]: Thêm đuôi .active để kiểm tra xem Text đó còn tồn tại trên màn hình không
+                // Tránh việc cố gắng đổi chữ của một Object đã bị destroy
+                if (ui && ui.hotkeyText && ui.hotkeyText.active) {
+                    ui.hotkeyText.setText(SKILL_CAMPAIGN_CONFIG[k].hotkey);
+                }
+            }
+        };
+    }
+
+    checkAndCastSkill(skillKey) {
+        let skill = SKILL_CAMPAIGN_CONFIG[skillKey];
+        if (skill.currentCd > 0) return; // Đang hồi chiêu thì không cho bấm
+
+        // Tạm thời log ra console để test. Các hàm bắn chiêu cụ thể ta sẽ ghép vào sau
+        console.log(`Đã thi triển kỹ năng: ${skill.name} (Level ${skill.level})`);
+
+        // Bắt đầu chu trình xoay hồi chiêu
+        skill.currentCd = skill.cd;
+        skill.ui.glow.setVisible(false);
+        skill.ui.text.setVisible(true);
     }
 
     shootBasicAttack() {

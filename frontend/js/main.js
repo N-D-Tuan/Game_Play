@@ -1,4 +1,5 @@
 import { CampaignScene } from './campaign.js';
+import { SKILL_CAMPAIGN_CONFIG } from './skills.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     const homeScreen = document.getElementById('home-screen');
@@ -52,13 +53,32 @@ document.addEventListener("DOMContentLoaded", () => {
     // Đóng mở Cài đặt
     btnSettings.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
     
-    closeSettings.addEventListener('click', () => { 
+    closeSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         settingsModal.style.display = 'none'; 
+        
+        // Nếu đang chờ phím mà đóng bảng -> Hủy ngay lập tức để game không bị kẹt
+        if (cancelCurrentKeybind) {
+            cancelCurrentKeybind();
+            cancelCurrentKeybind = null;
+        }
+
+        isWaitingForKey = false;
+
         // [FIX LỖI ĐƠ PAUSE]: Bật lại tương tác cho TẤT CẢ các scene đang chạy
         if (typeof window.game !== 'undefined') {
             window.game.scene.scenes.forEach(scene => {
                 if (scene.sys.isActive() && scene.input) {
                     scene.input.enabled = true; 
+
+                    if (scene.moveState) {
+                        scene.moveState.up = false;
+                        scene.moveState.down = false;
+                        scene.moveState.left = false;
+                        scene.moveState.right = false;
+                    }
                 }
             });
         }
@@ -82,41 +102,85 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- CÀI ĐẶT ĐỔI PHÍM BẤM (KEYBINDING) ---
     const keyBtns = document.querySelectorAll('.key-btn');
     let isWaitingForKey = false;
+    let currentWaitingBtn = null; // Theo dõi nút nào đang chờ
+    let cancelCurrentKeybind = null;
 
     keyBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            if (isWaitingForKey) return; // Nếu đang chờ phím khác thì bỏ qua
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Nếu bấm lại chính nút đang chờ thì Hủy lệnh chờ (Hủy chữ ẤN...)
+            if (isWaitingForKey && currentWaitingBtn === btn) {
+                if (cancelCurrentKeybind) cancelCurrentKeybind();
+                return;
+            }
+            
+            // Nếu đang chờ nút khác mà lại bấm sang nút này thì Hủy nút cũ trước
+            if (isWaitingForKey && cancelCurrentKeybind) {
+                cancelCurrentKeybind();
+            }
+            
             isWaitingForKey = true;
+            currentWaitingBtn = btn;
             
             const originalText = btn.textContent;
             btn.textContent = 'ẤN...';
             btn.classList.add('waiting');
+            btn.blur(); // Chống kẹt phím Space/Enter của trình duyệt
 
             const keydownHandler = (keyEvent) => {
-                keyEvent.preventDefault(); // Tránh bị cuộn trang
+                keyEvent.preventDefault(); 
                 let newKey = keyEvent.key === ' ' ? 'SPACE' : keyEvent.key.toUpperCase();
                 
                 // Cập nhật giao diện HTML
                 btn.textContent = newKey;
                 btn.classList.remove('waiting');
                 
-                // Ghi đè vào Cấu hình toàn cục để game.js nhận được
+                // [ĐÃ FIX]: Sau khi nhập xong thì khóa lại, tháo hoàn toàn sự kiện lắng nghe bàn phím
+                isWaitingForKey = false;
+                currentWaitingBtn = null;
+                document.removeEventListener('keydown', keydownHandler);
+                cancelCurrentKeybind = null; 
+
                 const type = btn.getAttribute('data-type');
                 const keyName = btn.getAttribute('data-key');
 
                 if (type === 'move') {
                     window.MOVE_CONFIG[keyName] = newKey;
                 } else if (type === 'skill') {
-                    window.SKILL_CONFIG[keyName].hotkey = newKey;
-                    // Gọi hàm cập nhật Text số hiển thị trên UI Kỹ năng trong game
-                    if (window.refreshSkillHotkeysUI) window.refreshSkillHotkeysUI();
-                }
+                    // Cập nhật cho Luyện tập
+                    if (window.SKILL_CONFIG && window.SKILL_CONFIG[keyName]) {
+                        window.SKILL_CONFIG[keyName].hotkey = newKey;
+                    }
 
-                isWaitingForKey = false;
-                document.removeEventListener('keydown', keydownHandler);
+                    // [FIX ĐỒNG BỘ VƯỢT ẢI]: Cập nhật thẳng vào biến được Import trực tiếp từ skills.js
+                    if (SKILL_CAMPAIGN_CONFIG && SKILL_CAMPAIGN_CONFIG[keyName]) {
+                        SKILL_CAMPAIGN_CONFIG[keyName].hotkey = newKey;
+                    }
+
+                    // Ép màn hình vẽ lại UI ngay lập tức
+                    try { 
+                        if (typeof window.refreshSkillHotkeysUI === 'function') window.refreshSkillHotkeysUI(); 
+                    } catch (error) {}
+                    
+                    try { 
+                        if (typeof window.refreshCampaignSkillHotkeysUI === 'function') window.refreshCampaignSkillHotkeysUI(); 
+                    } catch (error) {}
+                }
             };
 
+            // Lắng nghe phím gõ xuống
             document.addEventListener('keydown', keydownHandler);
+
+            // Hàm giải cứu (Khôi phục trạng thái nếu Hủy)
+            cancelCurrentKeybind = () => {
+                document.removeEventListener('keydown', keydownHandler);
+                btn.textContent = originalText;
+                btn.classList.remove('waiting');
+                isWaitingForKey = false;
+                currentWaitingBtn = null;
+            };
         });
     });
 
