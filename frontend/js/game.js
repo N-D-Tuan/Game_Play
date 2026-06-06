@@ -276,22 +276,36 @@ function updateHealthBarWidth(healthValue) {
 function createPauseMenu() {
     let pauseBg = this.add.graphics().fillStyle(0x000000, 0.7).fillRoundedRect(20, 20, 50, 50, 10).setDepth(4000);
     let pauseBtnIcon = this.add.text(25, 30, '⏸️', { fontSize: '30px' }).setInteractive({ useHandCursor: true }).setDepth(4001);
-    pauseBtnIcon.on('pointerdown', () => togglePause.call(this));
+    
+    pauseBtnIcon.on('pointerdown', (pointer, localX, localY, event) => {
+        event.stopPropagation();
+        togglePause.call(this);
+    });
 
     pauseOverlay = this.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, window.innerWidth, window.innerHeight).setDepth(5000);
     txtPause = this.add.text(window.innerWidth / 2, window.innerHeight / 2 - 150, 'TẠM DỪNG', { fontSize: '60px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(5001);
 
-    btnResume = this.add.text(window.innerWidth / 2, window.innerHeight / 2 - 30, '[ TIẾP TỤC ]', { fontSize: '32px', fill: '#00ff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true }).on('pointerdown', () => togglePause.call(this));
-    btnInventory = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 40, '[ KHO ĐỒ ]', { fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true }).on('pointerdown', () => alert("Kho đồ đang phát triển!"));
+    btnResume = this.add.text(window.innerWidth / 2, window.innerHeight / 2 - 30, '[ TIẾP TỤC ]', { fontSize: '32px', fill: '#00ff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
+    btnResume.on('pointerdown', (p, x, y, e) => { e.stopPropagation(); togglePause.call(this); });
+    
+    btnInventory = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 40, '[ KHO ĐỒ ]', { fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
+    btnInventory.on('pointerdown', (p, x, y, e) => { e.stopPropagation(); alert("Kho đồ đang phát triển!"); });
     
     btnSetting = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
-    btnSetting.on('pointerdown', () => {
+    btnSetting.on('pointerdown', (p, x, y, e) => {
+        e.stopPropagation();
         document.getElementById('settings-modal').style.display = 'flex'; 
         this.input.enabled = false;
     });
 
     btnHome = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 180, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
-    btnHome.on('pointerdown', () => {
+    btnHome.on('pointerdown', (p, x, y, e) => {
+        e.stopPropagation();
+        
+        // Ẩn và vô hiệu hóa Menu Pause ngay lập tức!
+        setPauseMenuVisible(false);
+        isPaused = false;
+
         this.physics.pause(); this.tweens.pauseAll(); if (spawnEvent) spawnEvent.paused = true;
         document.getElementById('home-screen').style.display = 'flex';
         setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10);
@@ -308,7 +322,22 @@ function togglePause() {
     else { this.physics.resume(); spawnEvent.paused = false; this.tweens.resumeAll(); setPauseMenuVisible(false); }
 }
 
-function setPauseMenuVisible(v) { pauseOverlay.setVisible(v); txtPause.setVisible(v); btnResume.setVisible(v); btnInventory.setVisible(v); btnSetting.setVisible(v); btnHome.setVisible(v); }
+function setPauseMenuVisible(v) { 
+    pauseOverlay.setVisible(v); 
+    
+    // Bật tắt quyền tương tác của màng đen để triệt tiêu mọi click ảo
+    if (v) {
+        pauseOverlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, window.innerWidth, window.innerHeight), Phaser.Geom.Rectangle.Contains);
+    } else {
+        pauseOverlay.disableInteractive();
+    }
+
+    txtPause.setVisible(v); 
+    btnResume.setVisible(v); 
+    btnInventory.setVisible(v); 
+    btnSetting.setVisible(v); 
+    btnHome.setVisible(v); 
+}
 
 // (CÁC HÀM SKILL CHỨC NĂNG GIỮ NGUYÊN)
 function shootBasicAttack() {
