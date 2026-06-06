@@ -35,6 +35,7 @@ export class CampaignScene extends Phaser.Scene {
         for (let i = 1; i <= 4; i++) this.load.image('decor_snow' + i, '../assets/decor_snow' + i + '.png');
 
         this.load.image('hp_frame', '../assets/hp_frame.png'); 
+        this.load.image('aa', '../assets/aa.png');
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
         this.load.audio('rain_bgm', '../assets/rain.mp3');
@@ -117,6 +118,11 @@ export class CampaignScene extends Phaser.Scene {
             if (this.isPaused || this.isGameOver) return;
             let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
 
+            if (key === window.MOVE_CONFIG.melee) {
+                this.shootBasicAttack();
+                return; 
+            }
+
             if (key === window.MOVE_CONFIG.up) this.moveState.up = true;
             if (key === window.MOVE_CONFIG.down) this.moveState.down = true;
             if (key === window.MOVE_CONFIG.left) this.moveState.left = true;
@@ -135,6 +141,9 @@ export class CampaignScene extends Phaser.Scene {
         this.playerHealth = 100;
         this.isGameOver = false;
         this.isPaused = false;
+
+        this.lastDirection = 'down'; // Hướng mặc định khi mới vào game
+        this.lastAATime = 0;         // Thời gian hồi chiêu đánh thường
         
         this.drawHealthBar();
         this.createPauseMenu();
@@ -152,6 +161,16 @@ export class CampaignScene extends Phaser.Scene {
             let mon = new Monster(this, mx, my, 'monster1');
             this.monsters.add(mon);
         }
+
+        this.basicAttacks = this.physics.add.group();
+
+        // Xử lý đạn trúng quái
+        this.physics.add.overlap(this.basicAttacks, this.monsters, (aa, monster) => {
+            if (aa.active && monster.active && !monster.isDead) {
+                aa.destroy();             // Xóa viên đạn
+                monster.takeDamage(10);   // Gây 10 sát thương cho quái
+            }
+        }, null, this);
     }
 
     chooseRandomWeather() {
@@ -560,21 +579,61 @@ export class CampaignScene extends Phaser.Scene {
 
         // 3. ĐIỀU KHIỂN HOẠT ẢNH (Ưu tiên nhìn ngang)
         if (dirX < 0) {
-            this.player.anims.play('walk-left', true); // Chạy hoạt ảnh sang trái
+            this.player.anims.play('walk-left', true); 
+            this.lastDirection = 'left';  // Lưu hướng trái
         } else if (dirX > 0) {
-            this.player.anims.play('walk-right', true); // Chạy hoạt ảnh sang phải
+            this.player.anims.play('walk-right', true); 
+            this.lastDirection = 'right'; // Lưu hướng phải
         } else if (dirY < 0) {
-            this.player.anims.play('walk-up', true); // Quay lưng đi lên
+            this.player.anims.play('walk-up', true); 
+            this.lastDirection = 'up';    // Lưu hướng lên
         } else if (dirY > 0) {
-            this.player.anims.play('walk-down', true); // Đối mặt đi xuống
+            this.player.anims.play('walk-down', true); 
+            this.lastDirection = 'down';  // Lưu hướng xuống
         } else {
-            // Khi dừng lại: Tắt hoạt ảnh và đứng im
             this.player.anims.stop();
         }
 
         // Gọi AI cho tất cả quái vật đang sống
         this.monsters.getChildren().forEach(mon => {
             mon.updateAI(this.player);
+        });
+    }
+
+    shootBasicAttack() {
+        // Cooldown đánh thường: 300ms đánh 1 lần
+        if (this.time.now - this.lastAATime < 300) return;
+        this.lastAATime = this.time.now;
+
+        let px = this.player.x;
+        let py = this.player.y;
+        let vx = 0, vy = 0;
+        let speed = 500; // Tốc độ bay của đạn
+
+        // Xác định vận tốc và tọa độ xuất phát dựa theo hướng mặt
+        if (this.lastDirection === 'left') { vx = -speed; px -= 30; }
+        else if (this.lastDirection === 'right') { vx = speed; px += 30; }
+        else if (this.lastDirection === 'up') { vy = -speed; py -= 30; }
+        else if (this.lastDirection === 'down') { vy = speed; py += 30; }
+
+        let aa = this.basicAttacks.create(px, py, 'aa');
+        
+        // Căn chỉnh kích thước ảnh đạn cho vừa phải
+        let scale = 40 / Math.max(aa.width, aa.height); 
+        aa.setScale(scale);
+
+        // Xoay đầu viên đạn theo đúng hướng bay
+        if (vx > 0) aa.setRotation(Math.PI / 2);         // Bắn phải
+        else if (vx < 0) aa.setRotation(-Math.PI / 2);   // Bắn trái
+        else if (vy > 0) aa.setRotation(Math.PI);        // Bắn xuống
+
+        aa.setVelocity(vx, vy);
+        aa.setDepth(this.player.y + 10);
+
+        // [GIỚI HẠN KHOẢNG CÁCH]: Viên đạn chỉ bay trong 0.45 giây rồi biến mất
+        // (Khoảng cách bay = Tốc độ 500 * 0.45s = 225 pixel)
+        this.time.delayedCall(600, () => {
+            if (aa && aa.active) aa.destroy();
         });
     }
 }
