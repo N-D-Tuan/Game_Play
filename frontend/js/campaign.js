@@ -170,6 +170,43 @@ export class CampaignScene extends Phaser.Scene {
         
         this.drawHealthBar();
         this.createSkillUI();
+
+        // ==========================================
+        // KHỞI TẠO RADAR
+        // ==========================================
+        // Set độ cao 14000 để nằm đè lên cây cối nhưng vẫn chìm dưới màn hình Pause (15000)
+        this.radarBg = this.add.graphics().setDepth(14000).setScrollFactor(0);
+        this.radarDots = this.add.graphics().setDepth(14001).setScrollFactor(0);
+
+        this.radarSize = 180; // Kích thước cạnh hình vuông của Radar
+        this.radarCx = this.cameras.main.width - this.radarSize / 2 - 30; // Cách mép phải 30px
+        this.radarCy = this.radarSize / 2 + 30; // Cách mép trên 30px
+
+        let startX = this.radarCx - this.radarSize / 2;
+        let startY = this.radarCy - this.radarSize / 2;
+
+        // 1. Vẽ nền Radar (Khối vuông màu xám đen)
+        this.radarBg.fillStyle(0x1a1a1a, 0.85);
+        this.radarBg.fillRect(startX, startY, this.radarSize, this.radarSize);
+
+        // 2. Vẽ viền Pixel dày (Chunky Borders)
+        // Lớp viền ngoài cùng (Đen)
+        this.radarBg.lineStyle(6, 0x000000, 1);
+        this.radarBg.strokeRect(startX - 3, startY - 3, this.radarSize + 6, this.radarSize + 6);
+        // Lớp viền trong (Xám kim loại)
+        this.radarBg.lineStyle(2, 0x888888, 1);
+        this.radarBg.strokeRect(startX - 3, startY - 3, this.radarSize + 6, this.radarSize + 6);
+
+        // 3. Vẽ lưới tọa độ mờ (Grid) phong cách Retro
+        this.radarBg.lineStyle(1, 0x00ff00, 0.1); // Lưới màu xanh lá siêu mờ
+        for(let i = 1; i < 10; i++) {
+            let offset = (this.radarSize / 10) * i;
+            // Kẻ dọc
+            this.radarBg.strokeLineShape(new Phaser.Geom.Line(startX + offset, startY, startX + offset, startY + this.radarSize));
+            // Kẻ ngang
+            this.radarBg.strokeLineShape(new Phaser.Geom.Line(startX, startY + offset, startX + this.radarSize, startY + offset));
+        }
+
         this.createPauseMenu();
 
         this.input.keyboard.on('keydown-ESC', () => this.togglePause());
@@ -647,6 +684,9 @@ export class CampaignScene extends Phaser.Scene {
                 }
             }
         }
+
+        // Cập nhật vị trí các chấm trên Radar mỗi khung hình
+        this.updateRadar();
     }
 
     // ==========================================
@@ -755,5 +795,45 @@ export class CampaignScene extends Phaser.Scene {
         this.time.delayedCall(600, () => {
             if (aa && aa.active) aa.destroy();
         });
+    }
+
+    // ==========================================
+    // HÀM VẼ CÁC CHẤM TRÊN RADAR
+    // ==========================================
+    updateRadar() {
+        if (!this.radarDots) return;
+        this.radarDots.clear(); 
+
+        // Tỷ lệ thu nhỏ: Map 4000x4000 sẽ lọt thỏm chuẩn xác vào radarSize (180x180)
+        let scale = this.radarSize / 4000; 
+        
+        // Tọa độ góc trên cùng bên trái của Radar trên màn hình
+        let radarTL_X = this.radarCx - this.radarSize / 2;
+        let radarTL_Y = this.radarCy - this.radarSize / 2;
+
+        // 1. Vẽ Quái vật (Pixel VUÔNG Đỏ)
+        this.radarDots.fillStyle(0xff0000, 1);
+        this.monsters.getChildren().forEach(mon => {
+            if (mon.active && !mon.isDead) {
+                // Ánh xạ tọa độ
+                let rx = radarTL_X + (mon.x * scale);
+                let ry = radarTL_Y + (mon.y * scale);
+                
+                // Vẽ 1 khối vuông 4x4 pixel làm chấm quái vật
+                this.radarDots.fillRect(rx - 2, ry - 2, 4, 4);
+            }
+        });
+
+        // 2. Vẽ Người chơi (Pixel VUÔNG Xanh lá, có viền đen)
+        let px = radarTL_X + (this.player.x * scale);
+        let py = radarTL_Y + (this.player.y * scale);
+        
+        // Lớp viền đen bên dưới (8x8 pixel)
+        this.radarDots.fillStyle(0x000000, 1);
+        this.radarDots.fillRect(px - 4, py - 4, 8, 8); 
+        
+        // Lõi màu xanh lá chói (6x6 pixel)
+        this.radarDots.fillStyle(0x00ff00, 1);
+        this.radarDots.fillRect(px - 3, py - 3, 6, 6);
     }
 }
