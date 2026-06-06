@@ -1,4 +1,5 @@
 import { SKILL_CAMPAIGN_CONFIG, evolveSkill } from './skills.js';
+import { Monster, createMonsterAnimations } from './monster.js';
 
 export class CampaignScene extends Phaser.Scene {
     constructor() {
@@ -25,6 +26,14 @@ export class CampaignScene extends Phaser.Scene {
         for (let i = 1; i <= 3; i++) this.load.image('grass' + i, '../assets/grass' + i + '.png');
         for (let i = 1; i <= 3; i++) this.load.image('rock' + i, '../assets/rock' + i + '.png');
 
+        // ==========================================
+        // TẢI CÁC VẬT TRANG TRÍ CỨNG
+        // ==========================================
+        for (let i = 1; i <= 4; i++) this.load.image('decor_normal' + i, '../assets/decor_normal' + i + '.png');
+        for (let i = 1; i <= 4; i++) this.load.image('decor_desert' + i, '../assets/decor_desert' + i + '.png');
+        for (let i = 1; i <= 4; i++) this.load.image('decor_rain' + i, '../assets/decor_rain' + i + '.png');
+        for (let i = 1; i <= 4; i++) this.load.image('decor_snow' + i, '../assets/decor_snow' + i + '.png');
+
         this.load.image('hp_frame', '../assets/hp_frame.png'); 
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
@@ -35,6 +44,13 @@ export class CampaignScene extends Phaser.Scene {
         this.load.spritesheet('player_anim', '../assets/player_spritesheet.png', { 
             frameWidth: 60,  
             frameHeight: 89  
+        });
+
+        this.load.spritesheet('monster1', '../assets/monster1_spritesheet.png', { 
+            frameWidth: 126,  // (130 - 4 pixel rác trái phải)
+            frameHeight: 37,  // (40 - 3 pixel rác trên dưới)
+            margin: 2,        // Nhích dao thụt vào 2 pixel ở lề ngoài cùng
+            spacing: 2        // Bỏ qua 2 pixel rác ở giữa các khung hình 
         });
     }
 
@@ -124,6 +140,18 @@ export class CampaignScene extends Phaser.Scene {
         this.createPauseMenu();
 
         this.input.keyboard.on('keydown-ESC', () => this.togglePause());
+
+        createMonsterAnimations(this);
+        this.monsters = this.physics.add.group();
+        
+        for (let i = 0; i < 6; i++) {
+            let mx = Phaser.Math.Between(100, 3900);
+            let my = Phaser.Math.Between(100, 3900);
+            
+            // Sử dụng Class Monster
+            let mon = new Monster(this, mx, my, 'monster1');
+            this.monsters.add(mon);
+        }
     }
 
     chooseRandomWeather() {
@@ -250,6 +278,34 @@ export class CampaignScene extends Phaser.Scene {
         spawnDeco(grassConfig); 
         spawnDeco(rockConfig);
         spawnDeco(treeConfig);
+
+        // ==========================================
+        // HỆ THỐNG VẬT CẢN (SOLID DECORATIONS)
+        // ==========================================
+        let solidKeys = [];
+        if (weather === 'normal') solidKeys = ['decor_normal1', 'decor_normal2', 'decor_normal3', 'decor_normal4'];
+        else if (weather === 'rain') solidKeys = ['decor_rain1', 'decor_rain2', 'decor_rain3', 'decor_rain4'];
+        else if (weather === 'snow') solidKeys = ['decor_snow1', 'decor_snow2', 'decor_snow3', 'decor_snow4'];
+        else if (weather === 'desert') solidKeys = ['decor_desert1', 'decor_desert2', 'decor_desert3', 'decor_desert4'];
+
+        // Tần suất xuất hiện ít đi
+        const numSolidDecos = 10; 
+
+        for (let i = 0; i < numSolidDecos; i++) {
+            let px = Phaser.Math.Between(100, 3900);
+            let py = Phaser.Math.Between(100, 3900);
+            let key = Phaser.Math.RND.pick(solidKeys);           
+            
+            // [ĐÃ CHỈNH SỬA]: Dùng this.add.image để tạo hình ảnh thuần túy (Không có Hitbox, có thể đi xuyên)
+            let deco = this.add.image(px, py, key);
+            
+            // Kích thước nhỏ lại (Thu nhỏ tỷ lệ xuống còn 40% đến 70% so với ảnh gốc)
+            let randScale = Phaser.Math.FloatBetween(0.4, 0.7); 
+            deco.setScale(randScale);
+            
+            // Căn chiều sâu (Z-index) để nhân vật đứng trước/sau vật thể một cách hợp lý
+            deco.setDepth(py); 
+        }
     }
 
     onStepTerrain(player, terrain) {
@@ -314,6 +370,82 @@ export class CampaignScene extends Phaser.Scene {
         this.healthBarFill.lineTo(BAR_X, BAR_Y + BAR_HEIGHT); 
         this.healthBarFill.closePath(); this.healthBarFill.fillPath();
         if(this.hpText) this.hpText.setText(Math.round(healthValue));
+    }
+
+    takeDamage(amount) {
+        if (this.isGameOver) return;
+        
+        this.playerHealth -= amount;
+        if (this.playerHealth < 0) this.playerHealth = 0;
+        
+        this.updateHealthBarWidth(this.playerHealth);
+        
+        // Hiệu ứng nhấp nháy đỏ khi bị đánh trúng
+        this.player.setTint(0xff0000);
+        this.time.delayedCall(200, () => this.player.clearTint());
+
+        // Hiện số máu bị trừ bay lên
+        let dmgText = this.add.text(this.player.x, this.player.y - 40, `-${amount}`, { fontSize: '24px', fill: '#ff0000', fontStyle: 'bold', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(8000);
+        this.tweens.add({ targets: dmgText, y: this.player.y - 80, alpha: 0, duration: 800, onComplete: () => dmgText.destroy() });
+
+        // ==========================================
+        // XỬ LÝ KHI NGƯỜI CHƠI TỬ TRẬN
+        // ==========================================
+        if (this.playerHealth <= 0) {
+            this.isGameOver = true;
+            this.player.anims.stop();
+            this.physics.pause(); // Dừng toàn bộ hệ thống vật lý (Quái vật đứng im)
+
+            // 1. Ẩn toàn bộ thanh máu của quái vật
+            if (this.monsters) {
+                this.monsters.getChildren().forEach(mon => {
+                    if (mon.hpBarBg) mon.hpBarBg.setVisible(false);
+                    if (mon.hpBarFill) mon.hpBarFill.setVisible(false);
+                });
+            }
+
+            // Lấy tâm màn hình camera
+            let cx = this.cameras.main.centerX;
+            let cy = this.cameras.main.centerY;
+
+            // 2. Tạo màn hình đen mờ che phủ
+            this.add.graphics().fillStyle(0x000000, 0.75)
+                .fillRect(0, 0, this.cameras.main.width, this.cameras.main.height)
+                .setScrollFactor(0).setDepth(29000);
+
+            // 3. Hiển thị chữ Game Over
+            this.add.text(cx, cy - 80, '💀 BẠN ĐÃ TỬ TRẬN 💀', { 
+                fontSize: '60px', fill: '#ff0000', fontStyle: 'bold' 
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
+
+            // 4. Nút [ CHƠI LẠI ]
+            let btnRestart = this.add.text(cx, cy + 30, '[ CHƠI LẠI ]', { 
+                fontSize: '32px', fill: '#00ff00', backgroundColor: '#333', padding: {x: 20, y: 10} 
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
+            
+            btnRestart.on('pointerdown', () => {
+                if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
+                this.scene.restart(); // Chơi lại map hiện tại
+            });
+
+            // 5. Nút [ TRANG CHỦ ]
+            let btnHomeGameOver = this.add.text(cx, cy + 110, '[ TRANG CHỦ ]', { 
+                fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} 
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
+            
+            btnHomeGameOver.on('pointerdown', () => {
+                if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
+                if (window.bgMusic) window.bgMusic.play();
+                
+                // Trở về HTML Trang chủ
+                document.getElementById('home-screen').style.display = 'flex';
+                setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10);
+                setTimeout(() => { 
+                    document.getElementById('game-container').style.display = 'none'; 
+                    this.scene.start('default'); 
+                }, 800);
+            });
+        }
     }
 
     createPauseMenu() {
@@ -439,5 +571,10 @@ export class CampaignScene extends Phaser.Scene {
             // Khi dừng lại: Tắt hoạt ảnh và đứng im
             this.player.anims.stop();
         }
+
+        // Gọi AI cho tất cả quái vật đang sống
+        this.monsters.getChildren().forEach(mon => {
+            mon.updateAI(this.player);
+        });
     }
 }
