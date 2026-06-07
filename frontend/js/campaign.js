@@ -1,4 +1,4 @@
-import { SKILL_CAMPAIGN_CONFIG, EVO_COLORS, evolveSkill, castMeteorEvo } from './skills.js';
+import { SKILL_CAMPAIGN_CONFIG, EVO_COLORS, evolveSkill, castBasicAttack, handleBasicAttackCollision, castMeteorEvo, castSwordsEvo, castLightningEvo, castShieldEvo, triggerShieldExplosion, castHealEvo, castEarthEvo, castArrowsEvo, castAnchorEvo, castDollEvo } from './skills.js';
 import { Monster, createMonsterAnimations } from './monster.js';
 
 export class CampaignScene extends Phaser.Scene {
@@ -41,8 +41,11 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('lightning1', '../assets/lightning1.png'); 
         this.load.image('shield', '../assets/shield.png'); 
         this.load.image('heal', '../assets/heal.png'); 
+        this.load.image('earth1', '../assets/earth1.png'); 
         this.load.image('earth2', '../assets/earth2.png'); 
+        this.load.image('earth3', '../assets/earth3.png'); 
         this.load.image('arrows', '../assets/arrows.png'); 
+        this.load.image('arrows_special', '../assets/arrows_special.png');
         this.load.image('anchor', '../assets/anchor.png'); 
         this.load.image('doll', '../assets/doll.png');
         this.load.audio('step_water', '../assets/step_water.mp3');
@@ -50,6 +53,7 @@ export class CampaignScene extends Phaser.Scene {
         this.load.audio('rain_bgm', '../assets/rain.mp3');
         this.load.audio('snow_bgm', '../assets/snow.mp3');
         this.load.audio('desert_bgm', '../assets/desert.mp3');
+        this.load.audio('thunder', '../assets/thunder.mp3');
         
         this.load.spritesheet('player_anim', '../assets/player_spritesheet.png', { 
             frameWidth: 60,  
@@ -145,6 +149,32 @@ export class CampaignScene extends Phaser.Scene {
             if (this.isPaused || this.isGameOver) return;
             let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
 
+            // ==========================================
+            // [DEBUG / HACK]: ÉP CẤP ĐỘ KỸ NĂNG ĐỂ TEST
+            // LƯU Ý: Xóa khối này khi làm logic nâng cấp thật!
+            // ==========================================
+            if (key === 'Q' || key === 'A' || key === 'Z') {
+                let targetLevel = (key === 'Q') ? 0 : ((key === 'A') ? 1 : 2);
+
+                // Ép cấp độ cho Đánh thường
+                this.player.aaLevel = targetLevel;
+                
+                for (let skKey in SKILL_CAMPAIGN_CONFIG) {
+                    let skill = SKILL_CAMPAIGN_CONFIG[skKey];
+                    skill.level = targetLevel; 
+                    
+                    // Cập nhật lại màu viền vòng tròn kỹ năng ngay lập tức
+                    if (skill.ui && skill.ui.glow) {
+                        skill.ui.glow.clear();
+                        skill.ui.glow.lineStyle(3, EVO_COLORS[targetLevel], 1);
+                        skill.ui.glow.strokeCircle(skill.posX, skill.startY, 29);
+                    }
+                }
+                console.log(`[TEST] Đã ép toàn bộ kỹ năng về Level ${targetLevel}`);
+                return; // Ngắt luôn, không xử lý các phím khác
+            }
+            // ==========================================
+
             if (key === window.MOVE_CONFIG.melee) {
                 this.shootBasicAttack();
                 return; 
@@ -237,12 +267,7 @@ export class CampaignScene extends Phaser.Scene {
         this.basicAttacks = this.physics.add.group();
 
         // Xử lý đạn trúng quái
-        this.physics.add.overlap(this.basicAttacks, this.monsters, (aa, monster) => {
-            if (aa.active && monster.active && !monster.isDead) {
-                aa.destroy();             // Xóa viên đạn
-                monster.takeDamage(10);   // Gây 10 sát thương cho quái
-            }
-        }, null, this);
+        this.physics.add.overlap(this.basicAttacks, this.monsters, handleBasicAttackCollision, null, this);
     }
 
     chooseRandomWeather() {
@@ -465,6 +490,37 @@ export class CampaignScene extends Phaser.Scene {
 
     takeDamage(amount) {
         if (this.isGameOver) return;
+
+        // ==========================================
+        // KIỂM TRA LÁ CHẮN CHẶN SÁT THƯƠNG
+        // ==========================================
+        if (this.player.shieldCount && this.player.shieldCount > 0) {
+            this.player.shieldCount--;
+
+            // Xóa đi 1 mảnh khiên đồ họa
+            if (this.player.shieldGroup && this.player.shieldGroup.list.length > 0) {
+                let sImg = this.player.shieldGroup.list[0];
+                
+                // Hiệu ứng khiên vỡ vụn
+                let breakFx = this.add.graphics().lineStyle(2, 0x00ffff, 1);
+                breakFx.strokeCircle(this.player.x + sImg.x, this.player.y + sImg.y, 20);
+                this.tweens.add({ targets: breakFx, scaleX: 2, scaleY: 2, alpha: 0, duration: 300, onComplete: () => breakFx.destroy() });
+                
+                sImg.destroy();
+            }
+
+            // Nếu đây là lớp khiên Cuối cùng bị vỡ
+            if (this.player.shieldCount === 0) {
+                this.player.shieldGroup.destroy();
+                this.player.shieldGroup = null;
+
+                // ĐẶC QUYỀN LEVEL 2: KHIÊN NỔ TUNG
+                if (this.player.shieldLevel === 2) {
+                    triggerShieldExplosion(this, this.player.x, this.player.y); // Gọi hàm nổ
+                }
+            }
+            return; // Lệnh return này giúp Pháp sư KHÔNG BỊ MẤT MÁU!
+        }
         
         this.playerHealth -= amount;
         if (this.playerHealth < 0) this.playerHealth = 0;
@@ -634,7 +690,7 @@ export class CampaignScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isPaused || this.isGameOver) return;
 
-        let speed = 200;
+        let speed = 200 * (this.player.speedMultiplier || 1);
 
         // 1. Xác định hướng bấm (-1, 0, hoặc 1)
         let dirX = 0, dirY = 0;
@@ -697,6 +753,18 @@ export class CampaignScene extends Phaser.Scene {
                     skill.ui.text.setText(Math.ceil(skill.currentCd / 1000));
                 }
             }
+        }
+
+        // Bắt khiên và Hào quang bám theo nhân vật
+        if (this.player.shieldGroup) {
+            this.player.shieldGroup.x = this.player.x;
+            this.player.shieldGroup.y = this.player.y;
+            this.player.shieldGroup.setDepth(this.player.y + 50);
+        }
+        if (this.player.buffAura) {
+            this.player.buffAura.x = this.player.x;
+            this.player.buffAura.y = this.player.y;
+            this.player.buffAura.setDepth(this.player.y - 10);
         }
 
         // Cập nhật vị trí các chấm trên Radar mỗi khung hình
@@ -775,6 +843,22 @@ export class CampaignScene extends Phaser.Scene {
 
         if (skillKey === 'meteor') {
             this.shootMeteor();
+        } else if (skillKey === 'swords') {
+            this.shootSwords();
+        } else if (skillKey === 'lightning') {
+            this.shootLightning();
+        } else if (skillKey === 'shield') {
+            castShieldEvo(this, this.player);
+        } else if (skillKey === 'heal') {
+            castHealEvo(this, this.player);
+        } else if (skillKey === 'earth') {
+            this.shootEarth();
+        } else if (skillKey === 'arrows') {
+            this.shootArrows();
+        } else if (skillKey === 'anchor') {
+            this.shootAnchor();
+        } else if (skillKey === 'doll') {
+            this.shootDoll();
         }
 
         // Bắt đầu chu trình xoay hồi chiêu
@@ -823,47 +907,73 @@ export class CampaignScene extends Phaser.Scene {
         this.radarDots.fillRect(px - 3, py - 3, 6, 6);
     }
 
+    // ==========================================
+    // Đánh thường (Basic Attack)
+    // ==========================================
     shootBasicAttack() {
-        // Cooldown đánh thường: 300ms đánh 1 lần
-        if (this.time.now - this.lastAATime < 300) return;
-        this.lastAATime = this.time.now;
-
-        let px = this.player.x;
-        let py = this.player.y;
-        let vx = 0, vy = 0;
-        let speed = 500; // Tốc độ bay của đạn
-
-        // Xác định vận tốc và tọa độ xuất phát dựa theo hướng mặt
-        if (this.lastDirection === 'left') { vx = -speed; px -= 30; }
-        else if (this.lastDirection === 'right') { vx = speed; px += 30; }
-        else if (this.lastDirection === 'up') { vy = -speed; py -= 30; }
-        else if (this.lastDirection === 'down') { vy = speed; py += 30; }
-
-        let aa = this.basicAttacks.create(px, py, 'aa');
-        
-        // Căn chỉnh kích thước ảnh đạn cho vừa phải
-        let scale = 40 / Math.max(aa.width, aa.height); 
-        aa.setScale(scale);
-
-        // Xoay đầu viên đạn theo đúng hướng bay
-        if (vx > 0) aa.setRotation(Math.PI / 2);         // Bắn phải
-        else if (vx < 0) aa.setRotation(-Math.PI / 2);   // Bắn trái
-        else if (vy > 0) aa.setRotation(Math.PI);        // Bắn xuống
-
-        aa.setVelocity(vx, vy);
-        aa.setDepth(this.player.y + 10);
-
-        // [GIỚI HẠN KHOẢNG CÁCH]: Viên đạn chỉ bay trong 0.45 giây rồi biến mất
-        // (Khoảng cách bay = Tốc độ 500 * 0.45s = 225 pixel)
-        this.time.delayedCall(600, () => {
-            if (aa && aa.active) aa.destroy();
-        });
+        castBasicAttack(this, this.player, this.lastDirection);
     }
 
     // ==========================================
-    // KỸ NĂNG: THIÊN THẠCH (METEOR)
+    // KỸ NĂNG 1: THIÊN THẠCH (METEOR)
     // ==========================================
     shootMeteor() {
         castMeteorEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 2: PHI KIẾM (SWORDS) - [MỚI THÊM]
+    // ==========================================
+    shootSwords() {
+        castSwordsEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 3: SẤM SÉT (LIGHTNING)
+    // ==========================================
+    shootLightning() {
+        castLightningEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 4: LÁ CHẮN (SHIELD)
+    // ==========================================
+    shootShield() {
+        castShieldEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 5: HỒI MÁU (HEAL)
+    // ==========================================
+    shootHeal() {
+        castHealEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 6: THỔ ĐỘN (EARTH)
+    // ==========================================
+    shootEarth() {
+        castEarthEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 7: VẠN TIỄN (ARROWS)
+    // ==========================================
+    shootArrows() {
+        castArrowsEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 8: TÀU CHIẾN (ANCHOR)
+    // ==========================================
+    shootAnchor() {
+        castAnchorEvo(this, this.player);
+    }
+
+    // ==========================================
+    // KỸ NĂNG 9: HÌNH NHÂN (DOLL)
+    // ==========================================
+    shootDoll() {
+        castDollEvo(this, this.player);
     }
 }

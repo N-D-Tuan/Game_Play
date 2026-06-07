@@ -42,10 +42,19 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
         this.maxHp = 100;
         this.damage = 5;
         this.speed = 100;
+
+        // Khởi tạo hệ số nhân tốc độ
+        this.speedMultiplier = 1; 
+
         this.lastAttackTime = 0;
         
         this.isAttacking = false;
         this.isDead = false;
+
+        // Biến quản lý trạng thái Tê Liệt
+        this.isParalyzed = false;
+        this.paralyzeEffect = null;
+        this.paralyzeTimer = null;
 
         // Tạo thanh máu nhỏ trên đầu
         this.hpBarBg = scene.add.graphics().setDepth(9000);
@@ -75,12 +84,29 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
         this.hpBarBg.x = barX; this.hpBarBg.y = barY;
         this.hpBarFill.x = barX; this.hpBarFill.y = barY;
 
+        // Nếu đang bị tê liệt, bắt hiệu ứng sét bám theo và KHÔNG LÀM GÌ CẢ
+        if (this.isParalyzed) {
+            if (this.paralyzeEffect) {
+                this.paralyzeEffect.x = this.x; this.paralyzeEffect.y = this.y;
+                this.paralyzeEffect.setDepth(this.y + 1);
+            }
+            return; 
+        }
+
         if (this.isAttacking) return; // Đang chém thì không chạy
 
+        // ==========================================
+        // ƯU TIÊN MỤC TIÊU LÀ HÌNH NHÂN NẾU CÓ
+        // ==========================================
+        let target = player; 
+        if (this.scene.activeDoll && this.scene.activeDoll.active) {
+            target = this.scene.activeDoll; 
+        }
+
         // Tính toán khoảng cách
-        let dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
-        let dx = player.x - this.x;
-        let dy = player.y - this.y;
+        let dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+        let dx = target.x - this.x;
+        let dy = target.y - this.y;
         
         // Phán đoán hướng quay mặt (Ưu tiên trục lớn hơn)
         let dir = 'down';
@@ -101,8 +127,12 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
                 
                 // Đợi 500ms cho rìu bổ xuống mới tính sát thương
                 this.scene.time.delayedCall(500, () => {
-                    if (!this.scene.isGameOver && !this.isDead && Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= 100) {
-                        this.scene.takeDamage(this.damage); // Gọi hàm trừ máu Player
+                    // [QUAN TRỌNG]: Chỉ trừ máu nếu mục tiêu chém là Người chơi
+                    // Nếu đang chém Hình nhân thì quái sẽ chỉ chém vào không khí (vì hình nhân vô địch)
+                    if (target === player) {
+                        if (!this.scene.isGameOver && !this.isDead && Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= 100) {
+                            this.scene.takeDamage(this.damage); 
+                        }
                     }
                 });
 
@@ -114,7 +144,8 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
             }
         } else {
             // XA -> CHẠY VỀ PHÍA PLAYER
-            this.scene.physics.moveToObject(this, player, this.speed);
+            let currentSpeed = this.speed * this.speedMultiplier;
+            this.scene.physics.moveToObject(this, target, currentSpeed);
             this.anims.play(`mon-move-${dir}`, true);
         }
         
@@ -140,11 +171,44 @@ export class Monster extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
+    applyParalysis(duration) {
+        if (this.isDead) return;
+        
+        this.isParalyzed = true;
+        this.anims.stop(); // Ngừng hoạt ảnh bước đi/chém
+        this.setVelocity(0, 0); // Khóa di chuyển
+
+        // Tạo hiệu ứng sét bao quanh người
+        if (!this.paralyzeEffect) {
+            this.paralyzeEffect = this.scene.add.sprite(this.x, this.y, 'lightning2');
+            this.paralyzeEffect.setScale(0.8);
+            this.paralyzeEffect.setBlendMode(Phaser.BlendModes.ADD);
+            
+            // Cho tia sét giật giật chớp nháy liên tục
+            this.scene.tweens.add({
+                targets: this.paralyzeEffect, alpha: 0.3, yoyo: true, repeat: -1, duration: 100
+            });
+        }
+
+        // Hủy bỏ tê liệt sau thời gian quy định (Nếu bị giật sét nhiều lần thì tính lại thời gian)
+        if (this.paralyzeTimer) this.paralyzeTimer.remove();
+        this.paralyzeTimer = this.scene.time.delayedCall(duration, () => {
+            this.isParalyzed = false;
+            if (this.paralyzeEffect) {
+                this.paralyzeEffect.destroy();
+                this.paralyzeEffect = null;
+            }
+        });
+    }
+
     die() {
         this.isDead = true;
         this.setVelocity(0, 0);
         this.hpBarBg.destroy();
         this.hpBarFill.destroy();
+
+        // Tắt sét khi quái chết
+        if (this.paralyzeEffect) this.paralyzeEffect.destroy();
 
         // Tự động phát hoạt ảnh chết theo đúng hướng nó đang quay mặt
         let currentAnim = this.anims.currentAnim ? this.anims.currentAnim.key : 'mon-move-down';
