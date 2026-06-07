@@ -569,12 +569,6 @@ export function castHealEvo(scene, player) {
         onComplete: () => heart.destroy()
     });
 
-    // Ánh sáng lục lóe lên ngay lập tức
-    let glow = scene.add.graphics().fillStyle(0x00ff00, 0.4).fillCircle(player.x, player.y, 40).setDepth(player.y - 1);
-    scene.tweens.add({
-        targets: glow, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: 500, onComplete: () => glow.destroy()
-    });
-
     // 3. ĐẶC QUYỀN LEVEL 2: BAN PHƯỚC (Tăng 50% tốc chạy trong 3 giây)
     if (level === 2) {
         player.speedMultiplier = 1.5;
@@ -1020,10 +1014,6 @@ export function castAnchorEvo(scene, player) {
         if (!isPlayerBuffed && Phaser.Math.Distance.Between(ship.x, ship.y, player.x, player.y) < 180) {
             isPlayerBuffed = true;
             player.speedMultiplier = pBuff;
-
-            // Hiệu ứng gió xanh dưới chân báo hiệu nhận Buff
-            let wind = scene.add.graphics().lineStyle(4, 0x00ffcc, 0.8).strokeCircle(player.x, player.y, 40);
-            scene.tweens.add({ targets: wind, scaleX: 1.5, scaleY: 1.5, alpha: 0, duration: 500, onComplete: () => wind.destroy() });
 
             // Hủy Buff sau 4 giây
             if (player.anchorBuffTimer) player.anchorBuffTimer.remove();
