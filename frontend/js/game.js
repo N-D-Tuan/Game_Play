@@ -22,7 +22,7 @@ window.MOVE_CONFIG = { up: 'ARROWUP', down: 'ARROWDOWN', left: 'ARROWLEFT', righ
 window.SKILL_CONFIG = {
     'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000,     currentCd: 0, ui: null, hotkey: '1' },
     'swords':   { name: "⚔️ PHI KIẾM",    icon: 'sword',      cd: 5000,     currentCd: 0, ui: null, hotkey: '2' },
-    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 7000,     currentCd: 0, ui: null, hotkey: '3' },
+    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 15000,     currentCd: 0, ui: null, hotkey: '3' },
     'shield':   { name: "🛡️ LÁ CHẮN",     icon: 'shield',     cd: 12000,    currentCd: 0, ui: null, hotkey: '4' },
     'heal':     { name: "💚 HỒI MÁU",     icon: 'heal',       cd: 15000,    currentCd: 0, ui: null, hotkey: '5' },
     'earth':    { name: "⛰️ THỔ ĐỘN",     icon: 'earth2',     cd: 10000,    currentCd: 0, ui: null, hotkey: '6' },
