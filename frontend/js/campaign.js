@@ -1,4 +1,4 @@
-import { SKILL_CAMPAIGN_CONFIG, evolveSkill } from './skills.js';
+import { SKILL_CAMPAIGN_CONFIG, EVO_COLORS, evolveSkill, castMeteorEvo } from './skills.js';
 import { Monster, createMonsterAnimations } from './monster.js';
 
 export class CampaignScene extends Phaser.Scene {
@@ -72,8 +72,19 @@ export class CampaignScene extends Phaser.Scene {
         // ĐƯA CẤU HÌNH VƯỢT ẢI LÊN WINDOW ĐỂ ĐỒNG BỘ TOÀN CỤC
         window.SKILL_CAMPAIGN_CONFIG = SKILL_CAMPAIGN_CONFIG;
 
+        // ==========================================
+        // Reset toàn bộ Chỉ số Kỹ năng khi ván mới bắt đầu
+        // ==========================================
         for(let key in SKILL_CAMPAIGN_CONFIG) { 
-            SKILL_CAMPAIGN_CONFIG[key].currentCd = 0; 
+            let skill = SKILL_CAMPAIGN_CONFIG[key];
+            
+            skill.currentCd = 0; // Đặt hồi chiêu về 0 để có thể cast ngay
+            skill.level = 0;     // KHÔI PHỤC LEVEL VỀ 0
+            
+            // KHÔI PHỤC THỜI GIAN HỒI CHIÊU GỐC (Tránh bị giảm vĩnh viễn sau nhiều lần chơi lại)
+            if (skill.baseCd) {
+                skill.cd = skill.baseCd; 
+            }
         }
 
         this.physics.world.setBounds(0, 0, 4000, 4000);
@@ -568,6 +579,9 @@ export class CampaignScene extends Phaser.Scene {
 
         this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0);
         this.btnHome.on('pointerdown', () => {
+            this.input.enabled = false;
+            this.setPauseMenuVisible(false);
+
             this.physics.resume();
             this.tweens.resumeAll();
             
@@ -724,7 +738,12 @@ export class CampaignScene extends Phaser.Scene {
 
             // Vòng viền phát sáng (Level 0 - Màu Xanh Lục/Cyan)
             let glow = this.add.graphics().setDepth(10004).setScrollFactor(0);
-            glow.lineStyle(3, 0x00ffff, 1);
+            
+            // Lấy level của kỹ năng (nếu undefined thì mặc định là 0)
+            let currentLevel = skill.level || 0; 
+            
+            // Gắn màu từ mảng EVO_COLORS tương ứng với currentLevel
+            glow.lineStyle(3, EVO_COLORS[currentLevel], 1); 
             glow.strokeCircle(posX, startY, 29);
 
             // Phím tắt
@@ -754,47 +773,14 @@ export class CampaignScene extends Phaser.Scene {
         // Tạm thời log ra console để test. Các hàm bắn chiêu cụ thể ta sẽ ghép vào sau
         console.log(`Đã thi triển kỹ năng: ${skill.name} (Level ${skill.level})`);
 
+        if (skillKey === 'meteor') {
+            this.shootMeteor();
+        }
+
         // Bắt đầu chu trình xoay hồi chiêu
         skill.currentCd = skill.cd;
         skill.ui.glow.setVisible(false);
         skill.ui.text.setVisible(true);
-    }
-
-    shootBasicAttack() {
-        // Cooldown đánh thường: 300ms đánh 1 lần
-        if (this.time.now - this.lastAATime < 300) return;
-        this.lastAATime = this.time.now;
-
-        let px = this.player.x;
-        let py = this.player.y;
-        let vx = 0, vy = 0;
-        let speed = 500; // Tốc độ bay của đạn
-
-        // Xác định vận tốc và tọa độ xuất phát dựa theo hướng mặt
-        if (this.lastDirection === 'left') { vx = -speed; px -= 30; }
-        else if (this.lastDirection === 'right') { vx = speed; px += 30; }
-        else if (this.lastDirection === 'up') { vy = -speed; py -= 30; }
-        else if (this.lastDirection === 'down') { vy = speed; py += 30; }
-
-        let aa = this.basicAttacks.create(px, py, 'aa');
-        
-        // Căn chỉnh kích thước ảnh đạn cho vừa phải
-        let scale = 40 / Math.max(aa.width, aa.height); 
-        aa.setScale(scale);
-
-        // Xoay đầu viên đạn theo đúng hướng bay
-        if (vx > 0) aa.setRotation(Math.PI / 2);         // Bắn phải
-        else if (vx < 0) aa.setRotation(-Math.PI / 2);   // Bắn trái
-        else if (vy > 0) aa.setRotation(Math.PI);        // Bắn xuống
-
-        aa.setVelocity(vx, vy);
-        aa.setDepth(this.player.y + 10);
-
-        // [GIỚI HẠN KHOẢNG CÁCH]: Viên đạn chỉ bay trong 0.45 giây rồi biến mất
-        // (Khoảng cách bay = Tốc độ 500 * 0.45s = 225 pixel)
-        this.time.delayedCall(600, () => {
-            if (aa && aa.active) aa.destroy();
-        });
     }
 
     // ==========================================
@@ -835,5 +821,49 @@ export class CampaignScene extends Phaser.Scene {
         // Lõi màu xanh lá chói (6x6 pixel)
         this.radarDots.fillStyle(0x00ff00, 1);
         this.radarDots.fillRect(px - 3, py - 3, 6, 6);
+    }
+
+    shootBasicAttack() {
+        // Cooldown đánh thường: 300ms đánh 1 lần
+        if (this.time.now - this.lastAATime < 300) return;
+        this.lastAATime = this.time.now;
+
+        let px = this.player.x;
+        let py = this.player.y;
+        let vx = 0, vy = 0;
+        let speed = 500; // Tốc độ bay của đạn
+
+        // Xác định vận tốc và tọa độ xuất phát dựa theo hướng mặt
+        if (this.lastDirection === 'left') { vx = -speed; px -= 30; }
+        else if (this.lastDirection === 'right') { vx = speed; px += 30; }
+        else if (this.lastDirection === 'up') { vy = -speed; py -= 30; }
+        else if (this.lastDirection === 'down') { vy = speed; py += 30; }
+
+        let aa = this.basicAttacks.create(px, py, 'aa');
+        
+        // Căn chỉnh kích thước ảnh đạn cho vừa phải
+        let scale = 40 / Math.max(aa.width, aa.height); 
+        aa.setScale(scale);
+
+        // Xoay đầu viên đạn theo đúng hướng bay
+        if (vx > 0) aa.setRotation(Math.PI / 2);         // Bắn phải
+        else if (vx < 0) aa.setRotation(-Math.PI / 2);   // Bắn trái
+        else if (vy > 0) aa.setRotation(Math.PI);        // Bắn xuống
+
+        aa.setVelocity(vx, vy);
+        aa.setDepth(this.player.y + 10);
+
+        // [GIỚI HẠN KHOẢNG CÁCH]: Viên đạn chỉ bay trong 0.45 giây rồi biến mất
+        // (Khoảng cách bay = Tốc độ 500 * 0.45s = 225 pixel)
+        this.time.delayedCall(600, () => {
+            if (aa && aa.active) aa.destroy();
+        });
+    }
+
+    // ==========================================
+    // KỸ NĂNG: THIÊN THẠCH (METEOR)
+    // ==========================================
+    shootMeteor() {
+        castMeteorEvo(this, this.player);
     }
 }
