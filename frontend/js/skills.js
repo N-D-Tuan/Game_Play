@@ -4,15 +4,15 @@
 
 // Cấu hình Kỹ năng cho chế độ Vượt ải
 export const SKILL_CAMPAIGN_CONFIG = {
-    'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000,  baseCd: 3000,     currentCd: 0, level: 0, ui: null, hotkey: '1' },
-    'swords':   { name: "⚔️ PHI KIẾM",    icon: 'sword',      cd: 5000,  baseCd: 5000,     currentCd: 0, level: 0, ui: null, hotkey: '2' },
-    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 15000,  baseCd: 15000,     currentCd: 0, level: 0, ui: null, hotkey: '3' },
-    'shield':   { name: "🛡️ LÁ CHẮN",     icon: 'shield',     cd: 12000, baseCd: 12000,    currentCd: 0, level: 0, ui: null, hotkey: '4' },
-    'heal':     { name: "💚 HỒI MÁU",     icon: 'heal',       cd: 15000, baseCd: 15000,    currentCd: 0, level: 0, ui: null, hotkey: '5' },
-    'earth':    { name: "⛰️ THỔ ĐỘN",     icon: 'earth2',     cd: 10000, baseCd: 10000,    currentCd: 0, level: 0, ui: null, hotkey: '6' },
-    'arrows':   { name: "🏹 VẠN TIỄN",    icon: 'arrows',     cd: 8000,  baseCd: 8000,     currentCd: 0, level: 0, ui: null, hotkey: '7' },
-    'anchor':   { name: "⚓ TÀU CHIẾN",   icon: 'anchor',     cd: 15000, baseCd: 15000,    currentCd: 0, level: 0, ui: null, hotkey: '8' },
-    'doll':     { name: "🎎 HÌNH NHÂN",   icon: 'doll',       cd: 20000, baseCd: 20000,    currentCd: 0, level: 0, ui: null, hotkey: '9' },
+    'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000,   baseCd: 3000,     currentCd: 0, level: 0, ui: null, hotkey: '1' },
+    'swords':   { name: "⚔️ PHI KIẾM",    icon: 'sword',      cd: 5000,   baseCd: 5000,     currentCd: 0, level: 0, ui: null, hotkey: '2' },
+    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 15000,  baseCd: 15000,    currentCd: 0, level: 0, ui: null, hotkey: '3' },
+    'shield':   { name: "🛡️ LÁ CHẮN",     icon: 'shield',     cd: 12000,  baseCd: 12000,    currentCd: 0, level: 0, ui: null, hotkey: '4' },
+    'heal':     { name: "💚 HỒI MÁU",     icon: 'heal',       cd: 15000,  baseCd: 15000,    currentCd: 0, level: 0, ui: null, hotkey: '5' },
+    'earth':    { name: "⛰️ THỔ ĐỘN",     icon: 'earth2',     cd: 10000,  baseCd: 10000,    currentCd: 0, level: 0, ui: null, hotkey: '6' },
+    'arrows':   { name: "🏹 VẠN TIỄN",    icon: 'arrows',     cd: 8000,   baseCd: 8000,     currentCd: 0, level: 0, ui: null, hotkey: '7' },
+    'anchor':   { name: "⚓ TÀU CHIẾN",   icon: 'anchor',     cd: 15000,  baseCd: 15000,    currentCd: 0, level: 0, ui: null, hotkey: '8' },
+    'doll':     { name: "🎎 HÌNH NHÂN",   icon: 'doll',       cd: 20000,  baseCd: 20000,    currentCd: 0, level: 0, ui: null, hotkey: '9' },
 };
 
 // Định nghĩa màu sắc viền theo cấp độ Tiến hóa
@@ -107,30 +107,46 @@ export function castMeteorEvo(scene, player) {
     let explosionRadius = 120 + (level * 40);
     let blastScale = 5 + (level * 2); // Vòng lửa nổ to hơn theo level
 
-    // 2. TÌM MỤC TIÊU
+    // ==========================================
+    // Auto Aim
+    // ==========================================
+    // // 2. TÌM MỤC TIÊU
+    // let targetX = player.x;
+    // let targetY = player.y;
+    // let minDist = Infinity;
+    // let foundTarget = false;
+    
+    // // Lưu ý: Đã đổi 'this.monsters' thành 'scene.monsters'
+    // scene.monsters.getChildren().forEach(mon => {
+    //     if (mon.active && !mon.isDead) {
+    //         let dist = Phaser.Math.Distance.Between(player.x, player.y, mon.x, mon.y);
+    //         if (dist < minDist && dist < 450) {
+    //             minDist = dist; targetX = mon.x; targetY = mon.y;
+    //             foundTarget = true;
+    //         }
+    //     }
+    // });
+    // // Nếu không có quái, ném ra trước mặt
+    // if (!foundTarget) {
+    //     if (scene.lastDirection === 'left') targetX -= 150;
+    //     else if (scene.lastDirection === 'right') targetX += 150;
+    //     else if (scene.lastDirection === 'up') targetY -= 150;
+    //     else if (scene.lastDirection === 'down') targetY += 150;
+    // }
+
+    // 2. XÁC ĐỊNH MỤC TIÊU CỐ ĐỊNH PHÍA TRƯỚC (BỎ AUTO-AIM ĐỂ TĂNG ĐỘ KHÓ)
     let targetX = player.x;
     let targetY = player.y;
-    let minDist = Infinity;
-    let foundTarget = false;
     
-    // Lưu ý: Đã đổi 'this.monsters' thành 'scene.monsters'
-    scene.monsters.getChildren().forEach(mon => {
-        if (mon.active && !mon.isDead) {
-            let dist = Phaser.Math.Distance.Between(player.x, player.y, mon.x, mon.y);
-            if (dist < minDist && dist < 450) {
-                minDist = dist; targetX = mon.x; targetY = mon.y;
-                foundTarget = true;
-            }
-        }
-    });
+    // Bạn có thể tùy chỉnh khoảng cách ném xa hay gần ở biến này
+    let castDistance = 250; 
 
-    // Nếu không có quái, ném ra trước mặt
-    if (!foundTarget) {
-        if (scene.lastDirection === 'left') targetX -= 150;
-        else if (scene.lastDirection === 'right') targetX += 150;
-        else if (scene.lastDirection === 'up') targetY -= 150;
-        else if (scene.lastDirection === 'down') targetY += 150;
-    }
+    // Luôn ném thẳng ra trước mặt theo hướng nhân vật đang nhìn
+    let dir = scene.lastDirection || 'down';
+    if (dir === 'left') targetX -= castDistance;
+    else if (dir === 'right') targetX += castDistance;
+    else if (dir === 'up') targetY -= castDistance;
+    else if (dir === 'down') targetY += castDistance;
 
     // 3. THẢ THIÊN THẠCH CHÍNH
     dropMeteor(scene, targetX, targetY, baseDamage, explosionRadius, blastScale, 0.4);
