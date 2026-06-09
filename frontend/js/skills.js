@@ -46,6 +46,9 @@ export function castBasicAttack(scene, player, direction) {
     if (scene.time.now - scene.lastAATime < 300) return;
     scene.lastAATime = scene.time.now;
 
+    // 1. LẤY CẤP ĐỘ ĐÁNH THƯỜNG
+    let level = player.aaLevel || 0;
+
     let px = player.x;
     let py = player.y;
     let vx = 0, vy = 0;
@@ -57,11 +60,18 @@ export function castBasicAttack(scene, player, direction) {
     else if (direction === 'up') { vy = -speed; py -= 30; }
     else if (direction === 'down') { vy = speed; py += 30; }
 
-    let aa = scene.basicAttacks.create(px, py, 'aa');
+    // 2. THAY ĐỔI HÌNH ẢNH THEO LEVEL ('aa0', 'aa1', 'aa2')
+    let aaImageKey = 'aa' + level;
+    let aa = scene.basicAttacks.create(px, py, aaImageKey);
     
-    // Căn chỉnh kích thước ảnh đạn cho vừa phải
-    let scale = 40 / Math.max(aa.width, aa.height); 
-    aa.setScale(scale);
+    // ==========================================
+    // CHỈNH SCALE RIÊNG CHO TỪNG LEVEL
+    // ==========================================
+    // Mảng chứa Scale tương ứng: [Level 0, Level 1, Level 2]
+    let attackScales = [0.1, 0.1, 0.15]; 
+    let currentScale = attackScales[level];
+    
+    aa.setScale(currentScale);
 
     // Xoay đầu viên đạn theo đúng hướng bay
     if (vx > 0) aa.setRotation(Math.PI / 2);         // Bắn phải
@@ -71,8 +81,12 @@ export function castBasicAttack(scene, player, direction) {
     aa.setVelocity(vx, vy);
     aa.setDepth(player.y + 10);
 
-    // [GIỚI HẠN KHOẢNG CÁCH]: Viên đạn chỉ bay trong 0.6 giây rồi biến mất
-    scene.time.delayedCall(600, () => {
+    // 3. THAY ĐỔI KHOẢNG CÁCH (THỜI GIAN BAY) THEO LEVEL
+    let flightDurations = [600, 700, 800];
+    let currentDuration = flightDurations[level];
+
+    // [GIỚI HẠN KHOẢNG CÁCH]: Viên đạn bay theo thời gian tương ứng rồi biến mất
+    scene.time.delayedCall(currentDuration, () => {
         if (aa && aa.active) aa.destroy();
     });
 }
@@ -497,14 +511,8 @@ export function castShieldEvo(scene, player) {
         let angle = (i * Math.PI * 2) / count;
         let sx = Math.cos(angle) * 45; // Khoảng cách từ khiên đến người
         let sy = Math.sin(angle) * 45;
-        
-        // 1. Vẽ thêm một vòng tròn viền đậm (Outline) bên dưới ảnh khiên
-        let outline = scene.add.graphics();
-        outline.lineStyle(4, 0x000000, 1); // Viền đen dày 4px
-        outline.strokeCircle(sx, sy, 18);  // Vẽ vòng tròn bán kính 18
-        player.shieldGroup.add(outline);
 
-        // 2. Ảnh khiên được tăng độ tương phản (Tint)
+        // Ảnh khiên được tăng độ tương phản (Tint)
         let sImg = scene.add.image(sx, sy, 'shield').setScale(0.1);
         sImg.setTint(0xffffff); // Giữ màu gốc, tăng độ sáng
         sImg.setAlpha(1);       // Đảm bảo không bị mờ
@@ -568,7 +576,9 @@ export function castHealEvo(scene, player) {
 
     // 1. Phục hồi sinh lực
     scene.playerHealth += healAmt;
-    if (scene.playerHealth > 100) scene.playerHealth = 100;
+    if (scene.playerHealth > scene.maxHealth) {
+        scene.playerHealth = scene.maxHealth;
+    }
     scene.updateHealthBarWidth(scene.playerHealth);
 
     // 2. Hiệu ứng: Chỉ 1 trái tim bay thẳng lên từ đỉnh đầu nhân vật
@@ -1014,7 +1024,7 @@ export function castAnchorEvo(scene, player) {
     let py = player.y; // Trùng tọa độ Y với người chơi lúc thi triển
 
     let ship = scene.add.image(startX, py, 'anchor');
-    ship.setScale(0.7); // Phóng to hình ảnh để ra dáng con tàu
+    ship.setScale(1.3); // Phóng to hình ảnh để ra dáng con tàu
     ship.setAlpha(0.65); // Làm trong suốt như bóng ma
     ship.setTint(0x00ffcc); // Phủ lớp màu xanh lam ma quái
     ship.setDepth(py + 50); // Nằm đè lên các vật thể khác

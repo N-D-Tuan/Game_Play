@@ -62,7 +62,7 @@ function preload() {
     this.load.audio('bgm', '../assets/bg_music.mp3'); 
     this.load.image('player', '../assets/player.png'); 
     this.load.image('monster', '../assets/monster.png'); 
-    this.load.image('aa', '../assets/aa.png');
+    this.load.image('aa', '../assets/aa1.png');
     this.load.image('fireball', '../assets/fireball.png'); 
     this.load.image('sword', '../assets/sword.png'); 
     this.load.image('lightning1', '../assets/lightning1.png'); 

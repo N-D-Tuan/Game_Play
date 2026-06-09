@@ -1,5 +1,7 @@
 import { SKILL_CAMPAIGN_CONFIG, EVO_COLORS, evolveSkill, castBasicAttack, handleBasicAttackCollision, castMeteorEvo, castSwordsEvo, castLightningEvo, castShieldEvo, triggerShieldExplosion, castHealEvo, castEarthEvo, castArrowsEvo, castAnchorEvo, castDollEvo } from './skills.js';
-import { Monster, createMonsterAnimations } from './monster.js';
+import { Monster1, createMonster1Animations } from './monster1.js';
+import { Monster2, createMonster2Animations } from './monster2.js';
+import { Monster3, createMonster3Animations } from './monster3.js';
 
 export class CampaignScene extends Phaser.Scene {
     constructor() {
@@ -35,7 +37,9 @@ export class CampaignScene extends Phaser.Scene {
         for (let i = 1; i <= 4; i++) this.load.image('decor_snow' + i, '../assets/decor_snow' + i + '.png');
 
         this.load.image('hp_frame', '../assets/hp_frame.png'); 
-        this.load.image('aa', '../assets/aa.png');
+        this.load.image('aa0', '../assets/aa0.png');
+        this.load.image('aa1', '../assets/aa1.png');
+        this.load.image('aa2', '../assets/aa2.png');
         this.load.image('fireball', '../assets/fireball.png'); 
         this.load.image('sword', '../assets/sword.png'); 
         this.load.image('lightning1', '../assets/lightning1.png'); 
@@ -48,6 +52,7 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('arrows_special', '../assets/arrows_special.png');
         this.load.image('anchor', '../assets/anchor.png'); 
         this.load.image('doll', '../assets/doll.png');
+        this.load.image('dragon_breath', '../assets/dragon_breath.png');
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
         this.load.audio('rain_bgm', '../assets/rain.mp3');
@@ -65,6 +70,16 @@ export class CampaignScene extends Phaser.Scene {
             frameHeight: 37,  // (40 - 3 pixel rác trên dưới)
             margin: 2,        // Nhích dao thụt vào 2 pixel ở lề ngoài cùng
             spacing: 2        // Bỏ qua 2 pixel rác ở giữa các khung hình 
+        });
+
+        this.load.spritesheet('monster2', '../assets/monster2_spritesheet.png', { 
+            frameWidth: 100, // Chiều rộng
+            frameHeight: 70  // Chiều cao
+        });
+
+        this.load.spritesheet('monster3', '../assets/monster3_spritesheet.png', { 
+            frameWidth: 96, 
+            frameHeight: 96  
         });
     }
 
@@ -158,7 +173,10 @@ export class CampaignScene extends Phaser.Scene {
 
                 // Ép cấp độ cho Đánh thường
                 this.player.aaLevel = targetLevel;
-                
+                this.maxHealth = hpLevels[targetLevel]; // Cập nhật giới hạn máu mới
+                this.playerHealth = this.maxHealth;     // Hồi đầy máu cho nhân vật
+                this.updateHealthBarWidth(this.playerHealth); // Gọi hàm vẽ lại thanh đỏ và Text
+
                 for (let skKey in SKILL_CAMPAIGN_CONFIG) {
                     let skill = SKILL_CAMPAIGN_CONFIG[skKey];
                     skill.level = targetLevel; 
@@ -202,7 +220,16 @@ export class CampaignScene extends Phaser.Scene {
             if (key === window.MOVE_CONFIG.right) this.moveState.right = false;
         });
 
-        this.playerHealth = 100;
+        // ==========================================
+        // Thiết lập Máu Tối Đa theo Cấp độ (Level 0: 100, Level 1: 150, Level 2: 300)
+        // ==========================================
+        let hpLevels = [100, 150, 300];
+        // Lấy level đánh thường của nhân vật làm hệ quy chiếu, nếu chưa có thì mặc định là 0
+        let currentLevel = this.player.aaLevel || 0; 
+        
+        this.maxHealth = hpLevels[currentLevel];
+        this.playerHealth = this.maxHealth; // Đổ đầy máu lúc mới vào game
+
         this.isGameOver = false;
         this.isPaused = false;
 
@@ -252,16 +279,38 @@ export class CampaignScene extends Phaser.Scene {
 
         this.input.keyboard.on('keydown-ESC', () => this.togglePause());
 
-        createMonsterAnimations(this);
+        createMonster1Animations(this);
+        createMonster2Animations(this);
+        createMonster3Animations(this);
+
         this.monsters = this.physics.add.group();
-        
+
+        // Thêm quái vật loại 1
         for (let i = 0; i < 6; i++) {
             let mx = Phaser.Math.Between(100, 3900);
             let my = Phaser.Math.Between(100, 3900);
             
             // Sử dụng Class Monster
-            let mon = new Monster(this, mx, my, 'monster1');
-            this.monsters.add(mon);
+            let mon1 = new Monster1(this, mx, my, 'monster1');
+            this.monsters.add(mon1);
+        }
+        
+        // Thêm quái vật loại 2
+        for (let i = 0; i < 4; i++) {
+            let mx = Phaser.Math.Between(100, 3900);
+            let my = Phaser.Math.Between(100, 3900);
+
+            let mon2 = new Monster2(this, mx, my);
+            this.monsters.add(mon2);
+        }
+
+        // Thêm quái vật loại 3
+        for (let i = 0; i < 3; i++) {
+            let mx = Phaser.Math.Between(100, 3900);
+            let my = Phaser.Math.Between(100, 3900);
+
+            let mon3 = new Monster3(this, mx, my);
+            this.monsters.add(mon3);
         }
 
         this.basicAttacks = this.physics.add.group();
@@ -466,7 +515,8 @@ export class CampaignScene extends Phaser.Scene {
         this.healthBarBg.closePath(); this.healthBarBg.fillPath();
 
         this.healthBarFill = this.add.graphics().setDepth(10001).setScrollFactor(0);
-        this.hpText = this.add.text(HP_TEXT_X, HP_TEXT_Y, this.playerHealth + ' / 100', { 
+
+        this.hpText = this.add.text(HP_TEXT_X, HP_TEXT_Y, this.playerHealth, { 
             fontSize: '26px', fill: '#ff3333', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3
         }).setOrigin(0.5).setDepth(10003).setScrollFactor(0);
         
@@ -476,15 +526,22 @@ export class CampaignScene extends Phaser.Scene {
     updateHealthBarWidth(healthValue) {
         const BAR_X = 219, BAR_Y = 63, BAR_WIDTH = 307, BAR_HEIGHT = 55, SLANT = 39; 
         this.healthBarFill.clear();
-        if (healthValue <= 0) { if(this.hpText) this.hpText.setText('0'); return; }
+
+        if (healthValue <= 0) {
+            if(this.hpText) this.hpText.setText('0');
+            return; 
+        }       
         this.healthBarFill.fillStyle(0xff0000, 1); 
-        let currentWidth = (healthValue / 100) * BAR_WIDTH; 
+
+        let currentWidth = (healthValue / this.maxHealth) * BAR_WIDTH; 
+
         this.healthBarFill.beginPath();
         this.healthBarFill.moveTo(BAR_X + SLANT, BAR_Y); 
         this.healthBarFill.lineTo(Math.max(BAR_X + SLANT, BAR_X + currentWidth), BAR_Y); 
         this.healthBarFill.lineTo(BAR_X + currentWidth, BAR_Y + BAR_HEIGHT); 
         this.healthBarFill.lineTo(BAR_X, BAR_Y + BAR_HEIGHT); 
         this.healthBarFill.closePath(); this.healthBarFill.fillPath();
+
         if(this.hpText) this.hpText.setText(Math.round(healthValue));
     }
 
