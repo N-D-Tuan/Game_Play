@@ -57,13 +57,13 @@ export class Boss extends BaseMonster {
         let cx = this.scene.cameras.main.width / 2;
         let cy = this.scene.cameras.main.height; // Lấy tọa độ đáy màn hình
 
-        this.bossUiBg = this.scene.add.graphics().setScrollFactor(0).setDepth(20000).setVisible(false);
-        this.bossUiFill = this.scene.add.graphics().setScrollFactor(0).setDepth(20001).setVisible(false);
+        this.bossUiBg = this.scene.add.graphics().setScrollFactor(0).setDepth(10000).setVisible(false);
+        this.bossUiFill = this.scene.add.graphics().setScrollFactor(0).setDepth(10001).setVisible(false);
         
         // Dời tên Boss xuống góc dưới (nằm ngay trên thanh máu Boss)
         this.bossNameText = this.scene.add.text(cx, cy - 170, '💀 KẺ THÁCH THỨC VĨ ĐẠI 💀', { 
             fontSize: '22px', fill: '#ff3333', fontStyle: 'bold', stroke: '#000', strokeThickness: 5 
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(20002).setVisible(false);
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(10002).setVisible(false);
         
         this.updateBossUI();
     }
