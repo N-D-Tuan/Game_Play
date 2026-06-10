@@ -131,6 +131,8 @@ export class CampaignScene extends Phaser.Scene {
         this.lastStepTime = 0; 
         
         this.moveState = { up: false, down: false, left: false, right: false };
+        this.clickDestination = null;
+        this.clickMarker = null;
 
         this.input.keyboard.on('keydown', (event) => {
             if (this.isPaused || this.isGameOver) return;
@@ -164,6 +166,22 @@ export class CampaignScene extends Phaser.Scene {
             if (key === window.MOVE_CONFIG.left) this.moveState.left = false;
             if (key === window.MOVE_CONFIG.right) this.moveState.right = false;
         });
+
+        this.input.on('pointerdown', (pointer) => {
+            if (this.isPaused || this.isGameOver) return;
+            if (!pointer.rightButtonDown()) return;
+
+            this.moveState.up = false;
+            this.moveState.down = false;
+            this.moveState.left = false;
+            this.moveState.right = false;
+
+            this.clickDestination = { x: pointer.worldX, y: pointer.worldY };
+            this.createClickMarker(this.clickDestination.x, this.clickDestination.y);
+        });
+
+        // Ngăn context menu khi click chuột phải
+        document.getElementById('game-container')?.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // ==========================================
         // CẬP NHẬT MÁU THEO TIẾN TRÌNH
@@ -328,6 +346,50 @@ export class CampaignScene extends Phaser.Scene {
         }
     }
 
+    createClickMarker(x, y) {
+        if (this.clickMarker) {
+            this.clickMarker.destroy();
+        }
+
+        this.clickMarker = this.add.graphics({ x, y });
+        this.clickMarker.lineStyle(2, 0x00ffff, 1);
+        this.clickMarker.strokeCircle(0, 0, 18);
+        this.clickMarker.setDepth(y - 1);
+
+        let pulse = this.add.graphics({ x, y });
+        pulse.lineStyle(2, 0x00ffff, 0.7);
+        pulse.strokeCircle(0, 0, 18);
+        pulse.setDepth(y - 1);
+        this.tweens.add({
+            targets: pulse,
+            scale: 1.6,
+            alpha: 0,
+            duration: 600,
+            ease: 'Cubic.easeOut',
+            onComplete: () => pulse.destroy()
+        });
+    }
+
+    updateClickMovement() {
+        if (!this.clickDestination) return null;
+
+        let dx = this.clickDestination.x - this.player.x;
+        let dy = this.clickDestination.y - this.player.y;
+        let distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.clickDestination.x, this.clickDestination.y);
+        if (distance < 16) {
+            this.player.setVelocity(0, 0);
+            if (this.clickMarker) {
+                this.clickMarker.destroy();
+                this.clickMarker = null;
+            }
+            this.clickDestination = null;
+            return null;
+        }
+
+        let currentDir = this.player.moveToPoint(this.clickDestination.x, this.clickDestination.y);
+        return currentDir;
+    }
+
     onBossIntroComplete(bossInstance) {
         this.setUiVisibility(true); // Bật lại UI
         
@@ -335,6 +397,15 @@ export class CampaignScene extends Phaser.Scene {
         bossInstance.bossUiBg.setVisible(true);
         bossInstance.bossUiFill.setVisible(true);
         bossInstance.bossNameText.setVisible(true);
+
+        // Mở lại input
+        this.input.keyboard.enabled = true;
+        this.input.enabled = true;
+        if (this.clickMarker) {
+            this.clickMarker.destroy();
+            this.clickMarker = null;
+        }
+        this.clickDestination = null;
 
         // Trả Camera lại cho Player
         this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
@@ -548,7 +619,25 @@ export class CampaignScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isPaused || this.isGameOver) return;
 
-        let newDir = this.player.updateMovement(this.moveState);
+        let newDir = null;
+        const isKeyboardMoving = this.moveState.up || this.moveState.down || this.moveState.left || this.moveState.right;
+
+        if (isKeyboardMoving) {
+            newDir = this.player.updateMovement(this.moveState);
+            if (this.clickDestination) {
+                this.clickDestination = null;
+                if (this.clickMarker) {
+                    this.clickMarker.destroy();
+                    this.clickMarker = null;
+                }
+            }
+        } else if (this.clickDestination) {
+            newDir = this.updateClickMovement();
+        } else {
+            this.player.setVelocity(0, 0);
+            this.player.anims.stop();
+        }
+
         if (newDir) this.lastDirection = newDir;
 
         // KIỂM TRA QUÁI CHẾT ĐỂ HOÀN THÀNH ẢI
@@ -561,7 +650,13 @@ export class CampaignScene extends Phaser.Scene {
             // ==========================================
             if (this.currentStage === 3) {
                 this.input.keyboard.enabled = false; // Khóa không cho bấm phím mới
+                this.input.enabled = false; // Khóa click chuột
                 this.moveState = { up: false, down: false, left: false, right: false }; // Xóa bộ nhớ các phím đang giữ
+                if (this.clickMarker) {
+                    this.clickMarker.destroy();
+                    this.clickMarker = null;
+                }
+                this.clickDestination = null;
             }
 
             this.time.delayedCall(1000, () => {
