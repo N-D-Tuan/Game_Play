@@ -299,7 +299,7 @@ export function castSwordsEvo(scene, player) {
                                 sword.destroy();
 
                                 // ==========================================
-                                // [MỚI]: TẠO VẾT CHÉM TRÊN MẶT ĐẤT
+                                // TẠO VẾT CHÉM TRÊN MẶT ĐẤT
                                 // ==========================================
                                 let slash = scene.add.graphics();
                                 slash.lineStyle(3, 0x222222, 0.5); // Nét chém màu đen xám, hơi mờ (50%)
@@ -523,7 +523,7 @@ export function triggerShieldExplosion(scene, x, y) {
 
     // Hiệu ứng nổ sóng năng lượng màu Cyan
     let blast = scene.add.graphics();
-    blast.setPosition(x, y); // [MỚI]: Dùng setPosition để tâm nổ chính xác
+    blast.setPosition(x, y); // Dùng setPosition để tâm nổ chính xác
     blast.lineStyle(6, 0x00ffff, 1);
     blast.strokeCircle(0, 0, 60);
     blast.setDepth(y + 100);
