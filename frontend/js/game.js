@@ -129,7 +129,7 @@ function create() {
         bg.setDisplaySize(window.innerWidth, window.innerHeight);
     });
 
-    // [MỚI]: Lắng nghe nhấn phím
+    // Lắng nghe nhấn phím
     this.input.keyboard.on('keydown', (event) => {
         if (isGameOver || isDoll || isPaused) return;
         let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
@@ -154,7 +154,7 @@ function create() {
         if (key === window.MOVE_CONFIG.right) moveState.right = true;
     });
 
-    // [MỚI]: Lắng nghe nhả phím (Dừng di chuyển)
+    // Lắng nghe nhả phím (Dừng di chuyển)
     this.input.keyboard.on('keyup', (event) => {
         let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
         if (key === window.MOVE_CONFIG.up) moveState.up = false;
@@ -200,7 +200,7 @@ function createSkillUI() {
         glow.strokeCircle(posX, startY, 29);
         glow.setDepth(1504);
 
-        // [MỚI]: Text hiển thị Phím Bấm nằm sát phía trên vòng tròn
+        // Text hiển thị Phím Bấm nằm sát phía trên vòng tròn
         let hotkeyText = this.add.text(posX, startY - 45, skill.hotkey, { 
             fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
         }).setOrigin(0.5).setDepth(1505);

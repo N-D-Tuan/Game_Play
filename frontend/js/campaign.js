@@ -209,6 +209,14 @@ export class CampaignScene extends Phaser.Scene {
             this.radarBg.strokeLineShape(new Phaser.Geom.Line(startX, startY + offset, startX + this.radarSize, startY + offset));
         }
 
+        // Radar icon Boss
+        this.bossRadarIcon = this.add.image(this.radarCx, this.radarCy, 'icon_boss')
+            .setScrollFactor(0)
+            .setOrigin(0.5)
+            .setDepth(14002)
+            .setVisible(false);
+        this.bossRadarIcon.setScale(100 / Math.max(this.bossRadarIcon.width, this.bossRadarIcon.height));
+
         this.createPauseMenu();
         this.input.keyboard.on('keydown-ESC', () => this.togglePause());
 
@@ -389,6 +397,7 @@ export class CampaignScene extends Phaser.Scene {
         if (chest.chestState === 'closed') {
             chest.chestState = 'opened';
             chest.setFrame(0); // Chuyển sang ảnh mở nắp
+            chest.setX(chest.x - 15);
 
             // Rơi ra 5 vật phẩm
             let dropImage = this.currentStage === 1 ? 'aa1' : 'aa2';
@@ -436,6 +445,7 @@ export class CampaignScene extends Phaser.Scene {
         if (this.collectedTreasures === 5 && this.stageChest && this.stageChest.chestState === 'opened') {
             this.stageChest.chestState = 'empty';
             this.stageChest.setFrame(2); // Đổi thành rương rỗng
+            this.stageChest.setX(this.stageChest.x + 25);
             
             this.processLevelUp();
 
@@ -788,12 +798,15 @@ export class CampaignScene extends Phaser.Scene {
         let rY = this.radarCy - 90;
         
         // 1. Vẽ Quái vật (Pixel VUÔNG Đỏ)
+        if (this.bossRadarIcon) this.bossRadarIcon.setVisible(false);
         this.radarDots.fillStyle(0xff0000, 1);
         this.monsters.getChildren().forEach(m => { 
             if (m.active && !m.isDead) {
-                // Nếu là Boss -> Vẽ Icon to
-                if (m instanceof Boss && m.state !== 'SPAWNING') {
-                    // Thay vì fillRect, ta có thể dùng hình ảnh icon (Nếu chưa có thì vẽ vuông to)
+                if (m instanceof Boss && this.bossRadarIcon) {
+                    this.bossRadarIcon.setPosition(rX + (m.x * sc), rY + (m.y * sc));
+                    this.bossRadarIcon.setVisible(true);
+                } else if (m instanceof Boss) {
+                    // Fallback nếu icon chưa sẵn sàng
                     this.radarDots.fillStyle(0x8a2be2, 1); // Tím Boss
                     this.radarDots.fillRect(rX + (m.x * sc) - 6, rY + (m.y * sc) - 6, 12, 12);
                 } else {
@@ -811,7 +824,7 @@ export class CampaignScene extends Phaser.Scene {
         }
 
         // ==========================================
-        // 3. [MỚI]: VẼ CỔNG QUA MÀN (Pixel VUÔNG Xanh Biển)
+        // 3. VẼ CỔNG QUA MÀN (Pixel VUÔNG Xanh Biển)
         // ==========================================
         this.radarDots.fillStyle(0x00aaff, 1);
         if (this.gateGroup) {
