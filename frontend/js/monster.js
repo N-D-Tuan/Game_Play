@@ -8,6 +8,7 @@ export class BaseMonster extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        this.setOrigin(0.5, 0.5);
         this.setScale(3);
         this.setCollideWorldBounds(true);
         

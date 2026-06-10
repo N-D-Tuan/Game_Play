@@ -3,19 +3,33 @@ import { BaseMonster } from './monster.js';
 
 export function createBossAnimations(scene) {
     // Sử dụng generateFrameNames cho file JSON (Atlas)
-    scene.anims.create({ key: 'boss-intro', frames: scene.anims.generateFrameNames('boss', { prefix: 'intro_', suffix: '.png', start: 1, end: 14, zeroPad: 2 }), frameRate: 8, repeat: 0 });
-    scene.anims.create({ key: 'boss-idle', frames: scene.anims.generateFrameNames('boss', { prefix: 'idle_', suffix: '.png', start: 1, end: 3, zeroPad: 2 }), frameRate: 6, repeat: -1 });
-    scene.anims.create({ key: 'boss-walk', frames: scene.anims.generateFrameNames('boss', { prefix: 'walk_', suffix: '.png', start: 1, end: 4, zeroPad: 2 }), frameRate: 8, repeat: -1 });
-    scene.anims.create({ key: 'boss-dead', frames: scene.anims.generateFrameNames('boss', { prefix: 'dead_', suffix: '.png', start: 1, end: 3, zeroPad: 2 }), frameRate: 5, repeat: 0 });
+    if (!scene.anims.exists('campaign-boss-intro')) {
+        scene.anims.create({ key: 'campaign-boss-intro', frames: scene.anims.generateFrameNames('boss', { prefix: 'intro_', suffix: '.png', start: 1, end: 14, zeroPad: 2 }), frameRate: 8, repeat: 0 });
+    }
+    if (!scene.anims.exists('campaign-boss-idle')) {
+        scene.anims.create({ key: 'campaign-boss-idle', frames: scene.anims.generateFrameNames('boss', { prefix: 'idle_', suffix: '.png', start: 1, end: 3, zeroPad: 2 }), frameRate: 6, repeat: 0 });
+    }
+    if (!scene.anims.exists('campaign-boss-walk')) {
+        scene.anims.create({ key: 'campaign-boss-walk', frames: scene.anims.generateFrameNames('boss', { prefix: 'walk_', suffix: '.png', start: 1, end: 4, zeroPad: 2 }), frameRate: 8, repeat: -1 });
+    }
+    if (!scene.anims.exists('campaign-boss-dead')) {
+        scene.anims.create({ key: 'campaign-boss-dead', frames: scene.anims.generateFrameNames('boss', { prefix: 'dead_', suffix: '.png', start: 1, end: 3, zeroPad: 2 }), frameRate: 5, repeat: 0 });
+    }
 }
 
 export class Boss extends BaseMonster {
     constructor(scene, x, y) {
-        // Tạm thời chưa truyền texture vì Boss bị ẩn lúc đầu
-        super(scene, x, y, null); 
-        this.setTexture('boss', 'intro_01.png');
+        super(scene, x, y, 'boss', 'intro_01.png');
         this.setVisible(false); // Ẩn Boss chờ Thiên thạch rơi
+        this.setOrigin(0.5, 0.5);
         this.setScale(2.5);
+        this.setFrame('intro_01.png');
+
+        this.currentBossAnimKey = null;
+        this.bossIntroFrames = Array.from({ length: 14 }, (_, i) => `intro_${String(i + 1).padStart(2, '0')}.png`);
+        this.bossIdleFrames = ['idle_01.png', 'idle_02.png', 'idle_03.png'];
+        this.bossWalkFrames = ['walk_01.png', 'walk_02.png', 'walk_03.png', 'walk_04.png'];
+        this.bossDeadFrames = ['dead_01.png', 'dead_02.png', 'dead_03.png'];
 
         this.body.setSize(40, 60);
         this.body.setOffset(20, 10);
@@ -30,7 +44,7 @@ export class Boss extends BaseMonster {
         this.hasHealed = false;
 
         // Vòng tròn Aggro (Khu vực đánh thức Boss)
-        this.aggroRadius = 300;
+        this.aggroRadius = 500;
         this.aggroZone = scene.add.graphics().setDepth(1);
         this.drawAggroZone();
 
@@ -51,6 +65,38 @@ export class Boss extends BaseMonster {
         this.aggroZone.strokeCircle(this.x, this.y, this.aggroRadius);
         this.aggroZone.fillStyle(0xff0000, 0.1); // Màu đỏ mờ vùng đất
         this.aggroZone.fillCircle(this.x, this.y, this.aggroRadius);
+    }
+
+    stopBossAnimation() {
+        if (this.anims) {
+            this.anims.stop();
+        }
+        this.currentBossAnimKey = null;
+    }
+
+    playBossAnimation(key, onComplete = null) {
+        if (this.currentBossAnimKey === key) return;
+        this.stopBossAnimation();
+        this.currentBossAnimKey = key;
+
+        if (!this.scene.anims.exists(key)) {
+            const frameGroup = key.replace('campaign-boss-', '');
+            const frameName = `${frameGroup}_01.png`;
+            this.setFrame(frameName);
+            if (onComplete && frameGroup === 'dead') {
+                this.scene.time.delayedCall(500, onComplete);
+            }
+            return;
+        }
+
+        this.anims.play(key, true);
+
+        if (onComplete) {
+            this.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+                this.currentBossAnimKey = null;
+                onComplete();
+            });
+        }
     }
 
     createBossUI() {
@@ -121,11 +167,10 @@ export class Boss extends BaseMonster {
         this.setVisible(true);
         this.scene.cameras.main.startFollow(this, true, 0.05, 0.05); // Cam theo dõi Boss
         
-        this.anims.play('boss-intro', true);
-        
-        this.once('animationcomplete-boss-intro', () => {
-            this.anims.play('boss-idle', true);
-            
+        this.anims.stop();
+        this.playBossAnimation('campaign-boss-intro', () => {
+            this.playBossAnimation('campaign-boss-idle');
+
             // Hiện câu thoại Chat
             let chatBg = this.scene.add.graphics().fillStyle(0x000000, 0.7).fillRoundedRect(this.x - 150, this.y - 120, 300, 40, 10).setDepth(this.y + 200);
             let chatText = this.scene.add.text(this.x, this.y - 100, 'Hãy đến đây đi, kẻ thách thức!', { fontSize: '16px', fill: '#fff' }).setOrigin(0.5).setDepth(this.y + 201);
@@ -142,6 +187,9 @@ export class Boss extends BaseMonster {
     // LOGIC ĐƯỢC GỌI MỖI KHUNG HÌNH (THAY THẾ AI CŨ)
     // ==========================================
     updateAI(player) {
+        if (this.y != null) {
+            this.setDepth(this.y);
+        }
         if (this.isDead || this.state === 'SPAWNING' || this.state === 'INTRO') return;
 
         // ==========================================
@@ -217,10 +265,10 @@ export class Boss extends BaseMonster {
         if (this.state === 'CHASING') {
             if (dist > 100) {
                 this.scene.physics.moveToObject(this, target, this.speed);
-                this.anims.play('boss-walk', true);
+                this.playBossAnimation('campaign-boss-walk');
             } else {
                 this.setVelocity(0, 0);
-                this.anims.play('boss-idle', true); // Tạm thời đứng im
+                this.playBossAnimation('campaign-boss-idle'); // Tạm thời đứng im
             }
         }
         
@@ -231,15 +279,30 @@ export class Boss extends BaseMonster {
         this.state = 'HEALING';
         this.hasHealed = true;
         this.setVelocity(0, 0);
+        this.stopBossAnimation();
         
         // Chuyển sang frame heal_01, sau 100ms chuyển sang heal_02 và GIỮ NGUYÊN
-        this.setTexture('boss', 'heal_01.png');
+        this.setFrame('heal_01.png');
         this.scene.time.delayedCall(100, () => {
-            this.setTexture('boss', 'heal_02.png');
+            this.setFrame('heal_02.png');
             
             // Tạo luồng sáng xanh bao quanh
-            let healAura = this.scene.add.graphics().lineStyle(4, 0x00ff00, 1).strokeCircle(this.x, this.y, 80).setDepth(this.y - 1);
-            let pulseTween = this.scene.tweens.add({ targets: healAura, scaleX: 1.2, scaleY: 1.2, alpha: 0.2, yoyo: true, repeat: -1, duration: 400 });
+            let healAura = this.scene.add.graphics({ x: this.x, y: this.y, depth: this.y - 1 });
+            healAura.lineStyle(4, 0x00ff00, 1);
+            healAura.strokeCircle(0, 0, 80);
+
+            let pulseTween = this.scene.tweens.add({
+                targets: healAura,
+                scaleX: 1.2,
+                scaleY: 1.2,
+                alpha: 0.2,
+                yoyo: true,
+                repeat: -1,
+                duration: 400,
+                onUpdate: () => {
+                    healAura.setPosition(this.x, this.y);
+                }
+            });
 
             // Rặn hồi máu trong 3 giây
             this.scene.time.delayedCall(3000, () => {
@@ -250,7 +313,7 @@ export class Boss extends BaseMonster {
                 // Kết thúc: chuyển sang heal_03 rồi trở lại Chasing
                 healAura.destroy();
                 pulseTween.remove();
-                this.setTexture('boss', 'heal_03.png');
+                this.setFrame('heal_03.png');
                 
                 this.scene.time.delayedCall(200, () => {
                     this.state = 'CHASING';
@@ -292,10 +355,8 @@ export class Boss extends BaseMonster {
         this.bossNameText.destroy();
         if (this.aggroZone) this.aggroZone.destroy();
 
-        this.anims.play('boss-dead', true);
-        
-        // Đợi chết xong (dead_03) rồi mới end game
-        this.once('animationcomplete-boss-dead', () => {
+        this.stopBossAnimation();
+        this.playBossAnimation('campaign-boss-dead', () => {
             this.scene.time.delayedCall(1500, () => {
                 this.scene.showVictoryScreen();
             });

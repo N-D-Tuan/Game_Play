@@ -28,9 +28,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.shieldCount = 0;       // Số lớp khiên hiện có
         this.shieldLevel = 0;       // Cấp độ của khiên
         this.shieldGroup = null;    // Hình ảnh khiên xoay quanh
-        
+
         this.buffAura = null;       // Hào quang dưới chân (từ chiêu Heal)
         this.buffTimer = null;      // Bộ đếm thời gian tắt Hào quang
+        this.anchorBuffAura = null; // Hiệu ứng vòng tròn khi speed buff từ Anchor
+        this.anchorBuffTimer = null; // Bộ đếm thời gian buff Anchor
     }
 
     // ==========================================
@@ -75,6 +77,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.buffAura.x = this.x;
             this.buffAura.y = this.y;
             this.buffAura.setDepth(this.y - 10);
+        }
+        if (this.anchorBuffAura) {
+            this.anchorBuffAura.x = this.x;
+            this.anchorBuffAura.y = this.y;
+            this.anchorBuffAura.setDepth(this.y - 15);
         }
 
         return currentDir; // Trả về hướng để scene lưu lại (phục vụ cho việc bắn đạn)

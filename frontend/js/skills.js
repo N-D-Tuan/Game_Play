@@ -292,16 +292,6 @@ export function castSwordsEvo(scene, player) {
                     duration: Phaser.Math.Between(200, 350), 
                     ease: 'Cubic.easeIn',
                     onComplete: () => {
-                        // Tia chớp nhỏ khi kiếm chạm đất
-                        let impact = scene.add.graphics();
-                        impact.lineStyle(2, 0xffffff, 1);
-                        impact.strokeCircle(dropX, dropY, 10);
-                        impact.setDepth(dropY);
-                        
-                        scene.tweens.add({
-                            targets: impact, scaleX: 2, scaleY: 2, alpha: 0, duration: 200, onComplete: () => impact.destroy()
-                        });
-
                         // Kiếm găm trên đất một lúc rồi từ từ tan biến
                         scene.tweens.add({
                             targets: sword, alpha: 0, delay: 500, duration: 400, 
@@ -1041,10 +1031,34 @@ export function castAnchorEvo(scene, player) {
             isPlayerBuffed = true;
             player.speedMultiplier = pBuff;
 
+            // Hiệu ứng vòng tròn xanh biển quanh người khi buff tốc
+            if (player.anchorBuffAura) {
+                player.anchorBuffAura.destroy();
+            }
+            player.anchorBuffAura = scene.add.graphics();
+            player.anchorBuffAura.lineStyle(3, 0x00ffff, 0.9);
+            player.anchorBuffAura.strokeCircle(0, 0, 42);
+            player.anchorBuffAura.setPosition(player.x, player.y);
+            player.anchorBuffAura.setDepth(player.y - 15);
+
+            scene.tweens.add({
+                targets: player.anchorBuffAura,
+                scaleX: 1.2,
+                scaleY: 1.2,
+                alpha: 0.25,
+                yoyo: true,
+                repeat: -1,
+                duration: 400
+            });
+
             // Hủy Buff sau 4 giây
             if (player.anchorBuffTimer) player.anchorBuffTimer.remove();
             player.anchorBuffTimer = scene.time.delayedCall(4000, () => {
                 player.speedMultiplier = 1;
+                if (player.anchorBuffAura) {
+                    player.anchorBuffAura.destroy();
+                    player.anchorBuffAura = null;
+                }
             });
         }
 

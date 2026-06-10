@@ -331,6 +331,43 @@ export class CampaignScene extends Phaser.Scene {
         this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
     }
 
+    resetPlayerCombatState() {
+        if (!this.player) return;
+
+        // Xóa khiên của người chơi
+        if (this.player.shieldGroup) {
+            this.tweens.killTweensOf(this.player.shieldGroup);
+            this.player.shieldGroup.destroy();
+            this.player.shieldGroup = null;
+        }
+        this.player.shieldCount = 0;
+        this.player.shieldLevel = 0;
+
+        // Xóa hiệu ứng buff tốc độ / hào quang
+        if (this.player.buffTimer) {
+            this.player.buffTimer.remove();
+            this.player.buffTimer = null;
+        }
+        if (this.player.anchorBuffTimer) {
+            this.player.anchorBuffTimer.remove();
+            this.player.anchorBuffTimer = null;
+        }
+        if (this.player.buffAura) {
+            this.tweens.killTweensOf(this.player.buffAura);
+            this.player.buffAura.destroy();
+            this.player.buffAura = null;
+        }
+        if (this.player.anchorBuffAura) {
+            this.tweens.killTweensOf(this.player.anchorBuffAura);
+            this.player.anchorBuffAura.destroy();
+            this.player.anchorBuffAura = null;
+        }
+        this.player.speedMultiplier = 1;
+
+        // Xóa tint tạm nếu còn còn dính
+        this.player.clearTint();
+    }
+
     // ==========================================
     // LOGIC RƯƠNG BÁU & CỔNG & VẬT PHẨM
     // ==========================================
@@ -541,6 +578,7 @@ export class CampaignScene extends Phaser.Scene {
                     let bossX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * 800, 300, 3700);
                     let bossY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * 800, 300, 3700);
                     
+                    this.resetPlayerCombatState();
                     this.setUiVisibility(false); // Tắt sạch UI chuẩn bị xem phim
                     
                     this.bossEntity = new Boss(this, bossX, bossY);
