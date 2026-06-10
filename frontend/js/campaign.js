@@ -308,6 +308,7 @@ export class CampaignScene extends Phaser.Scene {
         if (this.hpText) this.hpText.setVisible(isVisible);
         if (this.radarBg) this.radarBg.setVisible(isVisible);
         if (this.radarDots) this.radarDots.setVisible(isVisible);
+        if (this.bossRadarIcon) this.bossRadarIcon.setVisible(isVisible && this.bossEntity);
         if (this.stageTextUI) this.stageTextUI.setVisible(isVisible);
 
         // Ẩn/Hiện cả cái bảng nền đen
@@ -798,13 +799,15 @@ export class CampaignScene extends Phaser.Scene {
         let rY = this.radarCy - 90;
         
         // 1. Vẽ Quái vật (Pixel VUÔNG Đỏ)
-        if (this.bossRadarIcon) this.bossRadarIcon.setVisible(false);
+        // Chỉ hiện icon boss khi radar hiển thị
+        if (this.bossRadarIcon && this.radarBg.visible) this.bossRadarIcon.setVisible(false);
         this.radarDots.fillStyle(0xff0000, 1);
         this.monsters.getChildren().forEach(m => { 
             if (m.active && !m.isDead) {
                 if (m instanceof Boss && this.bossRadarIcon) {
                     this.bossRadarIcon.setPosition(rX + (m.x * sc), rY + (m.y * sc));
-                    this.bossRadarIcon.setVisible(true);
+                    
+                    if (this.radarBg && this.radarBg.visible) this.bossRadarIcon.setVisible(true);
                 } else if (m instanceof Boss) {
                     // Fallback nếu icon chưa sẵn sàng
                     this.radarDots.fillStyle(0x8a2be2, 1); // Tím Boss

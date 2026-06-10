@@ -133,8 +133,8 @@ export class Monster3 extends BaseMonster {
         // 1. Tạo vết cháy đen trên mặt đất (Tồn tại 5s)
         let scorch = this.scene.add.graphics();
         scorch.fillStyle(0x1a1a1a, 0.85); // Màu đen nhám
-        scorch.fillEllipse(ex, ey, 90, 45); // Hình elip bẹp bẹp dưới đất
-        scorch.setDepth(ey - 10); // Nằm dưới chân nhân vật
+        scorch.fillEllipse(ex, ey, 120, 70); // Hình elip bẹp bẹp dưới đất
+        scorch.setDepth(-1); // Luôn nằm dưới rồng và các nhân vật
 
         // Vết cháy mờ dần sau 5 giây (5000ms)
         this.scene.tweens.add({
@@ -142,8 +142,8 @@ export class Monster3 extends BaseMonster {
             onComplete: () => scorch.destroy()
         });
 
-        // 2. Gây sát thương (Hitbox rộng hình tròn bán kính 60px)
-        if (Phaser.Math.Distance.Between(ex, ey, player.x, player.y) <= 60) {
+        // 2. Gây sát thương (Hitbox rộng hình tròn bán kính 100px)
+        if (Phaser.Math.Distance.Between(ex, ey, player.x, player.y) <= 100) {
             this.scene.takeDamage(this.damage);
         }
     }
