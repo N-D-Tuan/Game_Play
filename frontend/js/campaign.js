@@ -508,6 +508,14 @@ export class CampaignScene extends Phaser.Scene {
         if (aliveMonsters.length === 0 && !this.stageCleared) {
             this.stageCleared = true;
 
+            // ==========================================
+            // KHÓA CHÂN NHÂN VẬT NGAY LẬP TỨC TẠI ẢI 3
+            // ==========================================
+            if (this.currentStage === 3) {
+                this.input.keyboard.enabled = false; // Khóa không cho bấm phím mới
+                this.moveState = { up: false, down: false, left: false, right: false }; // Xóa bộ nhớ các phím đang giữ
+            }
+
             this.time.delayedCall(1000, () => {
                 if (this.currentStage === 3) {
                     // ==========================================
