@@ -107,7 +107,7 @@ export class Boss extends BaseMonster {
         this.bossUiFill = this.scene.add.graphics().setScrollFactor(0).setDepth(10001).setVisible(false);
         
         // Dời tên Boss xuống góc dưới (nằm ngay trên thanh máu Boss)
-        this.bossNameText = this.scene.add.text(cx, cy - 170, '💀 KẺ THÁCH THỨC VĨ ĐẠI 💀', { 
+        this.bossNameText = this.scene.add.text(cx, cy - 170, '💀 KẺ CHINH PHẠT 💀', { 
             fontSize: '22px', fill: '#ff3333', fontStyle: 'bold', stroke: '#000', strokeThickness: 5 
         }).setOrigin(0.5).setScrollFactor(0).setDepth(10002).setVisible(false);
         
