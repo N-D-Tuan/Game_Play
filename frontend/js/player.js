@@ -86,4 +86,46 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         return currentDir; // Trả về hướng để scene lưu lại (phục vụ cho việc bắn đạn)
     }
+
+    moveToPoint(targetX, targetY) {
+        let speed = 200 * this.speedMultiplier;
+        let dx = targetX - this.x;
+        let dy = targetY - this.y;
+        let distance = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
+        if (distance < 16) {
+            this.setVelocity(0, 0);
+            return null;
+        }
+
+        let direction = new Phaser.Math.Vector2(dx, dy).normalize();
+        this.setVelocity(direction.x * speed, direction.y * speed);
+        this.setDepth(this.y);
+
+        let currentDir = null;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx > 0) { this.anims.play('walk-right', true); currentDir = 'right'; }
+            else { this.anims.play('walk-left', true); currentDir = 'left'; }
+        } else {
+            if (dy > 0) { this.anims.play('walk-down', true); currentDir = 'down'; }
+            else { this.anims.play('walk-up', true); currentDir = 'up'; }
+        }
+
+        if (this.shieldGroup) {
+            this.shieldGroup.x = this.x;
+            this.shieldGroup.y = this.y;
+            this.shieldGroup.setDepth(this.y + 50);
+        }
+        if (this.buffAura) {
+            this.buffAura.x = this.x;
+            this.buffAura.y = this.y;
+            this.buffAura.setDepth(this.y - 10);
+        }
+        if (this.anchorBuffAura) {
+            this.anchorBuffAura.x = this.x;
+            this.anchorBuffAura.y = this.y;
+            this.anchorBuffAura.setDepth(this.y - 15);
+        }
+
+        return currentDir;
+    }
 }
