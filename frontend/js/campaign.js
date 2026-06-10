@@ -4,6 +4,7 @@ import { Player, createPlayerAnimations } from './player.js';
 import { Monster1, createMonster1Animations } from './monster1.js';
 import { Monster2, createMonster2Animations } from './monster2.js';
 import { Monster3, createMonster3Animations } from './monster3.js';
+import { Boss, createBossAnimations } from './boss.js';
 
 export class CampaignScene extends Phaser.Scene {
     constructor() {
@@ -60,6 +61,11 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('anchor', '../assets/anchor.png'); 
         this.load.image('doll', '../assets/doll.png');
         this.load.image('dragon_breath', '../assets/dragon_breath.png');
+        this.load.image('start_boss1', '../assets/start_boss1.png');
+        this.load.image('start_boss2', '../assets/start_boss2.png');
+        this.load.image('icon_boss', '../assets/icon_boss.png');
+
+        this.load.atlas('boss', '../assets/boss_spritesheet.png', '../assets/boss_spritesheet.json');
 
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
@@ -84,13 +90,21 @@ export class CampaignScene extends Phaser.Scene {
 
         window.SKILL_CAMPAIGN_CONFIG = SKILL_CAMPAIGN_CONFIG;
 
-        // Reset Kỹ năng VỀ 0 NẾU LÀ ẢI 1 (Chơi lại từ đầu)
-        if (this.currentStage === 1) {
-            for(let key in SKILL_CAMPAIGN_CONFIG) { 
-                let skill = SKILL_CAMPAIGN_CONFIG[key];
-                skill.currentCd = 0; 
+        // ==========================================
+        // KHÔI PHỤC KỸ NĂNG KHI VÀO MÀN
+        // ==========================================
+        for(let key in SKILL_CAMPAIGN_CONFIG) { 
+            let skill = SKILL_CAMPAIGN_CONFIG[key];
+            
+            // Luôn luôn reset hồi chiêu về 0 để có thể dùng ngay lập tức khi qua màn
+            skill.currentCd = 0; 
+            
+            // CHỈ reset level về 0 và thời gian hồi chiêu gốc nếu người chơi bắt đầu lại từ Ải 1
+            if (this.currentStage === 1) {
                 skill.level = 0;     
-                if (skill.baseCd) skill.cd = skill.baseCd; 
+                if (skill.baseCd) {
+                    skill.cd = skill.baseCd; 
+                }
             }
         }
 
@@ -202,6 +216,7 @@ export class CampaignScene extends Phaser.Scene {
         createMonster1Animations(this);
         createMonster2Animations(this);
         createMonster3Animations(this);
+        createBossAnimations(this);
         
         this.anims.create({
             key: 'gateway-idle',
@@ -216,11 +231,14 @@ export class CampaignScene extends Phaser.Scene {
         let monCount = { m1: 0, m2: 0, m3: 0 };
 
         if (this.currentStage === 1) {
-            monCount.m1 = 10;
+            //monCount.m1 = 10;
+            monCount.m1 = 1;
         } else if (this.currentStage === 2) {
-            monCount.m1 = 15; monCount.m2 = 5;
+            //monCount.m1 = 15; monCount.m2 = 5;
+            monCount.m1 = 0; monCount.m2 = 1;
         } else if (this.currentStage === 3) {
-            monCount.m1 = 20; monCount.m2 = 10; monCount.m3 = 5;
+            //monCount.m1 = 20; monCount.m2 = 15; monCount.m3 = 5;
+            monCount.m1 = 0; monCount.m2 = 0; monCount.m3 = 1;
         }
 
         for (let i = 0; i < monCount.m1; i++) {
@@ -255,20 +273,62 @@ export class CampaignScene extends Phaser.Scene {
     createStageUI() {
         let cx = this.cameras.main.width / 2;
         
-        // Bảng nền đen viền đỏ băm
-        let bg = this.add.graphics().setScrollFactor(0).setDepth(13000);
-        bg.fillStyle(0x111111, 0.85);
-        bg.fillRect(cx - 100, 10, 200, 45);
-        bg.lineStyle(3, 0x8b0000, 1); // Viền đỏ thẫm
-        bg.strokeRect(cx - 100, 10, 200, 45);
+        // [ĐÃ SỬA]: Lưu bảng nền vào biến this.stageBgUI
+        this.stageBgUI = this.add.graphics().setScrollFactor(0).setDepth(13000);
+        this.stageBgUI.fillStyle(0x111111, 0.85);
+        this.stageBgUI.fillRect(cx - 100, 10, 200, 45);
+        this.stageBgUI.lineStyle(3, 0x8b0000, 1); // Viền đỏ thẫm
+        this.stageBgUI.strokeRect(cx - 100, 10, 200, 45);
 
         // Chữ
         let stageText = `ẢI ${this.currentStage} / 3`;
-        if (this.currentStage === 3) stageText = "ẢI CUỐI - TRÙM CUỐI";
+        if (this.currentStage === 3) stageText = "ẢI CUỐI";
         
-        this.add.text(cx, 32, stageText, {
+        this.stageTextUI = this.add.text(cx, 32, stageText, {
             fontSize: '24px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 4
         }).setOrigin(0.5).setScrollFactor(0).setDepth(13001);
+    }
+
+    setUiVisibility(isVisible) {
+        // Khóa hoặc Mở phím điều khiển
+        this.input.keyboard.enabled = isVisible;
+        
+        // Ẩn/Hiện UI người chơi
+        if (this.hpFrame) this.hpFrame.setVisible(isVisible);
+        if (this.healthBarBg) this.healthBarBg.setVisible(isVisible);
+        if (this.healthBarFill) this.healthBarFill.setVisible(isVisible);
+        if (this.hpText) this.hpText.setVisible(isVisible);
+        if (this.radarBg) this.radarBg.setVisible(isVisible);
+        if (this.radarDots) this.radarDots.setVisible(isVisible);
+        if (this.stageTextUI) this.stageTextUI.setVisible(isVisible);
+
+        // Ẩn/Hiện cả cái bảng nền đen
+        if (this.stageBgUI) this.stageBgUI.setVisible(isVisible); 
+        if (this.stageTextUI) this.stageTextUI.setVisible(isVisible);
+        
+        for (let key in SKILL_CAMPAIGN_CONFIG) {
+            let sk = SKILL_CAMPAIGN_CONFIG[key];
+            if (sk.ui) {
+                if (sk.ui.bgCircle) sk.ui.bgCircle.setVisible(isVisible);
+                if (sk.ui.icon) sk.ui.icon.setVisible(isVisible);
+                sk.ui.overlay.setVisible(isVisible);
+                if (sk.ui.text) sk.ui.text.setVisible(isVisible && sk.currentCd > 0);
+                sk.ui.glow.setVisible(isVisible);
+                sk.ui.hotkeyText.setVisible(isVisible);
+            }
+        }
+    }
+
+    onBossIntroComplete(bossInstance) {
+        this.setUiVisibility(true); // Bật lại UI
+        
+        // Hiện thanh máu của Boss lên
+        bossInstance.bossUiBg.setVisible(true);
+        bossInstance.bossUiFill.setVisible(true);
+        bossInstance.bossNameText.setVisible(true);
+
+        // Trả Camera lại cho Player
+        this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
     }
 
     // ==========================================
@@ -447,20 +507,50 @@ export class CampaignScene extends Phaser.Scene {
         let aliveMonsters = this.monsters.getChildren().filter(m => !m.isDead);
         if (aliveMonsters.length === 0 && !this.stageCleared) {
             this.stageCleared = true;
-            
-            // [ĐÃ SỬA]: Sinh rương ở bãi trống cách người chơi 300-450px thay vì trên xác quái
-            let angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-            let distance = Phaser.Math.Between(300, 450);
-            
-            // Clamp để rương không bị văng ra ngoài ranh giới bản đồ
-            let dropX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 150, 3850);
-            let dropY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 150, 3850);
-            
-            // Tạo khoảng trễ 1 giây rồi mới xuất hiện rương
+
             this.time.delayedCall(1000, () => {
-                if (!this.chestSpawned) {
-                    this.chestSpawned = true;
-                    this.spawnChestAndGateway(dropX, dropY);
+                if (this.currentStage === 3) {
+                    // ==========================================
+                    // HỒI TOÀN BỘ KỸ NĂNG & MÁU TRƯỚC KHI ĐÁNH BOSS
+                    // ==========================================
+                    for (let key in SKILL_CAMPAIGN_CONFIG) {
+                        let skill = SKILL_CAMPAIGN_CONFIG[key];
+                        skill.currentCd = 0; // Trả thời gian hồi chiêu về 0
+                        if (skill.ui) {
+                            skill.ui.overlay.clear(); 
+                            skill.ui.text.setVisible(false);
+                            skill.ui.glow.setVisible(true); // Sáng viền lên báo hiệu đã sẵn sàng
+                        }
+                    }
+                    // Tiện tay bơm đầy máu cho người chơi để trận chiến công bằng nhất
+                    this.playerHealth = this.maxHealth;
+                    this.updateHealthBarWidth(this.playerHealth);
+
+                    // ==========================================
+                    // SPAWN BOSS CÁCH XA NỬA BẢN ĐỒ (~800px)
+                    // ==========================================
+                    let angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                    let bossX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * 800, 300, 3700);
+                    let bossY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * 800, 300, 3700);
+                    
+                    this.setUiVisibility(false); // Tắt sạch UI chuẩn bị xem phim
+                    
+                    this.bossEntity = new Boss(this, bossX, bossY);
+                    this.monsters.add(this.bossEntity); // Cho Boss vào chung nhóm quái để ăn đạn
+                } else {
+                    // Spawn Rương cho Màn 1 và 2 (Logic cũ giữ nguyên)
+                    if (!this.chestSpawned) {
+                        // Sinh rương ở bãi trống cách người chơi 300-450px thay vì trên xác quái
+                        let angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+                        let distance = Phaser.Math.Between(300, 450);
+                        
+                        // Clamp để rương không bị văng ra ngoài ranh giới bản đồ
+                        let dropX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 150, 3850);
+                        let dropY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 150, 3850);
+
+                        this.chestSpawned = true;
+                        this.spawnChestAndGateway(dropX, dropY);
+                    }
                 }
             });
         }
@@ -617,13 +707,20 @@ export class CampaignScene extends Phaser.Scene {
         let cx = this.cameras.main.width / 2 - 300, cy = this.cameras.main.height - 60, i = 0;
         for (let key in SKILL_CAMPAIGN_CONFIG) {
             let sk = SKILL_CAMPAIGN_CONFIG[key], px = cx + (i * 75); sk.posX = px; sk.startY = cy; 
-            this.add.graphics().setDepth(10000).setScrollFactor(0).fillStyle(0x000000, 0.6).fillCircle(px, cy, 28);
-            let ico = this.add.image(px, cy, sk.icon).setDepth(10001).setScrollFactor(0); ico.setScale(35 / Math.max(ico.width, ico.height));
+            
+            // Gán nền đen và icon vào biến để dễ quản lý
+            let bgCircle = this.add.graphics().setDepth(10000).setScrollFactor(0).fillStyle(0x000000, 0.6).fillCircle(px, cy, 28);
+            let ico = this.add.image(px, cy, sk.icon).setDepth(10001).setScrollFactor(0); 
+            ico.setScale(35 / Math.max(ico.width, ico.height));
+            
             let ov = this.add.graphics().setDepth(10002).setScrollFactor(0);
             let txt = this.add.text(px, cy, '', { fontSize: '22px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(10003).setScrollFactor(0).setVisible(false);
             let gl = this.add.graphics().setDepth(10004).setScrollFactor(0).lineStyle(3, EVO_COLORS[sk.level || 0], 1).strokeCircle(px, cy, 29);
             let hk = this.add.text(px, cy - 45, sk.hotkey, { fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(10005).setScrollFactor(0);
-            sk.ui = { overlay: ov, text: txt, glow: gl, hotkeyText: hk }; i++;
+            
+            // Đưa bgCircle và icon vào trong object sk.ui
+            sk.ui = { bgCircle: bgCircle, icon: ico, overlay: ov, text: txt, glow: gl, hotkeyText: hk }; 
+            i++;
         }
     }
 
@@ -647,7 +744,18 @@ export class CampaignScene extends Phaser.Scene {
         // 1. Vẽ Quái vật (Pixel VUÔNG Đỏ)
         this.radarDots.fillStyle(0xff0000, 1);
         this.monsters.getChildren().forEach(m => { 
-            if (m.active && !m.isDead) this.radarDots.fillRect(rX + (m.x * sc) - 2, rY + (m.y * sc) - 2, 4, 4); 
+            if (m.active && !m.isDead) {
+                // Nếu là Boss -> Vẽ Icon to
+                if (m instanceof Boss && m.state !== 'SPAWNING') {
+                    // Thay vì fillRect, ta có thể dùng hình ảnh icon (Nếu chưa có thì vẽ vuông to)
+                    this.radarDots.fillStyle(0x8a2be2, 1); // Tím Boss
+                    this.radarDots.fillRect(rX + (m.x * sc) - 6, rY + (m.y * sc) - 6, 12, 12);
+                } else {
+                    // Quái thường
+                    this.radarDots.fillStyle(0xff0000, 1);
+                    this.radarDots.fillRect(rX + (m.x * sc) - 2, rY + (m.y * sc) - 2, 4, 4); 
+                }
+            }
         });
         
         // 2. Vẽ Rương Báu (Pixel VUÔNG Vàng Gold)
