@@ -90,6 +90,10 @@ export class CampaignScene extends Phaser.Scene {
 
         window.SKILL_CAMPAIGN_CONFIG = SKILL_CAMPAIGN_CONFIG;
 
+        this.tabKey = this.input.keyboard.addKey(
+            Phaser.Input.Keyboard.KeyCodes.TAB
+        );
+
         // ==========================================
         // KHÔI PHỤC KỸ NĂNG KHI VÀO MÀN
         // ==========================================
@@ -133,6 +137,12 @@ export class CampaignScene extends Phaser.Scene {
         this.moveState = { up: false, down: false, left: false, right: false };
         this.clickDestination = null;
         this.clickMarker = null;
+        this.cameraFollowedByMouse = false;
+        this.cameraPanningActive = false;
+        this.cameraPanDX = 0;
+        this.cameraPanDY = 0;
+        this.cameraPanThreshold = 50; // Khoảng cách cách rìa màn hình để bắt đầu di chuyển
+        this.cameraPanSpeed = 1;    // Độ nhạy camera (pixels/ms)
 
         this.input.keyboard.on('keydown', (event) => {
             if (this.isPaused || this.isGameOver) return;
@@ -167,21 +177,53 @@ export class CampaignScene extends Phaser.Scene {
             if (key === window.MOVE_CONFIG.right) this.moveState.right = false;
         });
 
+        if (this.input && this.input.mouse && this.input.mouse.disableContextMenu) {
+            this.input.mouse.disableContextMenu();
+        }
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.isPaused || this.isGameOver) return;
+            if (typeof pointer.x !== 'number' || typeof pointer.y !== 'number') return;
+            this.updateCameraPanState(pointer);
+        });
+
+        this.input.on('pointerout', () => {
+            this.cameraPanDX = 0;
+            this.cameraPanDY = 0;
+            this.cameraPanningActive = false;
+        });
+
         this.input.on('pointerdown', (pointer) => {
             if (this.isPaused || this.isGameOver) return;
-            if (!pointer.rightButtonDown()) return;
+            if (this.isPointerInRadar(pointer)) return;
 
-            this.moveState.up = false;
-            this.moveState.down = false;
-            this.moveState.left = false;
-            this.moveState.right = false;
+            if (pointer.rightButtonDown()) {
+                if (pointer.event && typeof pointer.event.preventDefault === 'function') {
+                    pointer.event.preventDefault();
+                    pointer.event.stopPropagation();
+                }
 
-            this.clickDestination = { x: pointer.worldX, y: pointer.worldY };
-            this.createClickMarker(this.clickDestination.x, this.clickDestination.y);
+                if (pointer.x > this.cameras.main.width - 20) return;
+
+                this.moveState.up = false;
+                this.moveState.down = false;
+                this.moveState.left = false;
+                this.moveState.right = false;
+
+                this.clickDestination = { x: pointer.worldX, y: pointer.worldY };
+                this.createClickMarker(this.clickDestination.x, this.clickDestination.y);
+                return;
+            }
+
+            
         });
 
         // Ngăn context menu khi click chuột phải
-        document.getElementById('game-container')?.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        if (this.input && this.input.mouse && this.input.mouse.disableContextMenu) {
+            this.input.mouse.disableContextMenu();
+        }
 
         // ==========================================
         // CẬP NHẬT MÁU THEO TIẾN TRÌNH
@@ -209,10 +251,15 @@ export class CampaignScene extends Phaser.Scene {
         this.radarBg = this.add.graphics().setDepth(14000).setScrollFactor(0);
         this.radarDots = this.add.graphics().setDepth(14001).setScrollFactor(0);
         this.radarSize = 180;
-        this.radarCx = this.cameras.main.width - this.radarSize / 2 - 30;
-        this.radarCy = this.radarSize / 2 + 30;
+        this.radarOffset = 60;
+        this.radarDragActive = false;
+        this.radarDragLastX = 0;
+        this.radarDragLastY = 0;
+        this.radarCx = this.cameras.main.width - this.radarSize / 2 - this.radarOffset;
+        this.radarCy = this.radarSize / 2 + this.radarOffset;
         let startX = this.radarCx - this.radarSize / 2;
         let startY = this.radarCy - this.radarSize / 2;
+        this.radarBounds = new Phaser.Geom.Rectangle(startX, startY, this.radarSize, this.radarSize);
 
         this.radarBg.fillStyle(0x1a1a1a, 0.85);
         this.radarBg.fillRect(startX, startY, this.radarSize, this.radarSize);
@@ -226,6 +273,16 @@ export class CampaignScene extends Phaser.Scene {
             this.radarBg.strokeLineShape(new Phaser.Geom.Line(startX + offset, startY, startX + offset, startY + this.radarSize));
             this.radarBg.strokeLineShape(new Phaser.Geom.Line(startX, startY + offset, startX + this.radarSize, startY + offset));
         }
+
+        this.radarZone = this.add.zone(startX, startY, this.radarSize, this.radarSize)
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(14003)
+            .setInteractive()
+            .on('pointerdown', (pointer) => this.onRadarPointerDown(pointer))
+            .on('pointermove', (pointer) => this.onRadarPointerMove(pointer))
+            .on('pointerup', () => this.onRadarPointerUp())
+            .on('pointerout', () => this.onRadarPointerUp());
 
         // Radar icon Boss
         this.bossRadarIcon = this.add.image(this.radarCx, this.radarCy, 'icon_boss')
@@ -368,6 +425,119 @@ export class CampaignScene extends Phaser.Scene {
             ease: 'Cubic.easeOut',
             onComplete: () => pulse.destroy()
         });
+    }
+
+    updateCameraPanState(pointer) {
+        if (!this.cameras.main || this.isGameOver || this.isPaused) return;
+        if (this.radarDragActive) return;
+        if (this.isPointerInRadar(pointer)) {
+            this.cameraPanDX = 0;
+            this.cameraPanDY = 0;
+            this.cameraPanningActive = false;
+            return;
+        }
+
+        let cam = this.cameras.main;
+        let edge = this.cameraPanThreshold;
+        let dx = 0;
+        let dy = 0;
+
+        let pointerX = pointer.x;
+        let minRight = cam.width - 10;
+        if (pointerX > minRight) {
+            pointerX = minRight;
+        }
+
+        if (pointerX < edge) {
+            dx = -((edge - pointerX) / edge);
+        } else if (pointerX > cam.width - edge) {
+            dx = (pointerX - (cam.width - edge)) / edge;
+        }
+
+        if (pointer.y < edge) {
+            dy = -((edge - pointer.y) / edge);
+        } else if (pointer.y > cam.height - edge) {
+            dy = (pointer.y - (cam.height - edge)) / edge;
+        }
+
+        this.cameraPanDX = Phaser.Math.Clamp(dx, -1, 1);
+        this.cameraPanDY = Phaser.Math.Clamp(dy, -1, 1);
+        this.cameraPanningActive = this.cameraPanDX !== 0 || this.cameraPanDY !== 0;
+
+        if (this.cameraPanningActive && !this.cameraFollowedByMouse) {
+            this.cameras.main.stopFollow();
+            this.cameraFollowedByMouse = true;
+        }
+    }
+
+    returnCameraToPlayer() {
+        if (!this.player || !this.cameras.main) return;
+
+        this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
+        this.cameraFollowedByMouse = false;
+    }
+
+    isPointerInRadar(pointer) {
+        let x = pointer.position ? pointer.position.x : pointer.x;
+        let y = pointer.position ? pointer.position.y : pointer.y;
+        return this.radarBounds && this.radarBounds.contains(x, y);
+    }
+
+    jumpCameraToRadar(pointer) {
+        if (!this.radarBounds || !this.cameras.main) return;
+
+        let x = pointer.position ? pointer.position.x : pointer.x;
+        let y = pointer.position ? pointer.position.y : pointer.y;
+        let localX = Phaser.Math.Clamp(x - this.radarBounds.x, 0, this.radarSize);
+        let localY = Phaser.Math.Clamp(y - this.radarBounds.y, 0, this.radarSize);
+        let worldX = (localX / this.radarSize) * 4000;
+        let worldY = (localY / this.radarSize) * 4000;
+        let cam = this.cameras.main;
+
+        let scrollX = Phaser.Math.Clamp(worldX - cam.width / 2, 0, 4000 - cam.width);
+        let scrollY = Phaser.Math.Clamp(worldY - cam.height / 2, 0, 4000 - cam.height);
+
+        cam.stopFollow();
+        cam.setScroll(scrollX, scrollY);
+        this.cameraFollowedByMouse = true;
+    }
+
+    onRadarPointerDown(pointer) {
+        if (this.isPaused || this.isGameOver) return;
+        if (pointer.event && typeof pointer.event.preventDefault === 'function') pointer.event.preventDefault();
+        if (pointer.event && typeof pointer.event.stopPropagation === 'function') pointer.event.stopPropagation();
+
+        if (pointer.leftButtonDown()) {
+            this.jumpCameraToRadar(pointer);
+            this.radarDragActive = true;
+            let x = pointer.position ? pointer.position.x : pointer.x;
+            let y = pointer.position ? pointer.position.y : pointer.y;
+            this.radarDragLastX = x;
+            this.radarDragLastY = y;
+        }
+    }
+
+    onRadarPointerMove(pointer) {
+        if (!this.radarDragActive || !pointer.isDown || !this.cameras.main) return;
+
+        let x = pointer.position ? pointer.position.x : pointer.x;
+        let y = pointer.position ? pointer.position.y : pointer.y;
+        let dx = x - this.radarDragLastX;
+        let dy = y - this.radarDragLastY;
+        this.radarDragLastX = x;
+        this.radarDragLastY = y;
+
+        let worldDx = dx / this.radarSize * 4000;
+        let worldDy = dy / this.radarSize * 4000;
+        let cam = this.cameras.main;
+
+        let scrollX = Phaser.Math.Clamp(cam.scrollX + worldDx, 0, 4000 - cam.width);
+        let scrollY = Phaser.Math.Clamp(cam.scrollY + worldDy, 0, 4000 - cam.height);
+        cam.setScroll(scrollX, scrollY);
+    }
+
+    onRadarPointerUp() {
+        this.radarDragActive = false;
     }
 
     updateClickMovement() {
@@ -618,6 +788,20 @@ export class CampaignScene extends Phaser.Scene {
 
     update(time, delta) {
         if (this.isPaused || this.isGameOver) return;
+
+        if (this.cameraPanningActive && this.cameras.main) {
+            let cam = this.cameras.main;
+            let scrollX = cam.scrollX + this.cameraPanDX * this.cameraPanSpeed * delta;
+            let scrollY = cam.scrollY + this.cameraPanDY * this.cameraPanSpeed * delta;
+            cam.setScroll(
+                Phaser.Math.Clamp(scrollX, 0, 4000 - cam.width),
+                Phaser.Math.Clamp(scrollY, 0, 4000 - cam.height)
+            );
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.tabKey)) {
+            this.returnCameraToPlayer();
+        }
 
         let newDir = null;
         const isKeyboardMoving = this.moveState.up || this.moveState.down || this.moveState.left || this.moveState.right;
@@ -940,6 +1124,17 @@ export class CampaignScene extends Phaser.Scene {
         
         this.radarDots.fillStyle(0x000000, 1).fillRect(px - 4, py - 4, 8, 8); 
         this.radarDots.fillStyle(0x00ff00, 1).fillRect(px - 3, py - 3, 6, 6);
+
+        // 5. Vẽ khung trắng thể hiện vùng nhìn thấy của camera
+        let cam = this.cameras.main;
+        if (cam) {
+            let viewX = rX + (cam.worldView.x * sc);
+            let viewY = rY + (cam.worldView.y * sc);
+            let viewW = cam.worldView.width * sc;
+            let viewH = cam.worldView.height * sc;
+            this.radarDots.lineStyle(2, 0xffffff, 1);
+            this.radarDots.strokeRect(viewX, viewY, viewW, viewH);
+        }
     }
 
     shootBasicAttack() { castBasicAttack(this, this.player, this.lastDirection); }
