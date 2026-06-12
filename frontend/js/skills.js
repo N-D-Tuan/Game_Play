@@ -486,6 +486,11 @@ export function castShieldEvo(scene, player) {
     let count = shieldCounts[level];
 
     // Xóa khiên cũ nếu bấm thi triển lại
+    if (player.shieldTween) {
+        player.shieldTween.stop();
+        player.shieldTween.remove();
+    }
+
     if (player.shieldGroup) {
         player.shieldGroup.destroy();
     }
@@ -510,8 +515,12 @@ export function castShieldEvo(scene, player) {
     }
 
     // Tween làm cho các mảnh khiên xoay tròn vĩnh viễn
-    scene.tweens.add({
-        targets: player.shieldGroup, angle: 360, duration: 2500, repeat: -1, ease: 'Linear'
+    player.shieldTween = scene.tweens.add({
+        targets: player.shieldGroup,
+        angle: 360,
+        duration: 2500,
+        repeat: -1,
+        ease: 'Linear'
     });
 }
 
