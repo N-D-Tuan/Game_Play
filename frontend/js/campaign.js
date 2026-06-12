@@ -192,8 +192,20 @@ export class CampaignScene extends Phaser.Scene {
             this.cameraPanDY = 0;
             this.cameraPanningActive = false;
         });
+        
+        // Xóa kẹt phím khi mất tiêu điểm
+        window.addEventListener('blur', () => {
+            this.moveState.up = false; this.moveState.down = false;
+            this.moveState.left = false; this.moveState.right = false;
+        });
 
         this.input.on('pointerdown', (pointer) => {
+            // ÉP TRÌNH DUYỆT TRẢ LẠI BÀN PHÍM CHO GAME
+            window.focus(); 
+            if (this.game && this.game.canvas) {
+                this.game.canvas.focus();
+            }
+
             if (this.isPaused || this.isGameOver) return;
             if (this.isPointerInRadar(pointer)) return;
 
@@ -990,12 +1002,27 @@ export class CampaignScene extends Phaser.Scene {
         if (this.isGameOver) return;
         if (this.player.shieldCount && this.player.shieldCount > 0) {
             this.player.shieldCount--;
+            
             if (this.player.shieldGroup && this.player.shieldGroup.list.length > 0) {
                 let sImg = this.player.shieldGroup.list[0];
-                let breakFx = this.add.graphics().lineStyle(2, 0x00ffff, 1).strokeCircle(this.player.x + sImg.x, this.player.y + sImg.y, 20);
-                this.tweens.add({ targets: breakFx, scaleX: 2, scaleY: 2, alpha: 0, duration: 300, onComplete: () => breakFx.destroy() }); sImg.destroy();
+                
+                // Lấy tọa độ thực tế trên bản đồ
+                let worldPoint = new Phaser.Math.Vector2();
+                this.player.shieldGroup.getWorldTransformMatrix().transformPoint(sImg.x, sImg.y, worldPoint);
+                
+                // Vẽ hiệu ứng tại đúng tọa độ worldPoint
+                let breakFx = this.add.graphics().lineStyle(3, 0x00ffff, 1).strokeCircle(worldPoint.x, worldPoint.y, 15);
+                breakFx.setDepth(worldPoint.y + 10);
+                
+                this.tweens.add({ targets: breakFx, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 300, onComplete: () => breakFx.destroy() });
+                sImg.destroy(); 
             }
-            if (this.player.shieldCount === 0) { this.player.shieldGroup.destroy(); this.player.shieldGroup = null; if (this.player.shieldLevel === 2) triggerShieldExplosion(this, this.player.x, this.player.y); }
+            
+            if (this.player.shieldCount === 0) { 
+                this.player.shieldGroup.destroy(); 
+                this.player.shieldGroup = null; 
+                if (this.player.shieldLevel === 2) triggerShieldExplosion(this, this.player.x, this.player.y); 
+            }
             return; 
         }
         this.playerHealth = Math.max(0, this.playerHealth - amount); this.updateHealthBarWidth(this.playerHealth);
