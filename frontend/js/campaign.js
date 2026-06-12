@@ -94,6 +94,30 @@ export class CampaignScene extends Phaser.Scene {
             Phaser.Input.Keyboard.KeyCodes.TAB
         );
 
+        const canvas = this.game.canvas;
+
+        if (canvas) {
+            canvas.tabIndex = 1;
+            canvas.style.outline = 'none';
+
+            setTimeout(() => {
+                canvas.focus();
+            }, 100);
+        }
+
+        if (canvas) {
+
+            canvas.addEventListener('mouseenter', () => {
+
+                canvas.focus();
+
+                if (this.input && this.input.keyboard) {
+                    this.input.keyboard.enabled = true;
+                }
+            });
+
+        }
+
         // ==========================================
         // KHÔI PHỤC KỸ NĂNG KHI VÀO MÀN
         // ==========================================
@@ -197,6 +221,17 @@ export class CampaignScene extends Phaser.Scene {
         window.addEventListener('blur', () => {
             this.moveState.up = false; this.moveState.down = false;
             this.moveState.left = false; this.moveState.right = false;
+        });
+
+        window.addEventListener('focus', () => {
+
+            if (this.input && this.input.keyboard) {
+                this.input.keyboard.enabled = true;
+            }
+
+            if (this.game && this.game.canvas) {
+                this.game.canvas.focus();
+            }
         });
 
         this.input.on('pointerdown', (pointer) => {
@@ -463,7 +498,7 @@ export class CampaignScene extends Phaser.Scene {
         if (pointerX < edge) {
             dx = -((edge - pointerX) / edge);
         } else if (pointerX > cam.width - edge) {
-            dx = (pointerX - (cam.width - edge)) / edge;
+            dx = (pointerX - (cam.width - edge)) / (edge - 10);
         }
 
         if (pointer.y < edge) {
@@ -1011,10 +1046,26 @@ export class CampaignScene extends Phaser.Scene {
                 this.player.shieldGroup.getWorldTransformMatrix().transformPoint(sImg.x, sImg.y, worldPoint);
                 
                 // Vẽ hiệu ứng tại đúng tọa độ worldPoint
-                let breakFx = this.add.graphics().lineStyle(3, 0x00ffff, 1).strokeCircle(worldPoint.x, worldPoint.y, 15);
+                let breakFx = this.add.circle(
+                    worldPoint.x,
+                    worldPoint.y,
+                    15,
+                    0x00ffff,
+                    0.25
+                );
+
+                breakFx.setStrokeStyle(3, 0x00ffff);
                 breakFx.setDepth(worldPoint.y + 10);
-                
-                this.tweens.add({ targets: breakFx, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 300, onComplete: () => breakFx.destroy() });
+
+                this.tweens.add({
+                    targets: breakFx,
+                    scale: 2.5,
+                    alpha: 0,
+                    duration: 300,
+                    onComplete: () => breakFx.destroy()
+                });
+
+                this.player.shieldGroup.remove(sImg);
                 sImg.destroy(); 
             }
             
