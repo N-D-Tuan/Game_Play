@@ -112,26 +112,76 @@ document.addEventListener("DOMContentLoaded", () => {
     const BASE_STATS = { hp: 1000, hpRegen: 5, atk: 50, dodge: 5 };
 
     let equippedItems = { head: null, chest: null, legs: null, weapon: null, accessory: null, shoes: null };
+    let myInventory = [];
 
-    // Dữ liệu mẫu (Lọc bỏ các chỉ số dư thừa)
-    let myInventory = [
-        { id: 1, name: 'Kiếm Sắt Gỉ', slot: 'weapon', rarity: 'F', stats: { atk: 10 }, icon: '🗡️' },
-        { id: 2, name: 'Gươm Ác Quỷ', slot: 'weapon', rarity: 'A', stats: { atk: 250 }, icon: '🩸' },
-        { id: 3, name: 'Áo Vải Thô', slot: 'chest', rarity: 'E', stats: { hp: 50 }, icon: '👕' },
-        { id: 4, name: 'Giáp Thần Quang', slot: 'chest', rarity: 'S', stats: { hp: 2000, hpRegen: 50 }, icon: '🎽' },
-        { id: 5, name: 'Nhẫn Sinh Mệnh', slot: 'accessory', rarity: 'B', stats: { hpRegen: 25 }, icon: '💍' },
-        { id: 6, name: 'Hắc Kiếm Thần', slot: 'weapon', rarity: 'B', stats: { atk: 30, dodge: 3 }, icon: '⚔️' },
-        { id: 7, name: 'Giày Bóng Đêm', slot: 'shoes', rarity: 'C', stats: { dodge: 15 }, icon: '👢' },
-        { id: 8, name: 'Kiếm Sắt Gỉ', slot: 'weapon', rarity: 'S', stats: { atk: 999 }, icon: '🗡️' },
-        { id: 9, name: 'Hắc Kiếm Thần', slot: 'weapon', rarity: 'S', stats: { atk: 999, dodge: 10 }, icon: '⚔️' }
-    ];
-    // Bạn có thể duplicate các item ra để test phân trang
-    for(let i=10; i<=100; i++) myInventory.push({ id: i, name: 'Đá Vụn', slot: 'accessory', rarity: 'F', stats: { hp: 1 }, icon: '🪨' });
+    // HÀM TẢI KHO ĐỒ TỪ BACKEND
+    async function loadInventoryFromServer() {
+        try {
+            let playerId = localStorage.getItem('playerId');
+
+            if (playerId.includes(':')) {
+                playerId = playerId.split(':')[0];
+                localStorage.setItem('playerId', playerId);
+            }
+
+            const response = await fetch(`http://127.0.0.1:8000/api/inventory/${playerId}`);
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                myInventory = [];
+                equippedItems = { head: null, chest: null, legs: null, weapon: null, accessory: null, shoes: null };
+                
+                // Trả các ô trên người về trạng thái "Trống" trước khi mặc đồ mới
+                document.querySelectorAll('.equip-slot').forEach(slot => {
+                    let slotName = slot.getAttribute('data-slot');
+                    const slotLabels = { head: 'Mũ', chest: 'Áo', legs: 'Quần', weapon: 'Vũ khí', accessory: 'Bổ trợ', shoes: 'Giày' };
+                    slot.innerHTML = `<span class="slot-label" style="opacity: 0.5">${slotLabels[slotName]}</span>`;
+                    slot.style.borderColor = '#555';
+                    slot.style.boxShadow = 'none';
+                    slot.removeAttribute('data-tooltip');
+                });
+
+                // Phân loại đồ Backend trả về
+                data.items.forEach(item => {
+                    // Chuyển đổi định dạng cho khớp với chuẩn Frontend
+                    let frontendItem = {
+                        id: item.id, // ID của player_items (độc nhất)
+                        item_id: item.item_id, // ID gốc
+                        name: item.name,
+                        slot: item.slot,
+                        rarity: item.rarity,
+                        stats: item.stats,
+                        icon: item.icon
+                    };
+
+                    if (item.is_equipped == 1) {
+                        equippedItems[frontendItem.slot] = frontendItem;
+                        
+                        // Vẽ trực tiếp lên nhân vật
+                        let slotDiv = document.getElementById(`slot-${frontendItem.slot}`);
+                        let textShadow = frontendItem.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+                        slotDiv.innerHTML = `<span>${frontendItem.icon}</span><span class="item-rank" style="color: ${RARITY_CONFIG[frontendItem.rarity].color}; ${textShadow}">${frontendItem.rarity}</span>`;
+                        slotDiv.style.borderColor = RARITY_CONFIG[frontendItem.rarity].color;
+                        slotDiv.setAttribute('data-tooltip', buildTooltip(frontendItem));
+                        if(frontendItem.rarity === 'S') slotDiv.style.boxShadow = `0 0 10px #ffffff`;
+                    } else {
+                        myInventory.push(frontendItem); // Tống vào balo
+                    }
+                });
+
+                // Cập nhật lại UI
+                updateStatsUI();
+                renderInventory();
+            }
+        } catch (error) {
+            console.error("Lỗi kết nối Server:", error);
+            showDarkFantasyAlert("Mất kết nối đến máy chủ!");
+        }
+    }
 
     btnInventory.addEventListener('click', () => { 
         inventoryModal.style.display = 'flex'; 
-        updateStatsUI(); 
-        renderInventory(); 
+        loadInventoryFromServer(); 
     });
     closeInventory.addEventListener('click', () => { 
         inventoryModal.style.display = 'none'; 
@@ -159,6 +209,36 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
     });
+
+    async function toggleEquipment(playerItemId, action) {
+        try {
+            let playerId = localStorage.getItem('playerId') || '1';
+            
+            const response = await fetch(`http://127.0.0.1:8000/api/equipment/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    player_id: playerId,
+                    player_item_id: playerItemId,
+                    action: action // 'equip' hoặc 'unequip'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                // Sau khi server xử lý xong, tải lại kho đồ để cập nhật UI
+                await loadInventoryFromServer();
+                console.log("Cập nhật trang bị thành công!");
+            } else {
+                showDarkFantasyAlert("Không thể thao tác trang bị!");
+            }
+        } catch (error) {
+            console.error("Lỗi kết nối:", error);
+        }
+    }
 
     function updateStatsUI() {
         let currentStats = { ...BASE_STATS };
@@ -192,37 +272,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return tooltip.trim();
     }
 
-    function equipItem(item) {
+    // CLICK ĐỂ MẶC TRANG BỊ
+    async function equipItem(item) {
         let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
         if (isCampaignActive) {
             showDarkFantasyAlert("Không thể mặc trang bị khi đang Vượt Ải!");
             return;
         }
 
-        let oldItem = equippedItems[item.slot];
-        if (oldItem) myInventory.push(oldItem);
-        
-        equippedItems[item.slot] = item;
-        myInventory = myInventory.filter(invItem => invItem.id !== item.id);
-        
-       // Tạo hiệu ứng viền trắng phát sáng độc quyền cho bậc S
-        let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
-        
-        // Vẽ đồ lên khe nhân vật và Gắn Tooltip
-        let slotDiv = document.getElementById(`slot-${item.slot}`);
-        slotDiv.innerHTML = `<span>${item.icon}</span><span class="item-rank" style="color: ${RARITY_CONFIG[item.rarity].color}; ${textShadow}">${item.rarity}</span>`;
-        slotDiv.style.borderColor = RARITY_CONFIG[item.rarity].color;
-        slotDiv.setAttribute('data-tooltip', buildTooltip(item)); // Hiện thông tin khi di chuột vào người
-        
-        if(item.rarity === 'S') slotDiv.style.boxShadow = `0 0 10px #ffffff`; else slotDiv.style.boxShadow = 'none';
-
-        updateStatsUI();
-        renderInventory();
+        await toggleEquipment(item.id, 'equip');
     }
 
     // DOUBLE CLICK ĐỂ THÁO TRANG BỊ
     document.querySelectorAll('.equip-slot').forEach(slotDiv => {
-        slotDiv.addEventListener('dblclick', () => {
+        slotDiv.addEventListener('dblclick', async () => {
             let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
             if (isCampaignActive) {
                 showDarkFantasyAlert("Không thể tháo trang bị khi đang Vượt Ải!");
@@ -232,18 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let slotName = slotDiv.getAttribute('data-slot');
             let item = equippedItems[slotName];
             if (item) {
-                myInventory.push(item); // Vứt về túi
-                equippedItems[slotName] = null; // Xóa khỏi người
-                
-                // Trả ô về trạng thái "Trống" nguyên bản
-                const slotLabels = { head: 'Mũ', chest: 'Áo', legs: 'Quần', weapon: 'Vũ khí', accessory: 'Bổ trợ', shoes: 'Giày' };
-                slotDiv.innerHTML = `<span class="slot-label" style="opacity: 0.5">${slotLabels[slotName]}</span>`;
-                slotDiv.style.borderColor = '#555';
-                slotDiv.style.boxShadow = 'none';
-                slotDiv.removeAttribute('data-tooltip'); // Xóa Tooltip
-
-                updateStatsUI();
-                renderInventory();
+                await toggleEquipment(item.id, 'unequip');
             }
         });
     });

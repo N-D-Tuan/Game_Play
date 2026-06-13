@@ -31,3 +31,11 @@ CREATE TABLE player_items (
     
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 );
+
+-- 1. Thêm 1 loại vật phẩm mẫu
+INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
+VALUES (1, 'Kiếm Sắt Gỉ', 'weapon', 'F', 0, 0, 10, 0, '🗡️');
+
+-- 2. Thêm 1 món đồ vào kho người chơi (player_id = 1)
+INSERT INTO player_items (id, player_id, item_id, is_equipped) 
+VALUES (1, 1, 1, 0);
