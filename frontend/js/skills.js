@@ -96,10 +96,13 @@ export function handleBasicAttackCollision(aa, monster) {
     if (aa.active && monster.active && !monster.isDead) {
         // Lấy cấp độ đánh thường của nhân vật (Nếu chưa có thì mặc định là 0)
         let level = aa.scene.player.aaLevel || 0;
+
+        // Lấy Tấn công hiện tại từ người chơi (Mặc định 50 nếu lỗi)
+        let atk = window.playerStats ? window.playerStats.atk : 50;
         
-        // Cấu hình sát thương: Level 0 (10), Level 1 (15), Level 2 (30)
-        let damageArr = [10, 15, 30];
-        let aaDamage = damageArr[level];
+        // Đánh thường: Level 0 (100% ATK), Level 1 (120% ATK), Level 2 (150% ATK)
+        let multiplierArr = [1.0, 1.2, 1.5];
+        let aaDamage = atk * multiplierArr[level];
 
         aa.destroy(); // Xóa viên đạn
         
@@ -114,10 +117,12 @@ export function castMeteorEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['meteor'].level;
 
     // 1. TÍNH TOÁN CHỈ SỐ THEO LEVEL
-    // Level 0: Dame 30, Bán kính 120
-    // Level 1: Dame 45, Bán kính 160
-    // Level 2: Dame 60, Bán kính 200 (Thêm 2 thiên thạch nhỏ)
-    let baseDamage = 30 + (level * 15); 
+    // Level 0: Bán kính 120
+    // Level 1: Bán kính 160
+    // Level 2: Bán kính 200 (Thêm 2 thiên thạch nhỏ)
+    let atk = window.playerStats ? window.playerStats.atk : 50;
+    let dmgMultiplier = [1.5, 2.0, 2.5]; // Nổ gây 150% - 250% ATK
+    let baseDamage = atk * dmgMultiplier[level];
     let explosionRadius = 120 + (level * 40);
     let blastScale = 5 + (level * 2); // Vòng lửa nổ to hơn theo level
 
@@ -240,8 +245,9 @@ export function castSwordsEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['swords'].level;
 
     // 1. TÍNH TOÁN CHỈ SỐ THEO LEVEL
-    // Level 0: Dame 30, Level 1: Dame 45, Level 2: Dame 60
-    let baseDamage = 30 + (level * 15); 
+    let atk = window.playerStats ? window.playerStats.atk : 50;
+    let dmgMultiplier = [0.4, 0.6, 0.8]; // Mỗi thanh kiếm gây 40% - 80% ATK
+    let baseDamage = atk * dmgMultiplier[level];
     
     // Level 0: 1 vòng, Level 1: 2 vòng, Level 2: 3 vòng
     let numWaves = level + 1; 
@@ -362,12 +368,14 @@ export function castLightningEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['lightning'].level;
 
     // 1. CHỈ SỐ THEO CẤP (Level 0 / 1 / 2)
-    let damageArr = [40, 50, 70];
+    let atk = window.playerStats ? window.playerStats.atk : 50;
+    let dmgMultiplier = [2.0, 2.5, 3.5]; // Giật cực mạnh 200% - 350% ATK
+    let damage = atk * dmgMultiplier[level];
+
     let stunChanceArr = [0.4, 0.5, 0.7]; // Xác suất 40-50-70%
     let stunDurArr = [1000, 1500, 2000]; // Tê liệt 1s-1.5s-2s
     let strikeCountArr = [4, 5, 7];      // Số lượng tia sét
 
-    let damage = damageArr[level];
     let stunChance = stunChanceArr[level];
     let stunDur = stunDurArr[level];
     let strikeCount = strikeCountArr[level];
@@ -541,7 +549,7 @@ export function triggerShieldExplosion(scene, x, y) {
         targets: blast, scaleX: 3, scaleY: 3, alpha: 0, duration: 400, onComplete: () => blast.destroy()
     });
 
-    // Gây sát thương (25) và Đẩy lùi (Knockback)
+    // Gây sát thương và Đẩy lùi (Knockback)
     let explosionRadius = 180;
     let knockbackDist = 120;
 
@@ -549,7 +557,8 @@ export function triggerShieldExplosion(scene, x, y) {
         if (mon.active && !mon.isDead) {
             let dist = Phaser.Math.Distance.Between(x, y, mon.x, mon.y);
             if (dist <= explosionRadius) {
-                mon.takeDamage(25);
+                let atk = window.playerStats ? window.playerStats.atk : 50;
+                mon.takeDamage(atk * 1.5);
 
                 let angle = Phaser.Math.Angle.Between(x, y, mon.x, mon.y);
                 let nx = mon.x + Math.cos(angle) * knockbackDist;
@@ -570,7 +579,7 @@ export function triggerShieldExplosion(scene, x, y) {
 // ==========================================
 export function castHealEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['heal'].level;
-    let healAmounts = [30, 50, 100]; // Level 2 hồi max 100 máu
+    let healAmounts = [100, 150, 200];
     let healAmt = healAmounts[level];
 
     // 1. Phục hồi sinh lực
@@ -630,9 +639,11 @@ export function castEarthEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['earth'].level;
     
     // 1. Chỉ số theo cấp
-    let damageArr = [30, 35, 40];
+    let atk = window.playerStats ? window.playerStats.atk : 50;
+    let dmgMultiplier = [0.8, 1.0, 1.3]; 
+    let damage = atk * dmgMultiplier[level];
+
     let durationArr = [2000, 2500, 3000]; // Thời gian núi tồn tại: 2s, 2.5s, 3s
-    let damage = damageArr[level];
     let activeDuration = durationArr[level];
 
     // Rung màn hình nhẹ báo hiệu động đất chuẩn bị xảy ra
@@ -780,6 +791,7 @@ export function castEarthEvo(scene, player) {
 // ==========================================
 export function castArrowsEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['arrows'].level;
+    let atk = window.playerStats ? window.playerStats.atk : 50;
     let portalCount = level + 1; // Level 0: 1 cổng, Level 1: 2 cổng, Level 2: 3 cổng
 
     // 1. Xác định khu vực xả mưa tên (Phía trước mặt nhân vật)
@@ -857,8 +869,8 @@ export function castArrowsEvo(scene, player) {
                         scene.monsters.getChildren().forEach(mon => {
                             if (mon.active && !mon.isDead) {
                                 let dist = Phaser.Math.Distance.Between(cx, cy, mon.x, mon.y);
-                                if (dist <= 70) mon.takeDamage(100);       // Nổ ngay mặt
-                                else if (dist <= 200) mon.takeDamage(80);  // Sát thương AOE (Văng miểng)
+                                if (dist <= 70) mon.takeDamage(atk * 4.0);       // Nổ ngay mặt gây 400% ATK
+                                else if (dist <= 200) mon.takeDamage(atk * 2.0);  // Văng miểng gây 200% ATK
                             }
                         });
 
@@ -939,7 +951,7 @@ export function castArrowsEvo(scene, player) {
                                 if (mon.active && !mon.isDead) {
                                     // Bất kỳ quái nào đứng gần điểm tên rơi đều dính 30 dame
                                     if (Phaser.Math.Distance.Between(tx, ty, mon.x, mon.y) <= arrowAoERadius) {
-                                        mon.takeDamage(30);
+                                        mon.takeDamage(atk * 0.4);
                                     }
                                 }
                             });
@@ -1006,12 +1018,14 @@ export function castAnchorEvo(scene, player) {
     let level = SKILL_CAMPAIGN_CONFIG['anchor'].level;
 
     // 1. CHỈ SỐ THEO CẤP (Level 0 / 1 / 2)
+    let atk = window.playerStats ? window.playerStats.atk : 50;
+    let dmgMultiplier = [0.5, 0.5, 0.8]; // Tàu tông gây 50% - 80% ATK
+    let mDamage = atk * dmgMultiplier[level];
+
     let speedBuffArr = [1.1, 1.15, 1.25]; // Buff tốc độ người chơi: 10%, 15%, 25%
-    let damageArr = [10, 10, 20];         // Sát thương tông trúng
     let slowDebuffArr = [0.9, 0.85, 0.75]; // Giảm tốc độ quái: 10%, 15%, 25%
 
     let pBuff = speedBuffArr[level];
-    let mDamage = damageArr[level];
     let mSlow = slowDebuffArr[level];
 
     // 2. TRIỆU HỒI TÀU MA
@@ -1143,7 +1157,7 @@ export function castAnchorEvo(scene, player) {
 
                         // Trừ máu (50) và Làm chậm (Giảm 10% -> còn 90%)
                         if (targetMon.active && !targetMon.isDead) {
-                            targetMon.takeDamage(50);
+                            targetMon.takeDamage(atk * 2.0);
                             targetMon.speedMultiplier = 0.9;
                             
                             scene.time.delayedCall(3000, () => {

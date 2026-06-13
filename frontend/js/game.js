@@ -292,7 +292,15 @@ function createPauseMenu() {
     btnResume.on('pointerdown', (p, x, y, e) => { e.stopPropagation(); togglePause.call(this); });
     
     btnInventory = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 40, '[ KHO ĐỒ ]', { fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
-    btnInventory.on('pointerdown', (p, x, y, e) => { e.stopPropagation(); alert("Kho đồ đang phát triển!"); });
+    btnInventory.on('pointerdown', (p, x, y, e) => { 
+        e.stopPropagation(); 
+        
+        // Giả lập click vào nút Kho Đồ gốc ngoài HTML
+        document.getElementById('btn-inventory').click(); 
+        
+        // Khóa tương tác của game để tránh click xuyên thấu
+        this.input.enabled = false;
+    });
     
     btnSetting = this.add.text(window.innerWidth / 2, window.innerHeight / 2 + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(5001).setInteractive({ useHandCursor: true });
     btnSetting.on('pointerdown', (p, x, y, e) => {

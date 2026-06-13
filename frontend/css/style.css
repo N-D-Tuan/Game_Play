@@ -459,3 +459,47 @@ body, html {
 }
 .page-btn:hover:not(:disabled) { background: #555; border-color: #ffcc00; }
 .page-btn:disabled { background: #111; color: #444; cursor: not-allowed; border-color: #222; }
+
+/* ==========================================
+   THÔNG BÁO CẢNH BÁO
+========================================== */
+.toast-container {
+    position: fixed;
+    top: -50px; /* Nằm ẩn trên cùng */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999999; /* Đè lên tất cả, kể cả kho đồ */
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.toast-container.show {
+    top: 30px; /* Trượt xuống */
+    opacity: 1;
+}
+
+.toast-content {
+    background: rgba(20, 5, 5, 0.95);
+    border: 2px solid #8b0000;
+    border-image: linear-gradient(90deg, transparent, #ff0000, transparent) 1;
+    padding: 15px 40px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.6), inset 0 0 10px rgba(255, 0, 0, 0.3);
+}
+
+.toast-icon {
+    font-size: 28px;
+    filter: drop-shadow(0 0 5px #ffcc00);
+}
+
+.toast-message {
+    color: #ffcc00;
+    font-family: 'MedievalSharp', cursive; /* Font chuẩn game */
+    font-size: 22px;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 4px #000;
+    text-transform: uppercase;
+}

@@ -275,9 +275,8 @@ export class CampaignScene extends Phaser.Scene {
         // ==========================================
         // CẬP NHẬT MÁU THEO TIẾN TRÌNH
         // ==========================================
-        let hpLevels = [100, 150, 300];
-        this.maxHealth = hpLevels[this.player.aaLevel] || 100;
-        this.playerHealth = this.maxHealth; 
+        this.maxHealth = window.playerStats ? window.playerStats.hp : 1000;
+        this.playerHealth = this.maxHealth;
 
         this.isGameOver = false;
         this.isPaused = false;
@@ -352,6 +351,33 @@ export class CampaignScene extends Phaser.Scene {
             key: 'gateway-idle',
             frames: this.anims.generateFrameNumbers('gateway', { start: 0, end: 3 }),
             frameRate: 10, repeat: -1
+        });
+
+        // ==========================================
+        // HỆ THỐNG HỒI MÁU THEO GIÂY (HP REGEN)
+        // ==========================================
+        this.time.addEvent({
+            delay: 1000, // Cứ 1 giây (1000ms) chạy 1 lần
+            callback: () => {
+                // Không hồi máu nếu đang chết hoặc đang tạm dừng
+                if (this.isGameOver || this.isPaused || this.playerHealth <= 0) return;
+                
+                // Lấy chỉ số Hồi máu từ Balo
+                let regenAmount = window.playerStats ? window.playerStats.hpRegen : 5;
+                
+                if (regenAmount > 0 && this.playerHealth < this.maxHealth) {
+                    this.playerHealth = Math.min(this.maxHealth, this.playerHealth + regenAmount);
+                    this.updateHealthBarWidth(this.playerHealth);
+                    
+                    // Hiện số máu hồi màu xanh lá nhảy lên đầu nhân vật
+                    let healText = this.add.text(this.player.x, this.player.y - 30, `+${regenAmount}`, { 
+                        fontSize: '18px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
+                    }).setOrigin(0.5).setDepth(8000);
+                    this.tweens.add({ targets: healText, y: this.player.y - 70, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
+                }
+            },
+            callbackScope: this,
+            loop: true
         });
 
         // ==========================================
@@ -756,8 +782,7 @@ export class CampaignScene extends Phaser.Scene {
         this.player.aaLevel = this.currentPlayerLevel;
         
         // Tăng giới hạn máu và hồi đầy
-        let hpLevels = [100, 150, 300];
-        this.maxHealth = hpLevels[this.currentPlayerLevel] || 300;
+        this.maxHealth = window.playerStats ? window.playerStats.hp : 1000;
         this.playerHealth = this.maxHealth;
         this.updateHealthBarWidth(this.playerHealth);
 
@@ -1027,14 +1052,46 @@ export class CampaignScene extends Phaser.Scene {
     }
 
     updateHealthBarWidth(v) {
-        this.healthBarFill.clear(); if (v <= 0) { if(this.hpText) this.hpText.setText('0'); return; }
-        let cw = (v / this.maxHealth) * 307;
-        this.healthBarFill.fillStyle(0xff0000, 1).beginPath().moveTo(219+39, 63).lineTo(Math.max(219+39, 219+cw), 63).lineTo(219+cw, 63+55).lineTo(219, 63+55).closePath().fillPath();
+        // Luôn lấy máu tối đa từ Kho đồ phòng khi người chơi vừa thay trang bị
+        this.maxHealth = window.playerStats ? window.playerStats.hp : 1000;
+        
+        // Nếu máu hiện tại vượt mức Max thì ép xuống
+        if (v > this.maxHealth) {
+            v = this.maxHealth;
+            this.playerHealth = v;
+        }
+
+        this.healthBarFill.clear(); 
+        if (v <= 0) { if(this.hpText) this.hpText.setText('0'); return; }
+        
+        let cw = (v / this.maxHealth) * 307; // 307 là chiều dài thanh máu
+        this.healthBarFill.fillStyle(0xff0000, 1).beginPath()
+            .moveTo(219+39, 63).lineTo(Math.max(219+39, 219+cw), 63)
+            .lineTo(219+cw, 63+55).lineTo(219, 63+55).closePath().fillPath();
+            
         if(this.hpText) this.hpText.setText(Math.round(v));
     }
 
     takeDamage(amount) {
         if (this.isGameOver) return;
+
+        // ==========================================
+        // KIỂM TRA TỈ LỆ NÉ TRÁNH (DODGE)
+        // ==========================================
+        let dodgeChance = window.playerStats ? window.playerStats.dodge : 5;
+        
+        // Quay xổ số ngẫu nhiên từ 0 đến 100. Nếu số quay được nhỏ hơn tỉ lệ né thì thành công!
+        if (Math.random() * 100 < dodgeChance) {
+            // Hiện chữ NÉ cực ngầu
+            let missText = this.add.text(this.player.x, this.player.y - 40, 'NÉ TRÁNH!', { 
+                fontSize: '24px', fill: '#00ffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 
+            }).setOrigin(0.5).setDepth(8000);
+            
+            this.tweens.add({ targets: missText, y: this.player.y - 90, alpha: 0, duration: 800, onComplete: () => missText.destroy() });
+            
+            return; // Lệnh return này sẽ THOÁT NGAY LẬP TỨC khỏi hàm trừ máu
+        }
+        
         if (this.player.shieldCount && this.player.shieldCount > 0) {
             this.player.shieldCount--;
             
@@ -1103,7 +1160,17 @@ export class CampaignScene extends Phaser.Scene {
         this.pauseOverlay = this.add.graphics().fillStyle(0x000000, 0.85).fillRect(0, 0, this.cameras.main.width, this.cameras.main.height).setDepth(15000).setScrollFactor(0);
         this.txtPause = this.add.text(cx, cy - 150, 'TẠM DỪNG', { fontSize: '60px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setDepth(15001).setScrollFactor(0);
         this.btnResume = this.add.text(cx, cy - 30, '[ TIẾP TỤC ]', { fontSize: '32px', fill: '#00ff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', (p,x,y,e) => { e.stopPropagation(); this.togglePause(); });
-        this.btnInventory = this.add.text(cx, cy + 40, '[ KHO ĐỒ ]', { fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => alert("Kho đồ đang phát triển!"));
+        this.btnInventory = this.add.text(cx, cy + 40, '[ KHO ĐỒ ]', { fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} })
+            .setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0)
+            .on('pointerdown', (p,x,y,e) => { 
+                if(e) e.stopPropagation(); 
+                
+                // Giả lập click vào nút Kho Đồ gốc ngoài HTML
+                document.getElementById('btn-inventory').click(); 
+                
+                // Khóa tương tác của game để tránh click xuyên thấu
+                this.input.enabled = false; 
+            });
         this.btnSetting = this.add.text(cx, cy + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', (p,x,y,e) => { if(e) e.stopPropagation(); document.getElementById('settings-modal').style.display = 'flex'; this.input.enabled = false; });
         this.btnChangeMap = this.add.text(cx, cy + 180, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#ff8800', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0}); });
         this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.input.enabled = false; this.setPauseMenuVisible(false); this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
