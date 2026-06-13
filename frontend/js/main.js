@@ -60,6 +60,33 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentPage = 1;
     const itemsPerPage = 35; // 35 là 5 hàng x 7 cột
 
+    // ==========================================
+    // LOGIC CHUYỂN TAB TRANG BỊ & GHÉP ĐỒ
+    // ==========================================
+    const tabEquipBtn = document.getElementById('tab-equip-btn');
+    const tabForgeBtn = document.getElementById('tab-forge-btn');
+    const viewEquip = document.getElementById('view-equip');
+    const viewForge = document.getElementById('view-forge');
+
+    let currentTab = 'equip';
+    let forgeItems = [];
+
+    tabEquipBtn.addEventListener('click', () => {
+        currentTab = 'equip';
+        tabEquipBtn.classList.add('active');
+        tabForgeBtn.classList.remove('active');
+        viewEquip.classList.add('active');
+        viewForge.classList.remove('active');
+    });
+
+    tabForgeBtn.addEventListener('click', () => {
+        currentTab = 'forge';
+        tabForgeBtn.classList.add('active');
+        tabEquipBtn.classList.remove('active');
+        viewForge.classList.add('active');
+        viewEquip.classList.remove('active');
+    });
+
     const RARITY_CONFIG = {
         'F': { color: '#ffffff', weight: 1, name: 'Thường' },
         'E': { color: '#00ff00', weight: 2, name: 'Ưu Tú' },
@@ -89,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: 9, name: 'Hắc Kiếm Thần', slot: 'weapon', rarity: 'S', stats: { atk: 999, dodge: 10 }, icon: '⚔️' }
     ];
     // Bạn có thể duplicate các item ra để test phân trang
-    for(let i=10; i<=100; i++) myInventory.push({ id: i, name: 'Đá Vụn '+i, slot: 'accessory', rarity: 'F', stats: { hp: 1 }, icon: '🪨' });
+    for(let i=10; i<=100; i++) myInventory.push({ id: i, name: 'Đá Vụn', slot: 'accessory', rarity: 'F', stats: { hp: 1 }, icon: '🪨' });
 
     btnInventory.addEventListener('click', () => { 
         inventoryModal.style.display = 'flex'; 
@@ -240,8 +267,14 @@ document.addEventListener("DOMContentLoaded", () => {
             div.style.borderColor = rankInfo.color;
             if(item.rarity === 'S') { div.style.boxShadow = `0 0 10px #ffffff`; div.style.borderColor = '#ffffff'; }
 
-            // 1 CLICK ĐỂ MẶC ĐỒ
-            div.addEventListener('click', () => equipItem(item));
+            // SỰ KIỆN CLICK ĐỘNG (Dựa theo Tab hiện tại)
+            div.addEventListener('click', () => {
+                if (currentTab === 'equip') {
+                    equipItem(item);
+                } else if (currentTab === 'forge') {
+                    addToForge(item);
+                }
+            });
             invGrid.appendChild(div);
         });
 
@@ -260,6 +293,86 @@ document.addEventListener("DOMContentLoaded", () => {
     // Nút điều khiển Lật trang
     btnPrevPage.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderInventory(); } });
     btnNextPage.addEventListener('click', () => { currentPage++; renderInventory(); });
+
+    // ==========================================
+    // LOGIC LÒ RÈN (BỎ VÀO LÒ & RÚT RA)
+    // ==========================================
+    function addToForge(item) {
+        // Chặn nếu đang ở trong ải
+        let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
+        if (isCampaignActive) {
+            showDarkFantasyAlert("Không thể ghép đồ khi đang Vượt Ải!");
+            return; 
+        }
+
+        // Chặn nếu lò đã đầy
+        if (forgeItems.length >= 10) {
+            showDarkFantasyAlert("Lò rèn đã chứa đủ 10 vật phẩm!");
+            return;
+        }
+
+        // Kiểm tra tính đồng nhất (Chỉ cho phép ghép đồ CÙNG TÊN và CÙNG BẬC)
+        if (forgeItems.length > 0) {
+            let sampleItem = forgeItems[0];
+            if (item.name !== sampleItem.name || item.rarity !== sampleItem.rarity) {
+                showDarkFantasyAlert("Vật phẩm hiến tế phải giống hệt nhau!");
+                return;
+            }
+        }
+
+        // Đưa vào lò và xóa khỏi Balo
+        forgeItems.push(item);
+        myInventory = myInventory.filter(invItem => invItem.id !== item.id);
+        
+        renderForge();
+        renderInventory();
+    }
+
+    function removeFromForge(index) {
+        let item = forgeItems[index];
+        if (item) {
+            // Trả về balo và xóa khỏi lò
+            myInventory.push(item);
+            forgeItems.splice(index, 1);
+            
+            renderForge();
+            renderInventory();
+        }
+    }
+
+    // Hàm vẽ giao diện Lò rèn
+    function renderForge() {
+        const forgeSlots = document.querySelectorAll('.forge-slot');
+        
+        forgeSlots.forEach((slot, index) => {
+            let item = forgeItems[index];
+            
+            if (item) {
+                // Có đồ trong ô này
+                let rankInfo = RARITY_CONFIG[item.rarity];
+                let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+                
+                slot.innerHTML = `<span>${item.icon}</span><span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
+                slot.style.borderColor = rankInfo.color;
+                slot.setAttribute('data-tooltip', buildTooltip(item));
+                if(item.rarity === 'S') slot.style.boxShadow = `0 0 10px #ffffff`; else slot.style.boxShadow = 'none';
+
+                // Click vào ô trong lò để rút đồ ra
+                slot.onclick = () => removeFromForge(index);
+            } else {
+                // Ô trống
+                slot.innerHTML = '';
+                slot.style.borderColor = '#555';
+                slot.style.boxShadow = 'none';
+                slot.removeAttribute('data-tooltip');
+                slot.onclick = null;
+            }
+        });
+
+        // Reset lại ô ở giữa (Đề phòng trường hợp đang có đồ thành công mà bạn rút bớt nguyên liệu ra)
+        document.getElementById('forge-result').innerHTML = '?';
+        document.getElementById('forge-result').style.borderColor = '#ffcc00';
+    }
 
     // --- LOGIC BẢNG CÀI ĐẶT ---
     const btnSettings = document.getElementById('btn-settings');

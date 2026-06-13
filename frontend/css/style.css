@@ -331,7 +331,7 @@ body, html {
     width: 40%; padding: 20px; border-right: 2px solid #444;
     display: flex; flex-direction: column;
 }
-.char-header h3 { text-align: center; color: #ffcc00; margin-top: 0; }
+.char-header h3 { text-align: center; color: #ffcc00; margin-top: 20px; }
 .char-body {
     display: flex; justify-content: space-between; align-items: center; margin: 15px 0;
 }
@@ -502,4 +502,125 @@ body, html {
     letter-spacing: 1px;
     text-shadow: 2px 2px 4px #000;
     text-transform: uppercase;
+}
+
+/* ==========================================
+   TABS TRANG BỊ & GHÉP ĐỒ
+========================================== */
+.panel-tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #444;
+}
+
+.panel-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px 0;
+    cursor: pointer;
+    font-family: 'MedievalSharp', cursive;
+    transition: 0.3s;
+}
+
+.panel-tab-btn:hover { color: #d4af37; }
+.panel-tab-btn.active {
+    color: #ffcc00;
+    border-bottom: 3px solid #ff0000;
+    text-shadow: 0 0 10px #ff0000;
+}
+
+.panel-view {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+}
+.panel-view.active { display: flex; }
+
+/* ==========================================
+   GIAO DIỆN LÒ RÈN MA THUẬT (VÒNG TRÒN)
+========================================== */
+.forge-container {
+    position: relative;
+    width: 100%;
+    flex-grow: 1;
+    min-height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+}
+
+/* Vòng phép thuật quay đều */
+.magic-circle {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 250px; height: 250px;
+    margin-top: -125px; margin-left: -125px;
+    border: 2px dashed #8b0000;
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: spin 15s linear infinite;
+    box-shadow: 0 0 20px rgba(139, 0, 0, 0.5), inset 0 0 20px rgba(139, 0, 0, 0.5);
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* Ô chứa đồ thành phẩm (Ở giữa) */
+.forge-center-slot {
+    width: 65px; height: 65px;
+    background: #111;
+    border: 2px solid #ffcc00;
+    border-radius: 12px;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.8), inset 0 0 15px rgba(255, 215, 0, 0.3);
+    display: flex; justify-content: center; align-items: center;
+    font-size: 30px; font-weight: bold; color: #ff0000;
+    z-index: 10;
+}
+
+/* 10 Ô nguyên liệu xếp vòng tròn */
+.forge-slot {
+    width: 45px; height: 45px;
+    background: #2a2a2a;
+    border: 2px solid #555;
+    border-radius: 8px;
+    position: absolute;
+    top: 50%; left: 50%;
+    margin-top: -22.5px; margin-left: -22.5px;
+    
+    /* Thuật toán xếp vòng tròn: Quay theo góc --i (36 độ), đẩy ra xa 125px, rồi tự quay ngược lại để đứng thẳng */
+    transform: rotate(calc(var(--i) * 36deg)) translateY(-125px) rotate(calc(var(--i) * -36deg));
+    
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 20px;
+}
+.forge-slot:hover { border-color: #ff3333; transform: rotate(calc(var(--i) * 36deg)) translateY(-125px) rotate(calc(var(--i) * -36deg)) scale(1.1); z-index: 999999; }
+
+/* Nút tiến hành ghép */
+.forge-action-btn {
+    margin-top: auto;
+    background: linear-gradient(90deg, transparent, #8b0000, transparent);
+    color: #ffcc00;
+    font-family: 'MedievalSharp', cursive;
+    font-size: 22px;
+    border: 1px solid #ff0000;
+    padding: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 4px #000;
+    transition: 0.3s;
+}
+.forge-action-btn:hover {
+    background: linear-gradient(90deg, transparent, #ff0000, transparent);
+    color: #fff;
+    box-shadow: 0 0 15px #ff0000;
+    letter-spacing: 2px;
 }

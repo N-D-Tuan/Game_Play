@@ -78,35 +78,73 @@
             <button id="close-inventory" class="close-btn">✖</button>
 
             <div class="char-panel">
-                <div class="char-header">
-                    <h3>NHÂN VẬT CỦA BẠN</h3>
+                <!-- 1. THANH TABS CHUYỂN ĐỔI -->
+                <div class="panel-tabs">
+                    <button id="tab-equip-btn" class="panel-tab-btn active">Trang Bị</button>
+                    <button id="tab-forge-btn" class="panel-tab-btn">Ghép Đồ</button>
+                </div>
+
+                <!-- 2. VIEW: TRANG BỊ -->
+                <div id="view-equip" class="panel-view active">
+                    <div class="char-header">
+                        <h3>NHÂN VẬT CỦA BẠN</h3>
+                    </div>
+                    
+                    <div class="char-body">
+                        <div class="equip-col">
+                            <div class="equip-slot" id="slot-head" data-slot="head"><span class="slot-label" style="opacity: 0.5">Mũ</span></div>
+                            <div class="equip-slot" id="slot-chest" data-slot="chest"><span class="slot-label" style="opacity: 0.5">Áo</span></div>
+                            <div class="equip-slot" id="slot-legs" data-slot="legs"><span class="slot-label" style="opacity: 0.5">Quần</span></div>
+                        </div>
+
+                        <div class="char-preview-container">
+                            <div id="char-preview-sprite"></div>
+                        </div>
+
+                        <div class="equip-col">
+                            <div class="equip-slot" id="slot-weapon" data-slot="weapon"><span class="slot-label" style="opacity: 0.5">Vũ khí</span></div>
+                            <div class="equip-slot" id="slot-accessory" data-slot="accessory"><span class="slot-label" style="opacity: 0.5">Bổ trợ</span></div>
+                            <div class="equip-slot" id="slot-shoes" data-slot="shoes"><span class="slot-label" style="opacity: 0.5">Giày</span></div>
+                        </div>
+                    </div>
+
+                    <div class="char-stats">
+                        <h4 style="color: #ffcc00; text-align: center; margin: 0 0 10px 0;">THUỘC TÍNH NHÂN VẬT</h4>
+                        <div class="stat-row"><span>🩸 Máu tối đa:</span> <span id="stat-hp">1000</span></div>
+                        <div class="stat-row"><span>❤️ Hồi máu/s:</span> <span id="stat-hpRegen">5</span></div>
+                        <hr style="border-color: #444;">
+                        <div class="stat-row"><span>⚔️ Tấn công:</span> <span id="stat-atk">50</span></div>
+                        <div class="stat-row"><span>💨 Tỉ lệ né:</span> <span id="stat-dodge">5%</span></div>
+                    </div>
                 </div>
                 
-                <div class="char-body">
-                    <div class="equip-col">
-                        <div class="equip-slot" id="slot-head" data-slot="head"><span class="slot-label" style="opacity: 0.5">Mũ</span></div>
-                        <div class="equip-slot" id="slot-chest" data-slot="chest"><span class="slot-label" style="opacity: 0.5">Áo</span></div>
-                        <div class="equip-slot" id="slot-legs" data-slot="legs"><span class="slot-label" style="opacity: 0.5">Quần</span></div>
+                <!-- 3. VIEW: LÒ RÈN (GHÉP ĐỒ) -->
+                <div id="view-forge" class="panel-view">
+                    <div class="char-header">
+                        <h3 style="color: #ff3333; text-shadow: 0 0 10px #ff0000;">LÒ RÈN HUYẾT THẠCH</h3>
+                    </div>
+                    
+                    <div class="forge-container">
+                        <!-- Vòng tròn ma thuật xoay bên dưới -->
+                        <div class="magic-circle"></div>
+                        
+                        <!-- Ô Trung tâm (Sản phẩm thành công) -->
+                        <div class="forge-center-slot" id="forge-result">?</div>
+                        
+                        <!-- 10 Ô nguyên liệu xếp vòng tròn nhờ CSS (Biến --i) -->
+                        <div class="forge-slot" style="--i:0;"></div>
+                        <div class="forge-slot" style="--i:1;"></div>
+                        <div class="forge-slot" style="--i:2;"></div>
+                        <div class="forge-slot" style="--i:3;"></div>
+                        <div class="forge-slot" style="--i:4;"></div>
+                        <div class="forge-slot" style="--i:5;"></div>
+                        <div class="forge-slot" style="--i:6;"></div>
+                        <div class="forge-slot" style="--i:7;"></div>
+                        <div class="forge-slot" style="--i:8;"></div>
+                        <div class="forge-slot" style="--i:9;"></div>
                     </div>
 
-                    <div class="char-preview-container">
-                        <div id="char-preview-sprite"></div>
-                    </div>
-
-                    <div class="equip-col">
-                        <div class="equip-slot" id="slot-weapon" data-slot="weapon"><span class="slot-label" style="opacity: 0.5">Vũ khí</span></div>
-                        <div class="equip-slot" id="slot-accessory" data-slot="accessory"><span class="slot-label" style="opacity: 0.5">Bổ trợ</span></div>
-                        <div class="equip-slot" id="slot-shoes" data-slot="shoes"><span class="slot-label" style="opacity: 0.5">Giày</span></div>
-                    </div>
-                </div>
-
-                <div class="char-stats">
-                    <h4 style="color: #ffcc00; text-align: center; margin: 0 0 10px 0;">THUỘC TÍNH NHÂN VẬT</h4>
-                    <div class="stat-row"><span>🩸 Máu tối đa:</span> <span id="stat-hp">1000</span></div>
-                    <div class="stat-row"><span>❤️ Hồi máu/s:</span> <span id="stat-hpRegen">5</span></div>
-                    <hr style="border-color: #444;">
-                    <div class="stat-row"><span>⚔️ Tấn công:</span> <span id="stat-atk">50</span></div>
-                    <div class="stat-row"><span>💨 Tỉ lệ né:</span> <span id="stat-dodge">5%</span></div>
+                    <button id="btn-do-forge" class="forge-action-btn">TIẾN HÀNH HIẾN TẾ</button>
                 </div>
             </div>
 
