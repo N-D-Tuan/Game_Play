@@ -2,6 +2,8 @@ import { CampaignScene } from './campaign.js';
 import { SKILL_CAMPAIGN_CONFIG } from './skills.js';
 
 document.addEventListener("DOMContentLoaded", () => {
+    localStorage.setItem('playerId', '1');
+
     const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
     const btnPractice = document.getElementById('btn-practice');
@@ -77,6 +79,14 @@ document.addEventListener("DOMContentLoaded", () => {
         tabForgeBtn.classList.remove('active');
         viewEquip.classList.add('active');
         viewForge.classList.remove('active');
+
+        // KHI CHUYỂN VỀ TAB TRANG BỊ, TRẢ HẾT ĐỒ TRONG LÒ VỀ BALO
+        if (forgeItems.length > 0) {
+            myInventory.push(...forgeItems);
+            forgeItems = [];
+            renderForge();
+            renderInventory();
+        }
     });
 
     tabForgeBtn.addEventListener('click', () => {
@@ -125,6 +135,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     closeInventory.addEventListener('click', () => { 
         inventoryModal.style.display = 'none'; 
+
+        // KIỂM TRA VÀ TRẢ LẠI ĐỒ TRONG LÒ RÈN VỀ BALO
+        if (typeof forgeItems !== 'undefined' && forgeItems.length > 0) {
+            myInventory.push(...forgeItems); // Đẩy toàn bộ đồ trong lò về đuôi balo
+            forgeItems = [];                 // Làm rỗng lò
+            renderForge();                   // Vẽ lại lò rèn (trống)
+            renderInventory();               // Vẽ lại balo
+        }
         
         // Bật lại tương tác cho TẤT CẢ các scene đang chạy (Tránh lỗi liệt phím)
         if (typeof window.game !== 'undefined') {
