@@ -43,7 +43,188 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 1000);
     });
 
-    document.getElementById('btn-inventory').addEventListener('click', () => alert("Kho đồ đang trống!"));
+    // ==========================================
+    // HỆ THỐNG KHO ĐỒ (INVENTORY SYSTEM) - ĐÃ CẬP NHẬT
+    // ==========================================
+    const btnInventory = document.getElementById('btn-inventory');
+    const inventoryModal = document.getElementById('inventory-modal');
+    const closeInventory = document.getElementById('close-inventory');
+    const invGrid = document.getElementById('inventory-grid');
+    const invSearch = document.getElementById('inv-search');
+    const invSort = document.getElementById('inv-sort');
+    
+    // Nút phân trang
+    const btnPrevPage = document.getElementById('btn-prev-page');
+    const btnNextPage = document.getElementById('btn-next-page');
+    const pageInfo = document.getElementById('page-info');
+    let currentPage = 1;
+    const itemsPerPage = 35; // 35 là 5 hàng x 7 cột
+
+    const RARITY_CONFIG = {
+        'F': { color: '#ffffff', weight: 1, name: 'Thường' },
+        'E': { color: '#00ff00', weight: 2, name: 'Ưu Tú' },
+        'D': { color: '#00aaff', weight: 3, name: 'Hiếm' },
+        'C': { color: '#a335ee', weight: 4, name: 'Cực Hiếm' },
+        'B': { color: '#ffd700', weight: 5, name: 'Sử Thi' },
+        'A': { color: '#ff0000', weight: 6, name: 'Huyền Thoại' },
+        'S': { color: '#000000', weight: 7, name: 'Thần Thoại' }
+    };
+
+    // Chỉ còn 4 chỉ số theo yêu cầu
+    const STAT_NAMES = { hp: '+ Máu tối đa', atk: '+ Tấn công', hpRegen: '+ Hồi máu/s', dodge: '+ Tỉ lệ né (%)' };
+    const BASE_STATS = { hp: 1000, hpRegen: 5, atk: 50, dodge: 5 };
+
+    let equippedItems = { head: null, chest: null, legs: null, weapon: null, accessory: null, shoes: null };
+
+    // Dữ liệu mẫu (Lọc bỏ các chỉ số dư thừa)
+    let myInventory = [
+        { id: 1, name: 'Kiếm Sắt Gỉ', slot: 'weapon', rarity: 'F', stats: { atk: 10 }, icon: '🗡️' },
+        { id: 2, name: 'Gươm Ác Quỷ', slot: 'weapon', rarity: 'A', stats: { atk: 250 }, icon: '🩸' },
+        { id: 3, name: 'Áo Vải Thô', slot: 'chest', rarity: 'E', stats: { hp: 50 }, icon: '👕' },
+        { id: 4, name: 'Giáp Thần Quang', slot: 'chest', rarity: 'S', stats: { hp: 2000, hpRegen: 50 }, icon: '🎽' },
+        { id: 5, name: 'Nhẫn Sinh Mệnh', slot: 'accessory', rarity: 'B', stats: { hpRegen: 25 }, icon: '💍' },
+        { id: 7, name: 'Giày Bóng Đêm', slot: 'shoes', rarity: 'C', stats: { dodge: 15 }, icon: '👢' },
+        { id: 9, name: 'Hắc Kiếm Thần', slot: 'weapon', rarity: 'S', stats: { atk: 999, dodge: 10 }, icon: '⚔️' }
+    ];
+    // Bạn có thể duplicate các item ra để test phân trang
+    for(let i=10; i<=100; i++) myInventory.push({ id: i, name: 'Đá Vụn '+i, slot: 'accessory', rarity: 'F', stats: { hp: 1 }, icon: '🪨' });
+
+    btnInventory.addEventListener('click', () => { 
+        inventoryModal.style.display = 'flex'; 
+        updateStatsUI(); 
+        renderInventory(); 
+    });
+    closeInventory.addEventListener('click', () => { inventoryModal.style.display = 'none'; });
+
+    function updateStatsUI() {
+        let currentStats = { ...BASE_STATS };
+        for (let slot in equippedItems) {
+            let item = equippedItems[slot];
+            if (item && item.stats) {
+                for (let statKey in item.stats) {
+                    if(currentStats[statKey] !== undefined) currentStats[statKey] += item.stats[statKey];
+                }
+            }
+        }
+        document.getElementById('stat-hp').textContent = currentStats.hp;
+        document.getElementById('stat-hpRegen').textContent = currentStats.hpRegen;
+        document.getElementById('stat-atk').textContent = currentStats.atk;
+        document.getElementById('stat-dodge').textContent = currentStats.dodge + '%';
+    }
+
+    // TẠO TOOLTIP THỐNG NHẤT
+    function buildTooltip(item) {
+        let tooltip = `[${RARITY_CONFIG[item.rarity].name}] ${item.name.toUpperCase()}\nPhẩm chất: Bậc ${item.rarity}\n-------------------\n`;
+        for(let stat in item.stats) {
+            if(STAT_NAMES[stat]) {
+                let suffix = (stat === 'dodge') ? '%' : '';
+                tooltip += `${STAT_NAMES[stat]}: ${item.stats[stat]}${suffix}\n`;
+            }
+        }
+        return tooltip.trim();
+    }
+
+    function equipItem(item) {
+        let oldItem = equippedItems[item.slot];
+        if (oldItem) myInventory.push(oldItem);
+        
+        equippedItems[item.slot] = item;
+        myInventory = myInventory.filter(invItem => invItem.id !== item.id);
+        
+       // Tạo hiệu ứng viền trắng phát sáng độc quyền cho bậc S
+        let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+        
+        // Vẽ đồ lên khe nhân vật và Gắn Tooltip
+        let slotDiv = document.getElementById(`slot-${item.slot}`);
+        slotDiv.innerHTML = `<span>${item.icon}</span><span class="item-rank" style="color: ${RARITY_CONFIG[item.rarity].color}; ${textShadow}">${item.rarity}</span>`;
+        slotDiv.style.borderColor = RARITY_CONFIG[item.rarity].color;
+        slotDiv.setAttribute('data-tooltip', buildTooltip(item)); // Hiện thông tin khi di chuột vào người
+        
+        if(item.rarity === 'S') slotDiv.style.boxShadow = `0 0 10px #ffffff`; else slotDiv.style.boxShadow = 'none';
+
+        updateStatsUI();
+        renderInventory();
+    }
+
+    // DOUBLE CLICK ĐỂ THÁO TRANG BỊ
+    document.querySelectorAll('.equip-slot').forEach(slotDiv => {
+        slotDiv.addEventListener('dblclick', () => {
+            let slotName = slotDiv.getAttribute('data-slot');
+            let item = equippedItems[slotName];
+            if (item) {
+                myInventory.push(item); // Vứt về túi
+                equippedItems[slotName] = null; // Xóa khỏi người
+                
+                // Trả ô về trạng thái "Trống" nguyên bản
+                const slotLabels = { head: 'Mũ', chest: 'Áo', legs: 'Quần', weapon: 'Vũ khí', accessory: 'Bổ trợ', shoes: 'Giày' };
+                slotDiv.innerHTML = `<span class="slot-label" style="opacity: 0.5">${slotLabels[slotName]}</span>`;
+                slotDiv.style.borderColor = '#555';
+                slotDiv.style.boxShadow = 'none';
+                slotDiv.removeAttribute('data-tooltip'); // Xóa Tooltip
+
+                updateStatsUI();
+                renderInventory();
+            }
+        });
+    });
+
+    // VẼ BALO & PHÂN TRANG
+    function renderInventory() {
+        invGrid.innerHTML = ''; 
+        let keyword = invSearch.value.toLowerCase();
+        let sortMode = invSort.value;
+
+        let filteredItems = myInventory.filter(item => item.name.toLowerCase().includes(keyword));
+
+        filteredItems.sort((a, b) => {
+            if (sortMode === 'name') return a.name.localeCompare(b.name);
+            if (sortMode === 'rarity') return RARITY_CONFIG[b.rarity].weight - RARITY_CONFIG[a.rarity].weight;
+        });
+
+        // Xử lý Phân Trang
+        let totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        let startIndex = (currentPage - 1) * itemsPerPage;
+        let pageItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+
+        // Cập nhật text hiển thị trang
+        pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
+        btnPrevPage.disabled = currentPage === 1;
+        btnNextPage.disabled = currentPage === totalPages;
+
+        pageItems.forEach(item => {
+            let rankInfo = RARITY_CONFIG[item.rarity];
+            let div = document.createElement('div');
+            div.className = 'inv-item';
+
+            // Tạo hiệu ứng viền trắng phát sáng độc quyền cho bậc S
+            let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+            
+            div.innerHTML = `<span>${item.icon}</span><span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
+            div.setAttribute('data-tooltip', buildTooltip(item));
+            div.style.borderColor = rankInfo.color;
+            if(item.rarity === 'S') { div.style.boxShadow = `0 0 10px #ffffff`; div.style.borderColor = '#ffffff'; }
+
+            // 1 CLICK ĐỂ MẶC ĐỒ
+            div.addEventListener('click', () => equipItem(item));
+            invGrid.appendChild(div);
+        });
+
+        // Điền đầy chữ Trống
+        for(let i = pageItems.length; i < itemsPerPage; i++) {
+            let emptyDiv = document.createElement('div');
+            emptyDiv.className = 'inv-item';
+            emptyDiv.innerHTML = `<span class="slot-label" style="opacity: 0.2">Trống</span>`;
+            invGrid.appendChild(emptyDiv);
+        }
+    }
+
+    invSearch.addEventListener('input', () => { currentPage = 1; renderInventory(); });
+    invSort.addEventListener('change', () => { currentPage = 1; renderInventory(); });
+    
+    // Nút điều khiển Lật trang
+    btnPrevPage.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderInventory(); } });
+    btnNextPage.addEventListener('click', () => { currentPage++; renderInventory(); });
 
     // --- LOGIC BẢNG CÀI ĐẶT ---
     const btnSettings = document.getElementById('btn-settings');

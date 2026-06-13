@@ -73,6 +73,67 @@
         </div>
     </div>
 
+    <div id="inventory-modal" class="modal-overlay" style="display: none;">
+        <div class="inventory-container">
+            <button id="close-inventory" class="close-btn">✖</button>
+
+            <div class="char-panel">
+                <div class="char-header">
+                    <h3>NHÂN VẬT CỦA BẠN</h3>
+                </div>
+                
+                <div class="char-body">
+                    <div class="equip-col">
+                        <div class="equip-slot" id="slot-head" data-slot="head"><span class="slot-label" style="opacity: 0.5">Mũ</span></div>
+                        <div class="equip-slot" id="slot-chest" data-slot="chest"><span class="slot-label" style="opacity: 0.5">Áo</span></div>
+                        <div class="equip-slot" id="slot-legs" data-slot="legs"><span class="slot-label" style="opacity: 0.5">Quần</span></div>
+                    </div>
+
+                    <div class="char-preview-container">
+                        <div id="char-preview-sprite"></div>
+                    </div>
+
+                    <div class="equip-col">
+                        <div class="equip-slot" id="slot-weapon" data-slot="weapon"><span class="slot-label" style="opacity: 0.5">Vũ khí</span></div>
+                        <div class="equip-slot" id="slot-accessory" data-slot="accessory"><span class="slot-label" style="opacity: 0.5">Bổ trợ</span></div>
+                        <div class="equip-slot" id="slot-shoes" data-slot="shoes"><span class="slot-label" style="opacity: 0.5">Giày</span></div>
+                    </div>
+                </div>
+
+                <div class="char-stats">
+                    <h4 style="color: #ffcc00; text-align: center; margin: 0 0 10px 0;">THUỘC TÍNH NHÂN VẬT</h4>
+                    <div class="stat-row"><span>🩸 Máu tối đa:</span> <span id="stat-hp">1000</span></div>
+                    <div class="stat-row"><span>❤️ Hồi máu/s:</span> <span id="stat-hpRegen">5</span></div>
+                    <hr style="border-color: #444;">
+                    <div class="stat-row"><span>⚔️ Tấn công:</span> <span id="stat-atk">50</span></div>
+                    <div class="stat-row"><span>💨 Tỉ lệ né:</span> <span id="stat-dodge">5%</span></div>
+                </div>
+            </div>
+
+            <div class="backpack-panel">
+                <div class="backpack-header">
+                    <h3>BALO VẬT PHẨM</h3>
+                    <div class="backpack-controls">
+                        <input type="text" id="inv-search" placeholder="Tìm kiếm...">
+                        <select id="inv-sort">
+                            <option value="rarity">Sắp xếp: Độ hiếm</option>
+                            <option value="name">Sắp xếp: Tên (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="inventory-grid" id="inventory-grid">
+                    </div>
+
+                <div class="inventory-pagination">
+                    <button id="btn-prev-page" class="page-btn">◀ Lùi</button>
+                    <span id="page-info">Trang 1 / 1</span>
+                    <button id="btn-next-page" class="page-btn">Tiến ▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="../js/main.js"></script>
     <script type="module" src="../js/game.js"></script>
     <script type="module" src="../js/skills.js"></script>
