@@ -83,7 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: 3, name: 'Áo Vải Thô', slot: 'chest', rarity: 'E', stats: { hp: 50 }, icon: '👕' },
         { id: 4, name: 'Giáp Thần Quang', slot: 'chest', rarity: 'S', stats: { hp: 2000, hpRegen: 50 }, icon: '🎽' },
         { id: 5, name: 'Nhẫn Sinh Mệnh', slot: 'accessory', rarity: 'B', stats: { hpRegen: 25 }, icon: '💍' },
+        { id: 6, name: 'Hắc Kiếm Thần', slot: 'weapon', rarity: 'B', stats: { atk: 30, dodge: 3 }, icon: '⚔️' },
         { id: 7, name: 'Giày Bóng Đêm', slot: 'shoes', rarity: 'C', stats: { dodge: 15 }, icon: '👢' },
+        { id: 8, name: 'Kiếm Sắt Gỉ', slot: 'weapon', rarity: 'S', stats: { atk: 999 }, icon: '🗡️' },
         { id: 9, name: 'Hắc Kiếm Thần', slot: 'weapon', rarity: 'S', stats: { atk: 999, dodge: 10 }, icon: '⚔️' }
     ];
     // Bạn có thể duplicate các item ra để test phân trang
@@ -94,7 +96,24 @@ document.addEventListener("DOMContentLoaded", () => {
         updateStatsUI(); 
         renderInventory(); 
     });
-    closeInventory.addEventListener('click', () => { inventoryModal.style.display = 'none'; });
+    closeInventory.addEventListener('click', () => { 
+        inventoryModal.style.display = 'none'; 
+        
+        // Bật lại tương tác cho TẤT CẢ các scene đang chạy (Tránh lỗi liệt phím)
+        if (typeof window.game !== 'undefined') {
+            window.game.scene.scenes.forEach(scene => {
+                if (scene.sys.isActive() && scene.input) {
+                    scene.input.enabled = true; 
+                    if (scene.moveState) {
+                        scene.moveState.up = false;
+                        scene.moveState.down = false;
+                        scene.moveState.left = false;
+                        scene.moveState.right = false;
+                    }
+                }
+            });
+        }
+    });
 
     function updateStatsUI() {
         let currentStats = { ...BASE_STATS };
@@ -106,11 +125,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
+        window.playerStats = currentStats;
+
         document.getElementById('stat-hp').textContent = currentStats.hp;
         document.getElementById('stat-hpRegen').textContent = currentStats.hpRegen;
         document.getElementById('stat-atk').textContent = currentStats.atk;
         document.getElementById('stat-dodge').textContent = currentStats.dodge + '%';
     }
+    
+    updateStatsUI();
 
     // TẠO TOOLTIP THỐNG NHẤT
     function buildTooltip(item) {
@@ -125,6 +148,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function equipItem(item) {
+        let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
+        if (isCampaignActive) {
+            showDarkFantasyAlert("Không thể mặc trang bị khi đang Vượt Ải!");
+            return;
+        }
+
         let oldItem = equippedItems[item.slot];
         if (oldItem) myInventory.push(oldItem);
         
@@ -149,6 +178,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // DOUBLE CLICK ĐỂ THÁO TRANG BỊ
     document.querySelectorAll('.equip-slot').forEach(slotDiv => {
         slotDiv.addEventListener('dblclick', () => {
+            let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
+            if (isCampaignActive) {
+                showDarkFantasyAlert("Không thể tháo trang bị khi đang Vượt Ải!");
+                return;
+            }
+
             let slotName = slotDiv.getAttribute('data-slot');
             let item = equippedItems[slotName];
             if (item) {
@@ -407,4 +442,27 @@ document.addEventListener("DOMContentLoaded", () => {
             muteBtn.textContent = '🔮'; volumeSlider.value = lastVolume === 0 ? 0.5 : lastVolume; updateGameVolume(volumeSlider.value);
         }
     });
+
+    let toastTimeout;
+    let toastHideTimeout;
+
+    function showDarkFantasyAlert(message) {
+        const toast = document.getElementById('dark-fantasy-toast');
+        document.getElementById('toast-text').textContent = message;
+        
+        // Hủy các bộ đếm giờ cũ nếu người chơi spam click
+        if (toastTimeout) clearTimeout(toastTimeout);
+        if (toastHideTimeout) clearTimeout(toastHideTimeout);
+
+        toast.style.display = 'block';
+        // Ép trình duyệt vẽ lại khung hình để hiệu ứng transition chạy mượt
+        void toast.offsetWidth; 
+        toast.classList.add('show');
+
+        // Đặt lại bộ đếm giờ mới hoàn toàn
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+            toastHideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 400);
+        }, 3000);
+    }
 });
