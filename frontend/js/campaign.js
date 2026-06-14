@@ -18,6 +18,9 @@ export class CampaignScene extends Phaser.Scene {
         // Nếu không có data truyền vào, mặc định là Ải 1 và Level 0
         this.currentStage = data.stage || 1;
         this.currentPlayerLevel = data.level || 0;
+
+        // NHẬN LẠI TÚI ĐỒ TỪ MÀN TRƯỚC
+        this.inheritedLoot = data.loot || [];
     }
 
     preload() {
@@ -82,6 +85,8 @@ export class CampaignScene extends Phaser.Scene {
         // SPRITESHEET MỚI CHO RƯƠNG VÀ CỔNG
         this.load.spritesheet('chest', '../assets/chest_spritesheet.png', { frameWidth: 235, frameHeight: 353 });
         this.load.spritesheet('gateway', '../assets/gateway_spritesheet.png', { frameWidth: 50, frameHeight: 200 });
+
+        this.load.image('random', '../assets/items/random.png');
     }
 
     create() {
@@ -281,8 +286,16 @@ export class CampaignScene extends Phaser.Scene {
         this.isGameOver = false;
         this.isPaused = false;
         this.stageCleared = false; // Biến kiểm tra đã dọn sạch quái chưa
-        this.chestSpawned = false; // Biến đánh dấu đã gọi rương chưa
+        this.chestSpawned = false; 
+        this.bossChestSpawned = false;
+        this.bossEntity = null;
         this.collectedTreasures = 0; // Đếm vật phẩm nhặt được
+
+        this.sessionLoot = [...this.inheritedLoot]; // Túi đồ tạm: Chứa trang bị nhặt được trong màn này
+        this.equipments = this.physics.add.group(); // Nhóm vật lý cho Trang bị rơi ra
+        
+        // Xử lý nhặt trang bị (Khác với nhặt ngọc)
+        this.physics.add.overlap(this.player, this.equipments, this.collectEquipment, null, this);
 
         this.isTransitioning = false;
         
@@ -292,6 +305,10 @@ export class CampaignScene extends Phaser.Scene {
         this.drawHealthBar();
         this.createSkillUI();
         this.createStageUI(); // Gọi UI hiển thị Tên Ải
+        // Tạo nút bấm mở Túi
+        this.createBagUI();
+        // Cập nhật ngay con số hiển thị trên túi UI
+        if (this.bagCountText) this.bagCountText.setText(this.sessionLoot.length);
 
         // Radar
         this.radarBg = this.add.graphics().setDepth(14000).setScrollFactor(0);
@@ -445,9 +462,70 @@ export class CampaignScene extends Phaser.Scene {
         }).setOrigin(0.5).setScrollFactor(0).setDepth(13001);
     }
 
+    createBagUI() {
+        let scX = this.cameras.main.width - 70;
+        let scY = 280;
+
+        // Nút mở túi
+        this.bagIcon = this.add.text(scX, scY, '📜', { fontSize: '40px' })
+            .setOrigin(0.5).setScrollFactor(0).setDepth(14000).setInteractive({ useHandCursor: true });
+        
+        // Số lượng đồ đang có trong túi
+        this.bagCountText = this.add.text(scX + 15, scY + 15, '0', { 
+            fontSize: '18px', fill: '#fff', backgroundColor: '#f00', padding: {x: 4, y: 2} 
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(14001);
+
+        // Bảng danh sách đồ (Mặc định ẩn)
+        this.bagPanel = this.add.graphics().setScrollFactor(0).setDepth(15000).setVisible(false);
+        this.bagPanel.fillStyle(0x000000, 0.9).lineStyle(2, 0xffcc00, 1)
+            .fillRect(scX - 300, scY + 30, 320, 400).strokeRect(scX - 300, scY + 30, 320, 400);
+            
+        this.bagTitle = this.add.text(scX - 140, scY + 45, 'TÚI ĐỒ VƯỢT ẢI', { 
+            fontSize: '20px', fill: '#ffcc00', fontStyle: 'bold' 
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(15001).setVisible(false);
+
+        this.bagContent = this.add.text(scX - 280, scY + 80, 'Chưa có trang bị nào.', { 
+            fontSize: '16px', fill: '#fff', wordWrap: { width: 280 } 
+        }).setOrigin(0).setScrollFactor(0).setDepth(15001).setVisible(false);
+
+        // Click để Bật/Tắt túi
+        this.bagIcon.on('pointerdown', () => {
+            let isVisible = !this.bagPanel.visible;
+            this.bagPanel.setVisible(isVisible);
+            this.bagTitle.setVisible(isVisible);
+            this.bagContent.setVisible(isVisible);
+            
+            // Cập nhật text hiển thị
+            if (isVisible) {
+                if (this.sessionLoot.length === 0) {
+                    this.bagContent.setText('Chưa có trang bị nào.');
+                } else {
+                    // Nhóm đồ theo tên và đếm số lượng
+                    let summary = {};
+                    this.sessionLoot.forEach(item => {
+                        let line = `[Bậc ${item.rarity}] ${item.name}`;
+                        summary[line] = (summary[line] || 0) + 1;
+                    });
+                    
+                    let textList = Object.keys(summary).map(k => `${k} x${summary[k]}`).join('\n\n');
+                    this.bagContent.setText(textList);
+                }
+            }
+        });
+    }
+
     setUiVisibility(isVisible) {
         // Khóa hoặc Mở phím điều khiển
         this.input.keyboard.enabled = isVisible;
+
+        if (this.bagIcon) this.bagIcon.setVisible(isVisible);
+        if (this.bagCountText) this.bagCountText.setVisible(isVisible);
+        // Nếu đang giấu UI thì phải đóng luôn bảng danh sách nếu người chơi đang mở nó
+        if (!isVisible && this.bagPanel) {
+            this.bagPanel.setVisible(false);
+            this.bagTitle.setVisible(false);
+            this.bagContent.setVisible(false);
+        }
         
         // Ẩn/Hiện UI người chơi
         if (this.hpFrame) this.hpFrame.setVisible(isVisible);
@@ -695,12 +773,6 @@ export class CampaignScene extends Phaser.Scene {
     // LOGIC RƯƠNG BÁU & CỔNG & VẬT PHẨM
     // ==========================================
     spawnChestAndGateway(x, y) {
-        if (this.currentStage === 3) {
-            // Nếu là màn cuối -> Xong là Thắng luôn
-            this.showVictoryScreen();
-            return;
-        }
-
         // Tạo Rương (Ban đầu là frame 1 - Đóng)
         this.stageChest = this.chestGroup.create(x, y, 'chest', 1);
         this.stageChest.setScale(0.5); // Bạn tự chỉnh độ to nhỏ
@@ -711,10 +783,12 @@ export class CampaignScene extends Phaser.Scene {
     openChest(player, chest) {
         if (chest.chestState === 'closed') {
             chest.chestState = 'opened';
-            chest.setFrame(0); // Chuyển sang ảnh mở nắp
+            chest.setFrame(0);
             chest.setX(chest.x - 15);
 
-            // Rơi ra 5 vật phẩm
+            this.cameras.main.shake(300, 0.01);
+
+            // 1. VĂNG 5 LÕI NÂNG CẤP (Ngọc)
             let dropImage = this.currentStage === 1 ? 'aa1' : 'aa2';
             for (let i = 0; i < 5; i++) {
                 // Tọa độ ngẫu nhiên xung quanh rương (bán kính 150px)
@@ -722,30 +796,139 @@ export class CampaignScene extends Phaser.Scene {
                 let destY = chest.y + Phaser.Math.Between(-100, 150);
                 
                 // Khởi tạo đồ từ trong lòng rương
-                let item = this.treasures.create(chest.x, chest.y, dropImage);
-                item.setScale(0.1).setDepth(destY);
+                let core = this.treasures.create(chest.x, chest.y, dropImage);
+                core.setScale(0.1).setDepth(destY);
                 
-                // [QUAN TRỌNG]: Tắt va chạm để người chơi không ăn được lúc nó đang nảy lên
-                item.body.enable = false; 
+                // Tắt va chạm để người chơi không ăn được lúc nó đang nảy lên
+                core.body.enable = false; 
 
                 // Tween 1: Đẩy sang ngang
-                this.tweens.add({ targets: item, x: destX, duration: 600, ease: 'Linear' });
+                this.tweens.add({ targets: core, x: destX, duration: 600, ease: 'Linear' });
                 
                 // Tween 2: Nhảy vọt lên trên rồi rớt xuống đất
                 this.tweens.add({
-                    targets: item,
+                    targets: core,
                     y: destY - 100, // Độ cao nảy lên
                     duration: 300,
                     yoyo: true, // Tự động rớt xuống lại
                     ease: 'Sine.easeOut',
                     onComplete: () => {
-                        item.y = destY; 
-                        item.body.enable = true; // Bật lại va chạm
-                        item.body.reset(item.x, item.y); // Reset lại vùng hitbox bám theo ảnh
+                        core.y = destY; 
+                        core.body.enable = true; // Bật lại va chạm
+                        core.body.reset(core.x, core.y); // Reset lại vùng hitbox bám theo ảnh
                     }
                 });
             }
+
+            // 2. VĂNG TRANG BỊ VỚI CỘT SÁNG THEO BẬC
+            let equipDrops = this.generateRandomDropsForStage(this.currentStage);
+            
+            equipDrops.forEach((itemData, index) => {
+                // Delay văng từng món để tạo cảm giác "tuôn trào"
+                this.time.delayedCall(index * 150, () => {
+                    let destX = chest.x + Phaser.Math.Between(-200, 200);
+                    let destY = chest.y + Phaser.Math.Between(-150, 200);                   
+
+                    // Ngẫu nhiên hiển thị 1 trong 6 loại trang bị khi rớt ra đất
+                    let iconImg = 'random';
+                    let equip = this.equipments.create(chest.x, chest.y, iconImg);
+                    equip.setScale(0.2).setDepth(destY).body.enable = false;
+                    equip.itemData = itemData; // Gắn data vào object vật lý để lúc nhặt còn biết là gì
+
+                    // 1. LỚP HÀO QUANG (To, mờ, tỏa sáng theo màu phẩm chất)
+                    let hexColor = Phaser.Display.Color.HexStringToColor(itemData.color).color;
+                    let beamAura = this.add.rectangle(destX, destY, 60, 800, hexColor)
+                        .setOrigin(0.5, 1).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(destY - 2);
+
+                    // 2. LỚP LÕI (Nhỏ, đặc, luôn dùng màu trắng để chống chìm nền)
+                    let beamCore = this.add.rectangle(destX, destY, 12, 800, 0xffffff)
+                        .setOrigin(0.5, 1).setAlpha(0).setBlendMode(Phaser.BlendModes.NORMAL).setDepth(destY - 1);
+
+                    // Tween văng đồ
+                    this.tweens.add({ targets: equip, x: destX, duration: 600, ease: 'Linear' });
+                    this.tweens.add({ targets: equip, y: destY - 150, duration: 300, yoyo: true, ease: 'Sine.easeOut',
+                        onComplete: () => { 
+                            equip.y = destY; 
+                            equip.body.enable = true; 
+                            equip.body.reset(equip.x, equip.y); 
+                            
+                            // Đồ chạm đất -> Cả 2 cột sáng cùng bùng lên
+                            this.tweens.add({ targets: beamAura, alpha: 0.8, duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+                            this.tweens.add({ targets: beamCore, alpha: 0.9, duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+                            
+                            // Lưu lại cả 2 cột sáng vào biến để lát nhặt thì xóa
+                            equip.beamAura = beamAura; 
+                            equip.beamCore = beamCore;
+                            
+                            // Chữ Rarity nổi lên
+                            let rarityTxt = this.add.text(destX, destY - 30, itemData.rarity, { 
+                                fontSize: '24px', fill: itemData.color, fontStyle: 'bold', stroke: '#000', strokeThickness: 4 
+                            }).setOrigin(0.5).setDepth(destY + 1);
+                            
+                            this.tweens.add({ targets: rarityTxt, y: destY - 50, duration: 1000, yoyo: true, repeat: -1 });
+                            equip.rarityTxt = rarityTxt;
+                        }
+                    });
+                });
+            });
         }
+    }
+
+    generateRandomDropsForStage(stage) {
+        let drops = [];
+        let numItems = stage === 1 ? 2 : (stage === 2 ? 4 : 6); // Màn cuối rớt 6 món
+
+        for(let i=0; i<numItems; i++) {
+            let roll = Math.random() * 100;
+            let rarity = 'F'; let color = '#ffffff';
+
+            if (stage === 1) {
+                if (roll < 10) { rarity = 'C'; color = '#a335ee'; }
+                else if (roll < 30) { rarity = 'D'; color = '#00aaff'; }
+                else if (roll < 60) { rarity = 'E'; color = '#00ff00'; }
+            } 
+            else if (stage === 2) {
+                if (roll < 5) { rarity = 'B'; color = '#ffd700'; }
+                else if (roll < 20) { rarity = 'C'; color = '#a335ee'; }
+                else if (roll < 50) { rarity = 'D'; color = '#00aaff'; }
+            }
+            else if (stage === 3) { // Ải Boss
+                if (i === 0) { rarity = 'A'; color = '#ff0000'; } // Món đầu tiên chắc chắn bậc A
+                else if (roll < 2) { rarity = 'S'; color = '#ff0000'; } // Bậc S phát sáng đỏ/trắng
+                else if (roll < 8) { rarity = 'A'; color = '#ff0000'; }
+                else if (roll < 40) { rarity = 'B'; color = '#ffd700'; }
+                else { rarity = 'C'; color = '#a335ee'; }
+            }
+
+            drops.push({ 
+                name: 'Trang bị Bí ẩn', // Sẽ gọi Backend định danh sau khi thắng
+                rarity: rarity, 
+                color: color 
+            });
+        }
+        return drops;
+    }
+
+    // Hàm Xử lý khi người chơi dẫm lên Trang Bị
+    collectEquipment(player, equip) {
+        // Hủy các hiệu ứng ánh sáng
+        if (equip.beamAura) equip.beamAura.destroy();
+        if (equip.beamCore) equip.beamCore.destroy();
+        if (equip.rarityTxt) equip.rarityTxt.destroy();
+        
+        // Thêm vào túi tạm
+        this.sessionLoot.push(equip.itemData);
+        this.bagCountText.setText(this.sessionLoot.length); // Cập nhật số trên UI
+        
+        // Animation nhặt
+        let txt = this.add.text(player.x, player.y - 40, `Nhặt Bậc ${equip.itemData.rarity}`, { 
+            fontSize: '18px', fill: equip.itemData.color, fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
+        }).setOrigin(0.5).setDepth(8000);
+        this.tweens.add({ targets: txt, y: player.y - 90, alpha: 0, duration: 1000, onComplete: () => txt.destroy() });
+
+        equip.destroy(); // Biến mất khỏi map
+
+        this.time.delayedCall(50, () => this.checkAndSpawnGateway());
     }
 
     collectTreasure(player, item) {
@@ -756,27 +939,46 @@ export class CampaignScene extends Phaser.Scene {
         let txt = this.add.text(player.x, player.y - 30, '+1', { fontSize: '20px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setDepth(8000);
         this.tweens.add({ targets: txt, y: player.y - 80, alpha: 0, duration: 800, onComplete: () => txt.destroy() });
 
-        // Khi nhặt đủ 5 cái -> Rương rỗng, Nâng cấp, Xuất hiện cổng
-        if (this.collectedTreasures === 5 && this.stageChest && this.stageChest.chestState === 'opened') {
-            this.stageChest.chestState = 'empty';
-            this.stageChest.setFrame(2); // Đổi thành rương rỗng
-            this.stageChest.setX(this.stageChest.x + 25);
-            
-            this.processLevelUp();
+        this.time.delayedCall(50, () => this.checkAndSpawnGateway());
+    }
 
-            // [ĐÃ SỬA]: Mở cổng CÁCH XA RƯƠNG 300px
-            let gateX = this.stageChest.x + 300;
-            // Nếu rương sát góc phải bản đồ quá thì đảo cổng sang bên trái
-            if (gateX > 3800) gateX = this.stageChest.x - 300; 
+    // KIỂM TRA ĐÃ NHẶT SẠCH ĐỒ CHƯA ĐỂ MỞ CỔNG
+    checkAndSpawnGateway() {
+        // Chỉ kiểm tra khi rương báu đã được mở
+        if (this.stageChest && this.stageChest.chestState === 'opened') {
             
-            let gate = this.gateGroup.create(gateX, this.stageChest.y, 'gateway');
-            gate.setScale(1.5);
-            gate.setDepth(this.stageChest.y);
-            gate.anims.play('gateway-idle', true);
+            // Đếm số Ngọc và Trang bị đang còn rơi vãi trên map
+            let gemsLeft = this.treasures.countActive(true);
+            let equipsLeft = this.equipments.countActive(true);
+
+            // NẾU CẢ 2 BẰNG 0 -> ĐÃ NHẶT SẠCH MỌI THỨ
+            if (gemsLeft === 0 && equipsLeft === 0) {
+                this.stageChest.chestState = 'empty';
+                this.stageChest.setFrame(2); // Đổi thành rương rỗng
+                this.stageChest.setX(this.stageChest.x + 25);
+                
+                this.processLevelUp(this.stageChest.isBossChest);
+
+                // NẾU ĐÂY LÀ RƯƠNG BOSS -> HIỆN BẢNG TỔNG KẾT
+                if (this.stageChest.isBossChest) {
+                    this.time.delayedCall(1500, () => {
+                        this.showSummaryScreen(true); // Gửi cờ Win = true
+                    });
+                } else {
+                    // Mở cổng CÁCH XA RƯƠNG 300px
+                    let gateX = this.stageChest.x + 300;
+                    if (gateX > 3800) gateX = this.stageChest.x - 300; 
+                    
+                    let gate = this.gateGroup.create(gateX, this.stageChest.y, 'gateway');
+                    gate.setScale(1.5);
+                    gate.setDepth(this.stageChest.y);
+                    gate.anims.play('gateway-idle', true);
+                } 
+            }
         }
     }
 
-    processLevelUp() {
+    processLevelUp(isBossChest = false) {
         // Tăng cấp độ nhân vật
         this.currentPlayerLevel++;
         this.player.aaLevel = this.currentPlayerLevel;
@@ -797,15 +999,17 @@ export class CampaignScene extends Phaser.Scene {
             }
         }
 
-        // Hiệu ứng chữ Level Up to giữa màn hình
-        let lvlTxt = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, '⚡ BẠN ĐÃ ĐƯỢC NÂNG CẤP! ⚡', { 
-            fontSize: '40px', fill: '#00ffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 5 
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(20000).setAlpha(0);
+        if (!isBossChest) {
+            // Hiệu ứng chữ Level Up to giữa màn hình
+            let lvlTxt = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, '⚡ BẠN ĐÃ ĐƯỢC NÂNG CẤP! ⚡', { 
+                fontSize: '40px', fill: '#00ffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 5 
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(20000).setAlpha(0);
 
-        this.tweens.add({
-            targets: lvlTxt, alpha: 1, y: this.cameras.main.centerY - 50, duration: 800, yoyo: true, hold: 1500,
-            onComplete: () => lvlTxt.destroy()
-        });
+            this.tweens.add({
+                targets: lvlTxt, alpha: 1, y: this.cameras.main.centerY - 50, duration: 800, yoyo: true, hold: 1500,
+                onComplete: () => lvlTxt.destroy()
+            });
+        }
     }
 
     enterGateway(player, gate) {
@@ -819,43 +1023,161 @@ export class CampaignScene extends Phaser.Scene {
         this.cameras.main.once('camerafadeoutcomplete', () => {
             if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
             // Truyền tham số Ải mới và Cấp độ qua cho Scene khởi tạo lại
-            this.scene.restart({ stage: this.currentStage + 1, level: this.currentPlayerLevel });
+            this.scene.restart({ 
+                stage: this.currentStage + 1, 
+                level: this.currentPlayerLevel,
+                loot: this.sessionLoot 
+            });
         });
     }
 
-    showVictoryScreen() {
-        this.isGameOver = true; // Dừng mọi hoạt động
+    // ==========================================
+    // BẢNG TỔNG KẾT & HIỂN THỊ DƯỚI DẠNG Ô TRANG BỊ
+    // ==========================================
+    async showSummaryScreen(isWin) {
+        this.isGameOver = true; 
         this.physics.pause(); 
-        
+        this.setUiVisibility(false); 
+        if (this.bagPanel) this.bagPanel.setVisible(false);
+
         let cx = this.cameras.main.centerX;
         let cy = this.cameras.main.centerY;
 
-        this.add.graphics().fillStyle(0x000000, 0.75).fillRect(0, 0, this.cameras.main.width, this.cameras.main.height).setScrollFactor(0).setDepth(29000);
+        // Vẽ nền đen mờ
+        this.add.graphics().fillStyle(0x000000, 0.95)
+            .fillRect(0, 0, this.cameras.main.width, this.cameras.main.height).setScrollFactor(0).setDepth(29000);
 
-        this.add.text(cx, cy - 80, '🏆 BẠN ĐÃ THẮNG! 🏆', { 
-            fontSize: '60px', fill: '#00ff00', fontStyle: 'bold' 
+        let title = isWin ? '🏆 VƯỢT ẢI THÀNH CÔNG 🏆' : '💀 BẠN ĐÃ TỬ TRẬN 💀';
+        let titleColor = isWin ? '#00ff00' : '#ff0000';
+        
+        this.add.text(cx, 80, title, { fontSize: '50px', fill: titleColor, fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
+        this.add.text(cx, 160, 'CHIẾN LỢI PHẨM THU ĐƯỢC:', { fontSize: '26px', fill: '#ffcc00', fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
+
+        // Chữ Loading trong lúc chờ Backend bóc quà
+        let loadingTxt = this.add.text(cx, cy, 'Đang giải mã trang bị...', { 
+            fontSize: '22px', fill: '#00ffff', fontStyle: 'italic'
         }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
 
-        let btnRestart = this.add.text(cx, cy + 30, '[ CHƠI LẠI MÀN 1 ]', { 
-            fontSize: '32px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} 
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
-        
-        btnRestart.on('pointerdown', () => {
-            if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
-            this.scene.restart({ stage: 1, level: 0 }); // Chơi lại từ đầu
-        });
+        // Xóa Lưới đồ HTML cũ (nếu vô tình còn sót lại do lag)
+        let oldGrid = document.getElementById('summary-loot-grid');
+        if (oldGrid) oldGrid.remove();
 
-        let btnHomeGameOver = this.add.text(cx, cy + 110, '[ TRANG CHỦ ]', { 
-            fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} 
+        // GỌI API BACKEND ĐỂ NHẬN ĐỒ THẬT
+        if (this.sessionLoot.length > 0) {
+            let playerId = localStorage.getItem('playerId') || '1';
+            let raritiesToGenerate = this.sessionLoot.map(item => item.rarity);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/campaign/save-loot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: playerId, rarities: raritiesToGenerate })
+                });
+                
+                const data = await response.json();
+                loadingTxt.destroy(); // Xóa chữ loading
+
+                if (data.status === 'success' && data.items && data.items.length > 0) {
+                    
+                    // =====================================
+                    // TẠO HTML GRID ĐỂ HIỂN THỊ CÁC Ô TRANG BỊ
+                    // =====================================
+                    let gridDiv = document.createElement('div');
+                    gridDiv.id = 'summary-loot-grid';
+                    gridDiv.style.position = 'absolute';
+                    gridDiv.style.top = '45%'; // Đặt ở giữa màn hình
+                    gridDiv.style.left = '50%';
+                    gridDiv.style.transform = 'translate(-50%, -50%)';
+                    gridDiv.style.width = '80%';
+                    gridDiv.style.overflowY = 'visible';
+                    gridDiv.style.display = 'flex';
+                    gridDiv.style.flexWrap = 'wrap';
+                    gridDiv.style.gap = '15px';
+                    gridDiv.style.justifyContent = 'center';
+                    gridDiv.style.zIndex = '35000'; // Đè lên trên cả thẻ canvas của game
+                    
+                    document.getElementById('game-container').appendChild(gridDiv);
+
+                    // Bảng màu cho các phẩm chất
+                    const RARITY_COLORS = {
+                        'F': '#ffffff', 'E': '#00ff00', 'D': '#00aaff', 
+                        'C': '#a335ee', 'B': '#ffd700', 'A': '#ff0000', 'S': '#000000'
+                    };
+
+                    // Duyệt qua từng món đồ Backend gửi về và vẽ thành 1 ô (Giống y chang file main.js)
+                    data.items.forEach(item => {
+                        let color = RARITY_COLORS[item.rarity] || '#ffffff';
+                        let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+                        let imagePath = `../assets/items/${item.icon}`;
+                        
+                        let itemDiv = document.createElement('div');
+                        itemDiv.className = 'inv-item'; // Tận dụng luôn class css của Balo!
+                        itemDiv.style.borderColor = color;
+                        itemDiv.style.position = 'relative'; 
+                        itemDiv.style.margin = '0'; // Ghi đè margin mặc định để dùng gap
+                        
+                        if(item.rarity === 'S') { 
+                            itemDiv.style.boxShadow = `0 0 10px #ffffff`; 
+                            itemDiv.style.borderColor = '#ffffff'; 
+                        }
+                        
+                        // Thêm Tooltip đàng hoàng khi người chơi rê chuột vào
+                        itemDiv.setAttribute('data-tooltip', `[Bậc ${item.rarity}] ${item.name.toUpperCase()}`);
+
+                        itemDiv.innerHTML = `
+                            <img src="${imagePath}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: contain;">
+                            <span class="item-rank" style="color: ${color}; ${textShadow}">${item.rarity}</span>
+                        `;
+                        
+                        gridDiv.appendChild(itemDiv);
+                    });
+
+                } else {
+                    this.add.text(cx, cy, 'Không có đồ nào rơi ra.', { fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
+                }
+            } catch (error) {
+                console.error("Lỗi:", error);
+                loadingTxt.setText('Mất kết nối đến máy chủ!');
+            }
+        } else {
+            loadingTxt.destroy();
+            this.add.text(cx, cy, 'Không có đồ nào rơi ra.', { fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
+        }
+
+        // Hiện nút Điều hướng ở bên dưới cái Lưới
+        let btnRestart = this.add.text(cx - 150, cy + 220, '[ CHƠI LẠI MÀN 1 ]', { 
+            fontSize: '28px', fill: '#ffff00', backgroundColor: '#333', padding: {x: 20, y: 10} 
         }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
         
-        btnHomeGameOver.on('pointerdown', () => {
-            if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
+        btnRestart.on('pointerdown', () => this.redirectAfterSummary('restart'));
+
+        let btnHomeGameOver = this.add.text(cx + 150, cy + 220, '[ TRANG CHỦ ]', { 
+            fontSize: '28px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} 
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
+        
+        btnHomeGameOver.on('pointerdown', () => this.redirectAfterSummary('home'));
+    }
+
+    // Hàm Phụ: Xử lý dọn dẹp và chuyển cảnh
+    redirectAfterSummary(action) {
+        // Xóa Lưới Đồ HTML đi để không bị dính trên màn hình khi chơi lại!
+        let grid = document.getElementById('summary-loot-grid');
+        if (grid) grid.remove();
+
+        if (window.activeCampaignBgm) window.activeCampaignBgm.stop();
+        
+        if (action === 'restart') {
+            // Truyền loot: [] để làm sạch túi đồ cũ
+            this.scene.restart({ stage: 1, level: 0, loot: [] });
+        } else {
             if (window.bgMusic) window.bgMusic.play();
             document.getElementById('home-screen').style.display = 'flex';
             setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10);
             setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800);
-        });
+            
+            // Ép Kho Đồ ở file main.js tải lại dữ liệu mới nhất
+            if (typeof loadInventoryFromServer === 'function') loadInventoryFromServer();
+        }
     }
 
     update(time, delta) {
@@ -960,6 +1282,26 @@ export class CampaignScene extends Phaser.Scene {
                         this.spawnChestAndGateway(dropX, dropY);
                     }
                 }
+            });
+        }
+
+        // KIỂM TRA KHI BOSS BỊ TIÊU DIỆT
+        if (this.currentStage === 3 && this.bossEntity && this.bossEntity.isDead && !this.bossChestSpawned) {
+            this.bossChestSpawned = true; // Đánh dấu để không gọi rương nhiều lần
+
+            this.time.delayedCall(1500, () => {
+                let cx = this.cameras.main.width / 2;
+                let cy = this.cameras.main.height / 2;
+                
+                // Rương Boss văng ra ngay giữa vùng camera đang nhìn
+                let camX = this.cameras.main.scrollX + cx;
+                let camY = this.cameras.main.scrollY + cy;
+                
+                this.chestSpawned = true;
+                this.spawnChestAndGateway(camX, camY); 
+                
+                // Gắn cờ đánh dấu rương này là rương Boss
+                this.stageChest.isBossChest = true; 
             });
         }
 
@@ -1139,17 +1481,18 @@ export class CampaignScene extends Phaser.Scene {
         this.tweens.add({ targets: dmgText, y: this.player.y - 80, alpha: 0, duration: 800, onComplete: () => dmgText.destroy() });
 
         if (this.playerHealth <= 0) {
-            this.isGameOver = true; this.player.anims.stop(); this.physics.pause();
-            this.monsters.getChildren().forEach(m => { if(m.hpBarBg) m.hpBarBg.setVisible(false); if(m.hpBarFill) m.hpBarFill.setVisible(false); });
-            let cx = this.cameras.main.centerX, cy = this.cameras.main.centerY;
-            this.add.graphics().fillStyle(0x000000, 0.75).fillRect(0, 0, this.cameras.main.width, this.cameras.main.height).setScrollFactor(0).setDepth(29000);
-            this.add.text(cx, cy - 80, '💀 BẠN ĐÃ TỬ TRẬN 💀', { fontSize: '60px', fill: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0).setDepth(30000);
+            this.isGameOver = true; 
+            this.player.anims.stop(); 
+            this.physics.pause();
             
-            // Sửa nút chơi lại về màn 1 (reset tiến trình)
-            let btnR = this.add.text(cx, cy + 30, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#00ff00', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
-            btnR.on('pointerdown', () => { if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0}); });
-            let btnH = this.add.text(cx, cy + 110, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setScrollFactor(0).setDepth(30000).setInteractive({ useHandCursor: true });
-            btnH.on('pointerdown', () => { if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
+            // Tắt thanh máu của quái vật cho gọn màn hình
+            this.monsters.getChildren().forEach(m => { 
+                if(m.hpBarBg) m.hpBarBg.setVisible(false); 
+                if(m.hpBarFill) m.hpBarFill.setVisible(false); 
+            });
+
+            // Gọi Bảng Tổng Kết Mới (Truyền false = Thua trận)
+            this.showSummaryScreen(false);
         }
     }
 
@@ -1172,7 +1515,7 @@ export class CampaignScene extends Phaser.Scene {
                 this.input.enabled = false; 
             });
         this.btnSetting = this.add.text(cx, cy + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', (p,x,y,e) => { if(e) e.stopPropagation(); document.getElementById('settings-modal').style.display = 'flex'; this.input.enabled = false; });
-        this.btnChangeMap = this.add.text(cx, cy + 180, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#ff8800', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0}); });
+        this.btnChangeMap = this.add.text(cx, cy + 180, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#ff8800', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0, loot: []}); });
         this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.input.enabled = false; this.setPauseMenuVisible(false); this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
         this.setPauseMenuVisible(false);
     }

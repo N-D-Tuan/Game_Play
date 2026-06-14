@@ -109,7 +109,7 @@ class InventoryController extends Controller
             'D' => 50, // D lên C: 50%
             'C' => 30, // C lên B: 30%
             'B' => 10, // B lên A: 10%
-            'A' => 0.2,  // A lên S: 0.2%
+            'A' => 1,  // A lên S: 1%
         ];
 
         // Thứ tự các bậc để tiến hóa
@@ -219,5 +219,52 @@ class InventoryController extends Controller
                 ]);
             }
         });
+    }
+
+    public function saveLoot(Request $request)
+    {
+        // 1. Kiểm tra dữ liệu gửi lên
+        $request->validate([
+            'player_id' => 'required|integer',
+            'rarities'  => 'required|array', // Mảng chứa các bậc phẩm chất, VD: ['A', 'B', 'C']
+        ]);
+
+        $playerId = $request->player_id;
+        $rarities = $request->rarities;
+        $savedItemsCount = 0;
+        $savedItemsList = [];
+
+        // Dùng Transaction để đảm bảo an toàn, nếu lỗi thì hủy toàn bộ
+        DB::transaction(function () use ($playerId, $rarities, &$savedItemsCount, &$savedItemsList) {
+            foreach ($rarities as $rarity) {
+                // 2. Với mỗi Bậc (VD: 'A'), tìm ngẫu nhiên 1 món đồ trong bảng `items` có bậc đó
+                $randomItem = Item::where('rarity', $rarity)
+                                  ->inRandomOrder()
+                                  ->first();
+
+                // 3. Nếu tìm thấy, nhét nó vào kho đồ của người chơi
+                if ($randomItem) {
+                    PlayerItem::create([
+                        'player_id'   => $playerId,
+                        'item_id'     => $randomItem->id,
+                        'is_equipped' => 0 // Đồ mới nhặt mặc định nằm trong balo
+                    ]);
+                    $savedItemsCount++;
+
+                    $savedItemsList[] = [
+                        'name' => $randomItem->name,
+                        'rarity' => $randomItem->rarity,
+                        'icon' => $randomItem->icon
+                    ];
+                }
+            }
+        });
+
+        // 4. Trả về kết quả cho Frontend
+        return response()->json([
+            'status'  => 'success',
+            'message' => "Đã chuyển thành công {$savedItemsCount} chiến lợi phẩm vào Kho đồ!",
+            'items'   => $savedItemsList
+        ]);
     }
 }

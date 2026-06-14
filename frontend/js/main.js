@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 
                 // Khởi động Vượt ải
-                window.game.scene.start('CampaignScene');
+                window.game.scene.start('CampaignScene', { stage: 1, level: 0, loot: [] });
             }
             window.dispatchEvent(new Event('resize')); 
         }, 1000);

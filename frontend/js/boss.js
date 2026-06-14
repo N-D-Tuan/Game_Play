@@ -684,10 +684,6 @@ export class Boss extends BaseMonster {
         if (this.aggroZone) this.aggroZone.destroy();
 
         this.stopBossAnimation();
-        this.playBossAnimation('campaign-boss-dead', () => {
-            this.scene.time.delayedCall(1500, () => {
-                this.scene.showVictoryScreen();
-            });
-        });
+        this.playBossAnimation('campaign-boss-dead', () => {});
     }
 }
