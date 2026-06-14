@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+
 use App\Models\PlayerItem; 
 use App\Models\Item;
 use App\Http\Controllers\Controller;
@@ -92,94 +93,131 @@ class InventoryController extends Controller
      */
     public function forge(Request $request)
     {
-        $playerId = $request->input('player_id');
-        $materialIds = $request->input('material_ids'); // Mảng 10 ID của PlayerItem
+        // 1. Valid dữ liệu đầu vào
+        $request->validate([
+            'player_id' => 'required|integer',
+            'materials' => 'required|array|size:10', // Bắt buộc truyền lên đúng 10 ID vật phẩm
+        ]);
 
-        if (count($materialIds) !== 10) {
-            return response()->json(['status' => 'error', 'message' => 'Yêu cầu đúng 10 vật phẩm!'], 400);
-        }
+        $playerId = $request->player_id;
+        $materialIds = $request->materials;
 
-        // Lấy 10 món đồ từ DB
-        $materials = PlayerItem::with('item')
-            ->whereIn('id', $materialIds)
-            ->where('player_id', $playerId)
-            ->where('is_equipped', 0) // Không cho lấy đồ đang mặc đem đốt
-            ->get();
-
-        if ($materials->count() !== 10) {
-            return response()->json(['status' => 'error', 'message' => 'Vật phẩm không hợp lệ hoặc đang được mặc!'], 400);
-        }
-
-        // Kiểm tra tính đồng nhất (Phải cùng Item ID gốc)
-        $firstItemId = $materials->first()->item_id;
-        foreach ($materials as $mat) {
-            if ($mat->item_id !== $firstItemId) {
-                return response()->json(['status' => 'error', 'message' => 'Nguyên liệu không đồng nhất!'], 400);
-            }
-        }
-
-        // --- BẮT ĐẦU LOGIC GACHA / NÂNG CẤP ---
-        $baseItem = $materials->first()->item;
-        $currentRarity = $baseItem->rarity;
-
-        // Định nghĩa ID của vật phẩm bậc kế tiếp (Bạn cần cấu hình cái này tùy vào DB của bạn)
-        // Ví dụ: Bậc F ID là 1, Bậc E tương ứng ID là 2...
-        $nextTierMap = [
-            'F' => ['next_id' => $baseItem->id + 1, 'rate' => 100], // 100% lên E
-            'E' => ['next_id' => $baseItem->id + 1, 'rate' => 80],  // 80% lên D
-            'D' => ['next_id' => $baseItem->id + 1, 'rate' => 50],  // 50% lên C
-            'C' => ['next_id' => $baseItem->id + 1, 'rate' => 30],  // 30% lên B
-            'B' => ['next_id' => $baseItem->id + 1, 'rate' => 15],  // 15% lên A
-            'A' => ['next_id' => $baseItem->id + 1, 'rate' => 5],   // 5% lên S
-            'S' => null // Bậc S không thể ghép nữa
+        // Cấu hình tỉ lệ thành công của từng bậc nguyên liệu khi lên bậc tiếp theo
+        $forgeRates = [
+            'F' => 90, // Nguyên liệu F lên E: 90%
+            'E' => 80, // E lên D: 80%
+            'D' => 50, // D lên C: 50%
+            'C' => 30, // C lên B: 30%
+            'B' => 10, // B lên A: 10%
+            'A' => 0.2,  // A lên S: 0.2%
         ];
 
-        $upgradeRule = $nextTierMap[$currentRarity];
+        // Thứ tự các bậc để tiến hóa
+        $rarityOrder = ['F', 'E', 'D', 'C', 'B', 'A', 'S'];
 
-        if (!$upgradeRule) {
-            return response()->json(['status' => 'error', 'message' => 'Trang bị này đã đạt mức tối đa!'], 400);
-        }
+        // Dùng Database Transaction để đảm bảo an toàn dữ liệu, lỗi là rollback ngay
+        return DB::transaction(function () use ($playerId, $materialIds, $forgeRates, $rarityOrder) {
+            
+            // 2. Lấy thông tin 10 món đồ hiến tế từ DB kèm thông tin gốc
+            $materials = PlayerItem::with('item')
+                ->where('player_id', $playerId)
+                ->whereIn('id', $materialIds)
+                ->get();
 
-        // Quay xổ số
-        $roll = rand(1, 100);
-        $isSuccess = $roll <= $upgradeRule['rate'];
+            // Kiểm tra xem có đủ 10 món hợp lệ trong DB không
+            if ($materials->count() !== 10) {
+                return response()->json(['status' => 'error', 'message' => 'Danh sách vật phẩm hiến tế không hợp lệ hoặc không đủ 10 món!'], 400);
+            }
 
-        DB::beginTransaction();
-        try {
-            if ($isSuccess) {
-                // Xóa 10 phôi cũ
+            // Kiểm tra xem có món nào đang được mặc trên người không
+            if ($materials->where('is_equipped', 1)->count() > 0) {
+                return response()->json(['status' => 'error', 'message' => 'Không thể hiến tế trang bị đang mặc trên người!'], 400);
+            }
+
+            // Kiểm tra tính đồng nhất về bậc (Rarity)
+            $firstRarity = $materials->first()->item->rarity;
+            foreach ($materials as $mat) {
+                if ($mat->item->rarity !== $firstRarity) {
+                    return response()->json(['status' => 'error', 'message' => 'Tất cả vật phẩm hiến tế phải cùng bậc phẩm chất!'], 400);
+                }
+            }
+
+            // Nếu là bậc S thì không thể nâng cấp được nữa
+            if ($firstRarity === 'S') {
+                return response()->json(['status' => 'error', 'message' => 'Vật phẩm bậc S đã đạt cấp tối đa, không thể hiến tế!'], 400);
+            }
+
+            // 3. TẦNG 1: XÁC SUẤT CHỦNG LOẠI (Dùng array_rand chọn ra 1 phôi đại diện)
+            // Lấy ngẫu nhiên 1 ID từ mảng 10 ID truyền lên. 
+            // Món nào xuất hiện nhiều hơn sẽ có cơ hội được chọn trúng cao hơn!
+            $chosenMaterialId = $materialIds[array_rand($materialIds)];
+            $chosenMaterial = $materials->firstWhere('id', $chosenMaterialId);
+            $targetSlot = $chosenMaterial->item->type; // Ví dụ: 'weapon', 'chest',...
+
+            // Xác định bậc tiếp theo
+            $currentRarityIndex = array_search($firstRarity, $rarityOrder);
+            $nextRarity = $rarityOrder[$currentRarityIndex + 1];
+
+            // Tìm một món đồ ngẫu nhiên ở bậc tiếp theo có cùng Loại (Vũ khí/Giáp...) với phôi đại diện
+            $rewardItem = Item::where('type', $targetSlot)
+                ->where('rarity', $nextRarity)
+                ->inRandomOrder()
+                ->first();
+
+            // Phòng trường hợp DB chưa có món nào thuộc loại đó ở bậc tiếp theo, lấy đại 1 món bậc tiếp theo
+            if (!$rewardItem) {
+                $rewardItem = Item::where('rarity', $nextRarity)->inRandomOrder()->first();
+            }
+
+            // 4. TẦNG 2: XÚC XẮC THÀNH CÔNG / THẤT BẠI
+            $successRate = $forgeRates[$firstRarity] ?? 0;
+            $diceRoll = rand(1, 100);
+
+            if ($diceRoll <= $successRate) {
+                // === KỊCH BẢN THÀNH CÔNG ===
+                // Xóa sạch cả 10 món nguyên liệu
                 PlayerItem::whereIn('id', $materialIds)->delete();
-                
-                // Tạo đồ mới
+
+                // Tạo món đồ mới bậc cao hơn cho người chơi
                 $newItem = PlayerItem::create([
                     'player_id' => $playerId,
-                    'item_id' => $upgradeRule['next_id'],
+                    'item_id' => $rewardItem->id,
                     'is_equipped' => 0
                 ]);
 
-                // Lấy thông tin đồ mới trả về Frontend
-                $newItem->load('item');
-                DB::commit();
-
                 return response()->json([
-                    'status' => 'success', 
-                    'message' => 'Ghép thành công!', 
-                    'new_item_id' => $newItem->item_id 
+                    'status' => 'success',
+                    'result' => 'success',
+                    'message' => 'Rèn trang bị thành công!',
+                    'item' => [
+                        'id' => $newItem->id,
+                        'name' => $rewardItem->name,
+                        'rarity' => $rewardItem->rarity,
+                        'icon' => $rewardItem->icon
+                    ]
                 ]);
             } else {
-                // Thất bại: Xóa 9 phôi, trả lại 1
-                $idsToDelete = array_slice($materialIds, 0, 9);
-                PlayerItem::whereIn('id', $idsToDelete)->delete();
-                DB::commit();
+                // === KỊCH BẢN THẤT BẠI ===
+                // Dùng array_rand chọn ra 1 ID duy nhất để GIỮ LẠI (Cứu vớt theo tỉ lệ đóng góp)
+                $survivedPlayerItemId = $materialIds[array_rand($materialIds)];
+                $survivedItem = $materials->firstWhere('id', $survivedPlayerItemId);
+
+                // Loại bỏ ID giữ lại ra khỏi danh sách xóa, 9 món còn lại sẽ bị hủy diệt
+                $itemsToDelete = array_diff($materialIds, [$survivedPlayerItemId]);
+                PlayerItem::whereIn('id', $itemsToDelete)->delete();
 
                 return response()->json([
-                    'status' => 'failed', 
-                    'message' => 'Ghép thất bại! Mất 9 nguyên liệu.'
+                    'status' => 'success', // Request xử lý thành công
+                    'result' => 'fail',    // Kết quả đập đồ thất bại
+                    'message' => 'Lò rèn phát nổ! Trang bị hiến tế đã bị phá hủy.',
+                    'survived_item' => [
+                        'id' => $survivedItem->id,
+                        'name' => $survivedItem->item->name,
+                        'rarity' => $survivedItem->item->rarity,
+                        'icon' => $survivedItem->item->icon
+                    ]
                 ]);
             }
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => 'Lỗi hệ thống'], 500);
-        }
+        });
     }
 }
