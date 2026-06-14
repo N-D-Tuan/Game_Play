@@ -83,10 +83,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // KHI CHUYỂN VỀ TAB TRANG BỊ, TRẢ HẾT ĐỒ TRONG LÒ VỀ BALO
         if (forgeItems.length > 0) {
             myInventory.push(...forgeItems);
-            forgeItems = [];
-            renderForge();
-            renderInventory();
         }
+        forgeItems = [];
+        renderForge();    
+        renderInventory();
     });
 
     tabForgeBtn.addEventListener('click', () => {
@@ -160,7 +160,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         // Vẽ trực tiếp lên nhân vật
                         let slotDiv = document.getElementById(`slot-${frontendItem.slot}`);
                         let textShadow = frontendItem.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
-                        slotDiv.innerHTML = `<span>${frontendItem.icon}</span><span class="item-rank" style="color: ${RARITY_CONFIG[frontendItem.rarity].color}; ${textShadow}">${frontendItem.rarity}</span>`;
+                        // Đổi sang dùng thẻ img
+                        let imagePath = `../assets/items/${frontendItem.icon}`;
+                        slotDiv.innerHTML = `<img src="${imagePath}" alt="${frontendItem.name}" style="width: 40px; height: 40px; object-fit: contain;">
+                                            <span class="item-rank" style="color: ${RARITY_CONFIG[frontendItem.rarity].color}; ${textShadow}">${frontendItem.rarity}</span>`;
                         slotDiv.style.borderColor = RARITY_CONFIG[frontendItem.rarity].color;
                         slotDiv.setAttribute('data-tooltip', buildTooltip(frontendItem));
                         if(frontendItem.rarity === 'S') slotDiv.style.boxShadow = `0 0 10px #ffffff`;
@@ -187,11 +190,13 @@ document.addEventListener("DOMContentLoaded", () => {
         inventoryModal.style.display = 'none'; 
 
         // KIỂM TRA VÀ TRẢ LẠI ĐỒ TRONG LÒ RÈN VỀ BALO
-        if (typeof forgeItems !== 'undefined' && forgeItems.length > 0) {
-            myInventory.push(...forgeItems); // Đẩy toàn bộ đồ trong lò về đuôi balo
-            forgeItems = [];                 // Làm rỗng lò
-            renderForge();                   // Vẽ lại lò rèn (trống)
-            renderInventory();               // Vẽ lại balo
+        if (typeof forgeItems !== 'undefined') {
+            if (forgeItems.length > 0) {
+                myInventory.push(...forgeItems); 
+            }
+            forgeItems = [];       
+            renderForge();       
+            renderInventory();     
         }
         
         // Bật lại tương tác cho TẤT CẢ các scene đang chạy (Tránh lỗi liệt phím)
@@ -332,7 +337,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // Tạo hiệu ứng viền trắng phát sáng độc quyền cho bậc S
             let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
             
-            div.innerHTML = `<span>${item.icon}</span><span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
+            // Đổi sang dùng thẻ img
+            let imagePath = `../assets/items/${item.icon}`;
+            div.innerHTML = `<img src="${imagePath}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: contain;">
+                            <span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
             div.setAttribute('data-tooltip', buildTooltip(item));
             div.style.borderColor = rankInfo.color;
             if(item.rarity === 'S') { div.style.boxShadow = `0 0 10px #ffffff`; div.style.borderColor = '#ffffff'; }
@@ -381,11 +389,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Kiểm tra tính đồng nhất (Chỉ cho phép ghép đồ CÙNG TÊN và CÙNG BẬC)
+        // Kiểm tra tính đồng nhất (Chỉ cho phép ghép đồ CÙNG BẬC)
         if (forgeItems.length > 0) {
             let sampleItem = forgeItems[0];
-            if (item.name !== sampleItem.name || item.rarity !== sampleItem.rarity) {
-                showDarkFantasyAlert("Vật phẩm hiến tế phải giống hệt nhau!");
+            if (item.rarity !== sampleItem.rarity) {
+                showDarkFantasyAlert("Vật phẩm hiến tế phải có CÙNG BẬC PHẨM CHẤT!");
                 return;
             }
         }
@@ -422,7 +430,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 let rankInfo = RARITY_CONFIG[item.rarity];
                 let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
                 
-                slot.innerHTML = `<span>${item.icon}</span><span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
+                // Đổi sang dùng thẻ img
+                let imagePath = `../assets/items/${item.icon}`;
+                slot.innerHTML = `<img src="${imagePath}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: contain;">
+                                <span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
                 slot.style.borderColor = rankInfo.color;
                 slot.setAttribute('data-tooltip', buildTooltip(item));
                 if(item.rarity === 'S') slot.style.boxShadow = `0 0 10px #ffffff`; else slot.style.boxShadow = 'none';
@@ -439,9 +450,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Reset lại ô ở giữa (Đề phòng trường hợp đang có đồ thành công mà bạn rút bớt nguyên liệu ra)
-        document.getElementById('forge-result').innerHTML = '?';
-        document.getElementById('forge-result').style.borderColor = '#ffcc00';
+        const resultSlot = document.getElementById('forge-result');
+        if (resultSlot) {
+            resultSlot.innerHTML = '?';
+            resultSlot.style.borderColor = '#ffcc00';
+            resultSlot.style.boxShadow = 'none';
+            resultSlot.removeAttribute('data-tooltip');
+        }
     }
 
     // --- LOGIC BẢNG CÀI ĐẶT ---
@@ -647,5 +662,127 @@ document.addEventListener("DOMContentLoaded", () => {
             toast.classList.remove('show');
             toastHideTimeout = setTimeout(() => { toast.style.display = 'none'; }, 400);
         }, 3000);
+    }
+
+    // ==========================================
+    // LOGIC HIẾN TẾ LÒ RÈN
+    // ==========================================
+    const btnForgeSubmit = document.getElementById('btn-forge-submit');
+
+    if (btnForgeSubmit) {
+        btnForgeSubmit.addEventListener('click', async () => {
+            // 1. Kiểm tra điều kiện đầu vào
+            let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
+            if (isCampaignActive) {
+                showDarkFantasyAlert("Không thể hiến tế khi đang Vượt Ải!");
+                return; 
+            }
+
+            if (forgeItems.length < 10) {
+                showDarkFantasyAlert("Lò rèn yêu cầu đúng 10 vật phẩm để khởi động!");
+                return;
+            }
+
+            // 2. Gom 10 cái ID lại thành 1 mảng để gửi lên Server
+            const materialIds = forgeItems.map(item => item.id);
+            let playerId = localStorage.getItem('playerId') || '1';
+
+            try {
+                // Khóa nút và đổi text để tránh người chơi spam click
+                btnForgeSubmit.textContent = "Đang rèn...";
+                btnForgeSubmit.disabled = true;
+
+                // 3. Gọi API
+                const response = await fetch('http://127.0.0.1:8000/api/forge/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        player_id: playerId,
+                        materials: materialIds
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    // Làm trống lò rèn ở biến JS (vì đồ đã bị Server xóa)
+                    forgeItems = [];
+                    
+                    // Render lại lò rèn (để xóa hình ảnh 10 nguyên liệu đi)
+                    renderForge();
+
+                    // Xử lý giao diện dựa trên nhân phẩm của người chơi
+                    if (data.result === 'success') {
+                        showDarkFantasyAlert(data.message);
+                        displayForgeResult(data.item, 'success');
+                    } else if (data.result === 'fail') {
+                        showDarkFantasyAlert(data.message);
+                        displayForgeResult(data.survived_item, 'fail'); 
+                    }                   
+                    
+                    // Gọi API load lại kho đồ để lấy dữ liệu mới nhất
+                    await loadInventoryFromServer();
+
+                } else {
+                    showDarkFantasyAlert(data.message || "Có lỗi xảy ra trong lò rèn!");
+                }
+
+            } catch (error) {
+                console.error("Lỗi Lò rèn:", error);
+                showDarkFantasyAlert("Mất kết nối đến Lò rèn!");
+            } finally {
+                // Trả lại trạng thái bình thường cho nút
+                btnForgeSubmit.textContent = "Tiến hành hiến tế";
+                btnForgeSubmit.disabled = false;
+            }
+        });
+    }
+
+    // Hàm vẽ món đồ kết quả ra ô trung tâm Lò rèn
+    function displayForgeResult(itemData, status) {
+        const resultSlot = document.getElementById('forge-result');
+        if (!resultSlot) return;
+
+        let rankInfo = RARITY_CONFIG[itemData.rarity];
+        let imagePath = `../assets/items/${itemData.icon}`;
+        let textShadow = itemData.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+
+        // Gắn tooltip cơ bản cho món đồ kết quả
+        resultSlot.setAttribute('data-tooltip', `[${rankInfo.name}] ${itemData.name.toUpperCase()}\nPhẩm chất: Bậc ${itemData.rarity}`);
+
+        // NẾU THẤT BẠI: Đồ xỉn màu (grayscale) và viền đỏ máu
+        if (status === 'fail') {
+            resultSlot.innerHTML = `
+                <img src="${imagePath}" alt="${itemData.name}" style="width: 45px; height: 45px; object-fit: contain; filter: grayscale(80%) brightness(0.6);">
+                <span class="item-rank" style="color: #ff0000; text-shadow: 0 0 5px #ff0000;">${itemData.rarity}</span>
+            `;
+            resultSlot.style.borderColor = '#ff0000';
+            resultSlot.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.5)';
+        } 
+        // NẾU THÀNH CÔNG: Đồ sáng bóng lấp lánh theo màu của Bậc
+        else {
+            resultSlot.innerHTML = `
+                <img src="${imagePath}" alt="${itemData.name}" style="width: 50px; height: 50px; object-fit: contain;">
+                <span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${itemData.rarity}</span>
+            `;
+            resultSlot.style.borderColor = rankInfo.color;
+            resultSlot.style.boxShadow = `0 0 20px ${rankInfo.color}80`;
+        }
+    }
+
+    // ==========================================
+    // SỰ KIỆN CLICK ĐỂ DỌN SẠCH Ô KẾT QUẢ Ở GIỮA
+    // ==========================================
+    const forgeResultSlot = document.getElementById('forge-result');
+    if (forgeResultSlot) {
+        forgeResultSlot.addEventListener('click', () => {
+            // Chỉ dọn dẹp khi ô này đang có đồ (khác với dấu "?")
+            if (forgeResultSlot.innerHTML !== '?') {
+                forgeResultSlot.innerHTML = '?';
+                forgeResultSlot.style.borderColor = '#ffcc00';
+                forgeResultSlot.style.boxShadow = 'none';
+                forgeResultSlot.removeAttribute('data-tooltip');
+            }
+        });
     }
 });
