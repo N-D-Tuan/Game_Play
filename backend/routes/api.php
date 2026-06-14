@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\InventoryController;
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
 Route::post('/equipment/toggle', [InventoryController::class, 'toggleEquip']);
 Route::post('/forge/merge', [InventoryController::class, 'forge']);
+Route::post('/campaign/save-loot', [InventoryController::class, 'saveLoot']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
