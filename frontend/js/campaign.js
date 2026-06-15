@@ -836,12 +836,15 @@ export class CampaignScene extends Phaser.Scene {
                     equip.itemData = itemData; // Gắn data vào object vật lý để lúc nhặt còn biết là gì
 
                     // 1. LỚP HÀO QUANG (To, mờ, tỏa sáng theo màu phẩm chất)
-                    let hexColor = Phaser.Display.Color.HexStringToColor(itemData.color).color;
+                    let hexColor = Phaser.Display.Color.HexStringToColor(itemData.color).color;                   
+                    // NẾU LÀ ĐỒ BẬC S (MÀU ĐEN): Ép dùng chế độ NORMAL để màu đen không bị tàng hình
+                    let auraBlendMode = (itemData.rarity === 'S') ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD;                   
                     let beamAura = this.add.rectangle(destX, destY, 60, 800, hexColor)
-                        .setOrigin(0.5, 1).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(destY - 2);
+                        .setOrigin(0.5, 1).setAlpha(0).setBlendMode(auraBlendMode).setDepth(destY - 2);
 
-                    // 2. LỚP LÕI (Nhỏ, đặc, luôn dùng màu trắng để chống chìm nền)
-                    let beamCore = this.add.rectangle(destX, destY, 12, 800, 0xffffff)
+                    // 2. LỚP LÕI (Nhỏ, đặc)
+                    let coreColor = (itemData.rarity === 'S') ? 0x222222 : 0xffffff;                    
+                    let beamCore = this.add.rectangle(destX, destY, 12, 800, coreColor)
                         .setOrigin(0.5, 1).setAlpha(0).setBlendMode(Phaser.BlendModes.NORMAL).setDepth(destY - 1);
 
                     // Tween văng đồ
@@ -894,7 +897,7 @@ export class CampaignScene extends Phaser.Scene {
             }
             else if (stage === 3) { // Ải Boss
                 if (i === 0) { rarity = 'A'; color = '#ff0000'; } // Món đầu tiên chắc chắn bậc A
-                else if (roll < 2) { rarity = 'S'; color = '#ff0000'; } // Bậc S phát sáng đỏ/trắng
+                else if (roll < 2) { rarity = 'S'; color = '#000000'; }
                 else if (roll < 8) { rarity = 'A'; color = '#ff0000'; }
                 else if (roll < 40) { rarity = 'B'; color = '#ffd700'; }
                 else { rarity = 'C'; color = '#a335ee'; }
