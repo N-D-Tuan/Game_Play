@@ -403,14 +403,11 @@ export class CampaignScene extends Phaser.Scene {
         let monCount = { m1: 0, m2: 0, m3: 0 };
 
         if (this.currentStage === 1) {
-            //monCount.m1 = 10;
-            monCount.m1 = 1;
+            monCount.m1 = 10;
         } else if (this.currentStage === 2) {
-            //monCount.m1 = 15; monCount.m2 = 5;
-            monCount.m1 = 0; monCount.m2 = 1;
+            monCount.m1 = 20; monCount.m2 = 5;
         } else if (this.currentStage === 3) {
-            //monCount.m1 = 20; monCount.m2 = 15; monCount.m3 = 5;
-            monCount.m1 = 0; monCount.m2 = 0; monCount.m3 = 1;
+            monCount.m1 = 35; monCount.m2 = 20; monCount.m3 = 5;
         }
 
         for (let i = 0; i < monCount.m1; i++) {
@@ -803,12 +800,12 @@ export class CampaignScene extends Phaser.Scene {
                     let hexColor = Phaser.Display.Color.HexStringToColor(itemData.color).color;                   
                     // NẾU LÀ ĐỒ BẬC S (MÀU ĐEN): Ép dùng chế độ NORMAL để màu đen không bị tàng hình
                     let auraBlendMode = (itemData.rarity === 'S') ? Phaser.BlendModes.NORMAL : Phaser.BlendModes.ADD;                   
-                    let beamAura = this.add.rectangle(destX, destY, 60, 800, hexColor)
+                    let beamAura = this.add.rectangle(destX, destY, 60, 4000, hexColor)
                         .setOrigin(0.5, 1).setAlpha(0).setBlendMode(auraBlendMode).setDepth(destY - 2);
 
                     // 2. LỚP LÕI (Nhỏ, đặc)
                     let coreColor = (itemData.rarity === 'S') ? 0x222222 : 0xffffff;                    
-                    let beamCore = this.add.rectangle(destX, destY, 12, 800, coreColor)
+                    let beamCore = this.add.rectangle(destX, destY, 12, 4000, coreColor)
                         .setOrigin(0.5, 1).setAlpha(0).setBlendMode(Phaser.BlendModes.NORMAL).setDepth(destY - 1);
 
                     // Tween văng đồ
@@ -1367,6 +1364,41 @@ export class CampaignScene extends Phaser.Scene {
             .lineTo(219+cw, 63+55).lineTo(219, 63+55).closePath().fillPath();
             
         if(this.hpText) this.hpText.setText(Math.round(v));
+    }
+
+    // ==========================================
+    // HÀM GÂY SÁT THƯƠNG TỔNG HỢP LÊN QUÁI VẬT
+    // ==========================================
+    applyDamageToMonster(monster, rawDamage) {
+        if (!monster || !monster.active || monster.isDead) return;
+
+        let stats = window.playerStats || { atk: 50, critRate: 5, critDamage: 150, lifesteal: 0 };
+        
+        // 1. Tính toán Chí Mạng
+        let isCrit = (Math.random() * 100) < stats.critRate;
+        let finalDamage = rawDamage;
+
+        if (isCrit) {
+            finalDamage = rawDamage * (stats.critDamage / 100);
+        }
+
+        // 2. Gây sát thương lên quái (truyền thêm cờ isCrit để đổi màu text)
+        if (typeof monster.takeDamage === 'function') {
+            monster.takeDamage(finalDamage, isCrit);
+        }
+
+        // 3. Tính toán Hút Máu
+        if (stats.lifesteal > 0 && this.playerHealth < this.maxHealth) {
+            let healAmt = finalDamage * (stats.lifesteal / 100);
+            this.playerHealth = Math.min(this.maxHealth, this.playerHealth + healAmt);
+            this.updateHealthBarWidth(this.playerHealth);
+            
+            // Text hút máu nhỏ màu xanh lá
+            let lsText = this.add.text(this.player.x, this.player.y - 20, `+${Math.round(healAmt)}`, { 
+                fontSize: '14px', fill: '#00ff00', stroke: '#000', strokeThickness: 2 
+            }).setOrigin(0.5).setDepth(8000);
+            this.tweens.add({ targets: lsText, y: this.player.y - 50, alpha: 0, duration: 800, onComplete: () => lsText.destroy() });
+        }
     }
 
     takeDamage(amount) {

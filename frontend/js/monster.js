@@ -52,7 +52,7 @@ export class BaseMonster extends Phaser.Physics.Arcade.Sprite {
         this.hpBarFill.fillRect(0, 0, hpWidth, 6);
     }
 
-    takeDamage(amount) {
+    takeDamage(amount, isCrit = false) {
         if (this.isDead) return;
         this.hp -= amount;
         this.updateHpBar();
@@ -61,8 +61,20 @@ export class BaseMonster extends Phaser.Physics.Arcade.Sprite {
         this.setTint(0xff0000);
         this.scene.time.delayedCall(200, () => this.clearTint());
 
+        // ĐỔI MÀU TEXT NẾU LÀ CHÍ MẠNG
+        let color = isCrit ? '#ffff00' : '#ff0000'; // Vàng nếu chí mạng, Đỏ nếu bình thường
+        let size = isCrit ? '40px' : '30px'; // Chữ bự hơn
+        let prefix = isCrit ? '💥' : ''; // Thêm icon nổ
+
         // Hiện số máu bị trừ
-        let dmgText = this.scene.add.text(this.x, this.y - 40, `-${amount}`, { fontSize: '24px', fill: '#ff0000', fontStyle: 'bold', stroke: '#fff', strokeThickness: 3 }).setOrigin(0.5).setDepth(8000);
+        let dmgText = this.scene.add.text(this.x, this.y - 40, `${prefix}${Math.round(amount)}`, { 
+            fontSize: size, 
+            fill: color, 
+            fontStyle: 'bold', 
+            stroke: '#000',
+            strokeThickness: 4 
+        }).setOrigin(0.5).setDepth(8000);
+
         this.scene.tweens.add({ targets: dmgText, y: this.y - 80, alpha: 0, duration: 800, onComplete: () => dmgText.destroy() });
 
         if (this.hp <= 0) {

@@ -107,9 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
         'S': { color: '#000000', weight: 7, name: 'Thần Thoại' }
     };
 
-    // Chỉ còn 4 chỉ số theo yêu cầu
-    const STAT_NAMES = { hp: '+ Máu tối đa', atk: '+ Tấn công', hpRegen: '+ Hồi máu/s', dodge: '+ Tỉ lệ né (%)' };
-    const BASE_STATS = { hp: 1000, hpRegen: 5, atk: 50, dodge: 5 };
+    // 8 chỉ số ban đầu của người chơi
+    const STAT_NAMES = { 
+        hp: '+ Máu tối đa', atk: '+ Tấn công', hpRegen: '+ Hồi máu/s', dodge: '+ Tỉ lệ né (%)',
+        critRate: '+ Tỉ lệ Chí mạng (%)', critDamage: '+ ST Chí mạng (%)', lifesteal: '+ Hút máu (%)', speed: '+ Tốc độ chạy'
+    };
+    const BASE_STATS = { 
+        hp: 1000, hpRegen: 5, atk: 50, dodge: 5, 
+        critRate: 5, critDamage: 150, lifesteal: 0, speed: 200 
+    };
 
     let equippedItems = { head: null, chest: null, legs: null, weapon: null, accessory: null, shoes: null };
     let myInventory = [];
@@ -261,6 +267,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('stat-hpRegen').textContent = currentStats.hpRegen;
         document.getElementById('stat-atk').textContent = currentStats.atk;
         document.getElementById('stat-dodge').textContent = currentStats.dodge + '%';
+        if(document.getElementById('stat-critRate')) document.getElementById('stat-critRate').textContent = currentStats.critRate + '%';
+        if(document.getElementById('stat-critDamage')) document.getElementById('stat-critDamage').textContent = currentStats.critDamage + '%';
+        if(document.getElementById('stat-lifesteal')) document.getElementById('stat-lifesteal').textContent = currentStats.lifesteal + '%';
+        if(document.getElementById('stat-speed')) document.getElementById('stat-speed').textContent = currentStats.speed;
     }
     
     updateStatsUI();

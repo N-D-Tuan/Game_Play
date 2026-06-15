@@ -39,7 +39,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // HÀM XỬ LÝ DI CHUYỂN (Được gọi mỗi khung hình)
     // ==========================================
     updateMovement(moveState) {
-        let speed = 200 * this.speedMultiplier;
+        let baseSpeed = window.playerStats ? window.playerStats.speed : 200;
+        let speed = baseSpeed * this.speedMultiplier;
 
         // Xác định vector hướng
         let dirX = 0, dirY = 0;
@@ -88,7 +89,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     moveToPoint(targetX, targetY) {
-        let speed = 200 * this.speedMultiplier;
+        let baseSpeed = window.playerStats ? window.playerStats.speed : 200;
+        let speed = baseSpeed * this.speedMultiplier;
         let dx = targetX - this.x;
         let dy = targetY - this.y;
         let distance = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);

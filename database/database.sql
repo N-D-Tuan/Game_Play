@@ -19,6 +19,40 @@ CREATE TABLE items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 1. Thêm 4 cột chỉ số mới vào bảng items
+ALTER TABLE items
+ADD COLUMN crit_rate INT DEFAULT 0,
+ADD COLUMN crit_damage INT DEFAULT 0,
+ADD COLUMN lifesteal INT DEFAULT 0,
+ADD COLUMN speed INT DEFAULT 0;
+
+-- 2. Tự động cập nhật dữ liệu dựa trên BẬC và LOẠI trang bị
+SET SQL_SAFE_UPDATES = 0;
+-- Tốc chạy (Chỉ Giày mới có nhiều)
+UPDATE items SET speed = CASE 
+    WHEN type = 'shoes' THEN (CASE rarity WHEN 'S' THEN 80 WHEN 'A' THEN 60 WHEN 'B' THEN 40 WHEN 'C' THEN 30 WHEN 'D' THEN 20 WHEN 'E' THEN 10 ELSE 5 END) 
+    ELSE (CASE rarity WHEN 'S' THEN 5 ELSE 0 END) 
+END;
+
+-- Tỉ lệ Chí mạng (Mũ, Vũ khí, Phụ kiện)
+UPDATE items SET crit_rate = CASE 
+    WHEN type IN ('weapon', 'head', 'accessory') THEN (CASE rarity WHEN 'S' THEN 15 WHEN 'A' THEN 10 WHEN 'B' THEN 7 WHEN 'C' THEN 5 WHEN 'D' THEN 3 WHEN 'E' THEN 1 ELSE 0 END)
+    ELSE 0 
+END;
+
+-- Sát thương Chí mạng (Vũ khí, Phụ kiện)
+UPDATE items SET crit_damage = CASE 
+    WHEN type IN ('weapon', 'accessory') THEN (CASE rarity WHEN 'S' THEN 50 WHEN 'A' THEN 30 WHEN 'B' THEN 20 WHEN 'C' THEN 10 WHEN 'D' THEN 5 ELSE 0 END)
+    ELSE 0 
+END;
+
+-- Hút máu (Vũ khí, Áo)
+UPDATE items SET lifesteal = CASE 
+    WHEN type IN ('weapon', 'chest') THEN (CASE rarity WHEN 'S' THEN 10 WHEN 'A' THEN 7 WHEN 'B' THEN 5 WHEN 'C' THEN 3 WHEN 'D' THEN 1 ELSE 0 END)
+    ELSE 0 
+END;
+SET SQL_SAFE_UPDATES = 1;
+
 -- ==========================================
 -- BẢNG 2: TÚI ĐỒ CỦA NGƯỜI CHƠI (INVENTORY)
 -- ==========================================
@@ -34,7 +68,7 @@ CREATE TABLE player_items (
 
 -- 1. Thêm 1 loại vật phẩm mẫu
 INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
-VALUES (1, 'Zao Sắt Gỉ', 'weapon', 'F', 9999, 9999, 9999, 100, 'weapon_kiemsatgi.png');
+VALUES (1, 'A-Sắt Gỉ', 'weapon', 'S', 9999, 9999, 9999, 9999, 'weapon_kiemsatgi.png');
 
 INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
 VALUES (2, 'Kiếm Diệt Quỷ', 'weapon', 'S', 200, 25, 900, 20, 'weapon_kiem.png');
