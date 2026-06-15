@@ -650,7 +650,7 @@ export class Boss extends BaseMonster {
         });
     }
 
-    takeDamage(amount) {
+    takeDamage(amount, isCrit = false) {
         if (this.isDead || this.state === 'SPAWNING' || this.state === 'INTRO') return;
         
         // Miễn nhiễm sát thương khi đang hồi máu, kame casting hoặc chờ đợi
@@ -666,7 +666,12 @@ export class Boss extends BaseMonster {
         this.setTint(0xff0000);
         this.scene.time.delayedCall(200, () => this.clearTint());
 
-        let dmgText = this.scene.add.text(this.x, this.y - 40, `-${amount}`, { fontSize: '30px', fill: '#ff0000', fontStyle: 'bold', stroke: '#fff', strokeThickness: 4 }).setOrigin(0.5).setDepth(8000);
+        // ĐỔI MÀU TEXT NẾU LÀ CHÍ MẠNG
+        let color = isCrit ? '#ffff00' : '#ff0000'; // Vàng nếu chí mạng, Đỏ nếu bình thường
+        let size = isCrit ? '40px' : '30px'; // Chữ bự hơn
+        let prefix = isCrit ? '💥' : ''; // Thêm icon nổ
+
+        let dmgText = this.scene.add.text(this.x, this.y - 40, `${prefix}${Math.round(amount)}`, { fontSize: size, fill: color, fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(8000);
         this.scene.tweens.add({ targets: dmgText, y: this.y - 80, alpha: 0, duration: 800, onComplete: () => dmgText.destroy() });
 
         if (this.hp <= 0) this.die();

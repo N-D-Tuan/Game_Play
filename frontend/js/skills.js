@@ -104,9 +104,9 @@ export function handleBasicAttackCollision(aa, monster) {
         let multiplierArr = [1.0, 1.2, 1.5];
         let aaDamage = atk * multiplierArr[level];
 
+        aa.scene.applyDamageToMonster(monster, aaDamage); 
+
         aa.destroy(); // Xóa viên đạn
-        
-        monster.takeDamage(aaDamage); 
     }
 }
 
@@ -230,7 +230,7 @@ function dropMeteor(scene, targetX, targetY, damage, radius, blastScale, imgScal
                 if (mon.active && !mon.isDead) {
                     let dist = Phaser.Math.Distance.Between(targetX, targetY, mon.x, mon.y);
                     if (dist <= radius) {
-                        mon.takeDamage(damage);
+                        scene.applyDamageToMonster(mon, damage);
                     }
                 }
             });
@@ -351,7 +351,7 @@ export function castSwordsEvo(scene, player) {
                         let dist = Phaser.Math.Distance.Between(cx, cy, mon.x, mon.y);
                         // Nếu quái nằm trong bán kính r = 200
                         if (dist <= radius) {
-                            mon.takeDamage(baseDamage);
+                            scene.applyDamageToMonster(mon, baseDamage);
                         }
                     }
                 });
@@ -462,7 +462,7 @@ export function castLightningEvo(scene, player) {
                         if (mon.active && !mon.isDead) {
                             let dist = Phaser.Math.Distance.Between(targetX, targetY, mon.x, mon.y);
                             if (dist <= blastRadius) {
-                                mon.takeDamage(damage);
+                                scene.applyDamageToMonster(mon, damage);
                                 // Gieo xúc xắc xem có bị Tê liệt không?
                                 if (!mon.isDead && Math.random() < stunChance) {
                                     if (typeof mon.applyParalysis === 'function') mon.applyParalysis(stunDur);
@@ -558,7 +558,7 @@ export function triggerShieldExplosion(scene, x, y) {
             let dist = Phaser.Math.Distance.Between(x, y, mon.x, mon.y);
             if (dist <= explosionRadius) {
                 let atk = window.playerStats ? window.playerStats.atk : 50;
-                mon.takeDamage(atk * 1.5);
+                scene.applyDamageToMonster(mon, atk * 1.5);
 
                 let angle = Phaser.Math.Angle.Between(x, y, mon.x, mon.y);
                 let nx = mon.x + Math.cos(angle) * knockbackDist;
@@ -746,7 +746,7 @@ export function castEarthEvo(scene, player) {
                 let distToCenter = Phaser.Math.Distance.Between(cx, cy, mon.x, mon.y);
                 if (distToCenter <= effectRadius) {
                     // Trừ máu
-                    mon.takeDamage(damage);
+                    scene.applyDamageToMonster(mon, damage);
 
                     // Toán học: Hất văng quái vật ra xa khỏi tâm 3 ngọn núi
                     let angle = Phaser.Math.Angle.Between(cx, cy, mon.x, mon.y);
@@ -869,8 +869,8 @@ export function castArrowsEvo(scene, player) {
                         scene.monsters.getChildren().forEach(mon => {
                             if (mon.active && !mon.isDead) {
                                 let dist = Phaser.Math.Distance.Between(cx, cy, mon.x, mon.y);
-                                if (dist <= 70) mon.takeDamage(atk * 4.0);       // Nổ ngay mặt gây 400% ATK
-                                else if (dist <= 200) mon.takeDamage(atk * 2.0);  // Văng miểng gây 200% ATK
+                                if (dist <= 70) scene.applyDamageToMonster(mon, atk * 4.0);       // Nổ ngay mặt gây 400% ATK
+                                else if (dist <= 200) scene.applyDamageToMonster(mon, atk * 2.0);  // Văng miểng gây 200% ATK
                             }
                         });
 
@@ -951,7 +951,7 @@ export function castArrowsEvo(scene, player) {
                                 if (mon.active && !mon.isDead) {
                                     // Bất kỳ quái nào đứng gần điểm tên rơi đều dính 30 dame
                                     if (Phaser.Math.Distance.Between(tx, ty, mon.x, mon.y) <= arrowAoERadius) {
-                                        mon.takeDamage(atk * 0.4);
+                                        scene.applyDamageToMonster(mon, atk * 0.4);
                                     }
                                 }
                             });
@@ -1090,7 +1090,7 @@ export function castAnchorEvo(scene, player) {
             if (mon.active && !mon.isDead && !hitMonsters.has(mon)) {
                 if (Phaser.Math.Distance.Between(ship.x, ship.y, mon.x, mon.y) < 150) {
                     hitMonsters.add(mon); // Đánh dấu đã tông
-                    mon.takeDamage(mDamage);
+                    scene.applyDamageToMonster(mon, mDamage);
 
                     // Giảm tốc độ chạy của quái trong 3 giây
                     mon.speedMultiplier = mSlow;
@@ -1157,7 +1157,7 @@ export function castAnchorEvo(scene, player) {
 
                         // Trừ máu (50) và Làm chậm (Giảm 10% -> còn 90%)
                         if (targetMon.active && !targetMon.isDead) {
-                            targetMon.takeDamage(atk * 2.0);
+                            scene.applyDamageToMonster(targetMon, atk * 2.0);
                             targetMon.speedMultiplier = 0.9;
                             
                             scene.time.delayedCall(3000, () => {

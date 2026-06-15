@@ -32,6 +32,10 @@ class InventoryController extends Controller
             if ($base->hp_regen > 0) $stats['hpRegen'] = $base->hp_regen;
             if ($base->atk > 0) $stats['atk'] = $base->atk;
             if ($base->dodge > 0) $stats['dodge'] = $base->dodge;
+            if ($base->crit_rate > 0) $stats['critRate'] = $base->crit_rate;
+            if ($base->crit_damage > 0) $stats['critDamage'] = $base->crit_damage;
+            if ($base->lifesteal > 0) $stats['lifesteal'] = $base->lifesteal;
+            if ($base->speed > 0) $stats['speed'] = $base->speed;
 
             return [
                 'id' => $playerItem->id, // Trả về ID của PlayerItem (ID độc nhất)
