@@ -289,7 +289,6 @@ export class CampaignScene extends Phaser.Scene {
         this.chestSpawned = false; 
         this.bossChestSpawned = false;
         this.bossEntity = null;
-        this.collectedTreasures = 0; // Đếm vật phẩm nhặt được
 
         this.sessionLoot = [...this.inheritedLoot]; // Túi đồ tạm: Chứa trang bị nhặt được trong màn này
         this.equipments = this.physics.add.group(); // Nhóm vật lý cho Trang bị rơi ra
@@ -425,15 +424,12 @@ export class CampaignScene extends Phaser.Scene {
         }
 
         this.basicAttacks = this.physics.add.group();
-        this.treasures = this.physics.add.group(); // Nhóm chứa vật phẩm rớt ra
         this.chestGroup = this.physics.add.group(); // Nhóm chứa rương
         this.gateGroup = this.physics.add.group(); // Nhóm chứa cổng
 
         // Xử lý đạn trúng quái
         this.physics.add.overlap(this.basicAttacks, this.monsters, handleBasicAttackCollision, null, this);
         
-        // Xử lý nhặt vật phẩm
-        this.physics.add.overlap(this.player, this.treasures, this.collectTreasure, null, this);
         
         // Xử lý tương tác Rương và Cổng
         this.physics.add.overlap(this.player, this.chestGroup, this.openChest, null, this);
@@ -788,39 +784,7 @@ export class CampaignScene extends Phaser.Scene {
 
             this.cameras.main.shake(300, 0.01);
 
-            // 1. VĂNG 5 LÕI NÂNG CẤP (Ngọc)
-            let dropImage = this.currentStage === 1 ? 'aa1' : 'aa2';
-            for (let i = 0; i < 5; i++) {
-                // Tọa độ ngẫu nhiên xung quanh rương (bán kính 150px)
-                let destX = chest.x + Phaser.Math.Between(-150, 150);
-                let destY = chest.y + Phaser.Math.Between(-100, 150);
-                
-                // Khởi tạo đồ từ trong lòng rương
-                let core = this.treasures.create(chest.x, chest.y, dropImage);
-                core.setScale(0.1).setDepth(destY);
-                
-                // Tắt va chạm để người chơi không ăn được lúc nó đang nảy lên
-                core.body.enable = false; 
-
-                // Tween 1: Đẩy sang ngang
-                this.tweens.add({ targets: core, x: destX, duration: 600, ease: 'Linear' });
-                
-                // Tween 2: Nhảy vọt lên trên rồi rớt xuống đất
-                this.tweens.add({
-                    targets: core,
-                    y: destY - 100, // Độ cao nảy lên
-                    duration: 300,
-                    yoyo: true, // Tự động rớt xuống lại
-                    ease: 'Sine.easeOut',
-                    onComplete: () => {
-                        core.y = destY; 
-                        core.body.enable = true; // Bật lại va chạm
-                        core.body.reset(core.x, core.y); // Reset lại vùng hitbox bám theo ảnh
-                    }
-                });
-            }
-
-            // 2. VĂNG TRANG BỊ VỚI CỘT SÁNG THEO BẬC
+            // VĂNG TRANG BỊ VỚI CỘT SÁNG THEO BẬC
             let equipDrops = this.generateRandomDropsForStage(this.currentStage);
             
             equipDrops.forEach((itemData, index) => {
@@ -934,28 +898,16 @@ export class CampaignScene extends Phaser.Scene {
         this.time.delayedCall(50, () => this.checkAndSpawnGateway());
     }
 
-    collectTreasure(player, item) {
-        item.destroy(); // Xóa ảnh trên map
-        this.collectedTreasures++;
-        
-        // Hiệu ứng text nhặt đồ
-        let txt = this.add.text(player.x, player.y - 30, '+1', { fontSize: '20px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setDepth(8000);
-        this.tweens.add({ targets: txt, y: player.y - 80, alpha: 0, duration: 800, onComplete: () => txt.destroy() });
-
-        this.time.delayedCall(50, () => this.checkAndSpawnGateway());
-    }
-
     // KIỂM TRA ĐÃ NHẶT SẠCH ĐỒ CHƯA ĐỂ MỞ CỔNG
     checkAndSpawnGateway() {
         // Chỉ kiểm tra khi rương báu đã được mở
         if (this.stageChest && this.stageChest.chestState === 'opened') {
             
-            // Đếm số Ngọc và Trang bị đang còn rơi vãi trên map
-            let gemsLeft = this.treasures.countActive(true);
+            // Đếm số Trang bị đang còn rơi vãi trên map
             let equipsLeft = this.equipments.countActive(true);
 
             // NẾU CẢ 2 BẰNG 0 -> ĐÃ NHẶT SẠCH MỌI THỨ
-            if (gemsLeft === 0 && equipsLeft === 0) {
+            if (equipsLeft === 0) {
                 this.stageChest.chestState = 'empty';
                 this.stageChest.setFrame(2); // Đổi thành rương rỗng
                 this.stageChest.setX(this.stageChest.x + 25);
