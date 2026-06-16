@@ -5,7 +5,7 @@
 // ==========================================
 export function playEggHatchAnimation(scene, petName, petImageKey, onComplete) {
     // Tạo màn che đen làm tối toàn bộ game
-    let overlay = scene.add.graphics().fillStyle(0x000000, 0.9).fillRect(0, 0, scene.cameras.main.width, scene.cameras.main.height).setDepth(50000).setScrollFactor(0);
+    let overlay = scene.add.graphics().fillStyle(0x000000, 1).fillRect(0, 0, scene.cameras.main.width, scene.cameras.main.height).setDepth(50000).setScrollFactor(0);
     
     let cx = scene.cameras.main.width / 2;
     let cy = scene.cameras.main.height / 2;
@@ -55,18 +55,36 @@ export function playEggHatchAnimation(scene, petName, petImageKey, onComplete) {
                                 // Hào quang tỏa sáng phía sau lưng Pet
                                 let glow = scene.add.graphics().setDepth(50001).setScrollFactor(0);
                                 glow.fillStyle(0xffdd00, 0.5).fillCircle(cx, cy, 150);
-                                scene.tweens.add({ targets: glow, scale: 1.2, alpha: 0.1, yoyo: true, repeat: -1, duration: 1000 });
 
                                 // Tên Pet nổi lên
                                 let nameTxt = scene.add.text(cx, cy + 150, `Nhận được\n${petName}`, { fontSize: '36px', fill: '#ffcc00', fontStyle: 'bold', align: 'center', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(50005).setScrollFactor(0);
 
                                 scene.tweens.add({ targets: newPet, scale: 1.5, duration: 1000, ease: 'Elastic.easeOut' });
 
-                                // Đợi 3.5 giây cho người chơi ngắm, rồi dọn dẹp và trả lại UI Balo
-                                scene.time.delayedCall(3500, () => {
-                                    overlay.destroy(); flash.destroy(); newPet.destroy(); glow.destroy(); nameTxt.destroy();
+                                // Tạo hàm dọn dẹp chung để dùng cho cả 2 trường hợp (Hết giờ / Click chuột)
+                                let isCleanedUp = false;
+
+                                let cleanupGacha = () => {
+                                    if (isCleanedUp) return;
+                                    isCleanedUp = true;
+                                    
+                                    // Hủy lắng nghe sự kiện click để tránh lỗi bộ nhớ
+                                    scene.input.off('pointerdown', cleanupGacha);
+
+                                    overlay.destroy(); 
+                                    flash.destroy(); 
+                                    newPet.destroy(); 
+                                    glow.destroy(); 
+                                    nameTxt.destroy();
+                                    
                                     if (onComplete) onComplete();
-                                });
+                                };
+
+                                // 1. Lắng nghe sự kiện click chuột vào màn hình để tắt ngay lập tức
+                                scene.input.on('pointerdown', cleanupGacha);
+
+                                // 2. Tự động tắt sau 3.5 giây nếu người chơi không click
+                                scene.time.delayedCall(3500, cleanupGacha);
                             }
                         });
                     }

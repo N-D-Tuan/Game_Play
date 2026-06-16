@@ -575,7 +575,6 @@ INSERT INTO player_items (id, player_id, item_id, is_equipped) VALUES
 (229,1,133,0), (230,1,133,0), (231,1,133,0);
 
 INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
--- 10 Mảnh trứng thú cưng (ID: 212)
 (1, 212, 0),
 (1, 212, 0),
 (1, 212, 0),
