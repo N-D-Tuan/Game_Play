@@ -5,6 +5,7 @@ import { Monster1, createMonster1Animations } from './monster1.js';
 import { Monster2, createMonster2Animations } from './monster2.js';
 import { Monster3, createMonster3Animations } from './monster3.js';
 import { Boss, createBossAnimations } from './boss.js';
+import { CompanionPet } from './pet.js';
 
 export class CampaignScene extends Phaser.Scene {
     constructor() {
@@ -87,6 +88,10 @@ export class CampaignScene extends Phaser.Scene {
         this.load.spritesheet('gateway', '../assets/gateway_spritesheet.png', { frameWidth: 50, frameHeight: 200 });
 
         this.load.image('random', '../assets/items/random.png');
+
+        this.load.image('egg', '../assets/pets/egg/egg.png');
+        this.load.image('crack', '../assets/pets/egg/crack.png');
+        this.load.image('egg_piece', '../assets/pets/egg/egg_piece.png');
     }
 
     create() {
@@ -152,6 +157,10 @@ export class CampaignScene extends Phaser.Scene {
         // Kế thừa Level từ màn trước
         this.player.aaLevel = this.currentPlayerLevel; 
         this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
+
+        if (window.equippedPet) {
+            this.myPet = new CompanionPet(this, this.player.x, this.player.y, window.equippedPet.icon);
+        }
 
         this.weatherType = this.chooseRandomWeather();
         this.applyWeatherAndBackground(this.weatherType);
@@ -1279,6 +1288,10 @@ export class CampaignScene extends Phaser.Scene {
         }
 
         this.updateRadar();
+
+        if (this.myPet) {
+            this.myPet.updateBehavior(this.player);
+        }
     }
 
     // (Giữ nguyên các hàm sinh map, thời tiết, radar, tạo thanh máu, menu pause và bắn kỹ năng bên dưới)

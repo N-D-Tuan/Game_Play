@@ -53,6 +53,17 @@ UPDATE items SET lifesteal = CASE
 END;
 SET SQL_SAFE_UPDATES = 1;
 
+-- Cập nhật bảng items để cho phép chứa Nguyên liệu (Mảnh trứng, Trứng)
+ALTER TABLE items 
+MODIFY COLUMN type ENUM('head', 'chest', 'legs', 'weapon', 'accessory', 'shoes', 'material') NOT NULL;
+
+-- Thêm Mảnh Trứng và Trứng Thú Cưng vào bảng items
+-- ID 212: Mảnh Trứng, ID 213: Trứng Thú Cưng
+INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
+VALUES 
+(212, 'Mảnh Trứng Thú Cưng', 'material', 'S', 0, 0, 0, 0, 'egg_piece.png'),
+(213, 'Trứng Thú Cưng', 'material', 'S', 0, 0, 0, 0, 'egg.png');
+
 -- ==========================================
 -- BẢNG 2: TÚI ĐỒ CỦA NGƯỜI CHƠI (INVENTORY)
 -- ==========================================
@@ -65,6 +76,97 @@ CREATE TABLE player_items (
     
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 );
+
+-- ==========================================
+-- BẢNG 3: PET
+-- ==========================================
+CREATE TABLE pets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pet_code VARCHAR(50) UNIQUE NOT NULL, -- Mã nhận diện (VD: ngoc_long)
+    name VARCHAR(100) NOT NULL,
+    
+    -- CHỈ SỐ GỐC (Ở Cấp 1)
+    base_hp INT DEFAULT 0,
+    base_hp_regen INT DEFAULT 0,
+    base_atk INT DEFAULT 0,
+    base_dodge INT DEFAULT 0,
+    base_crit_rate INT DEFAULT 0,
+    base_crit_damage INT DEFAULT 0,
+    base_lifesteal INT DEFAULT 0,
+    base_speed INT DEFAULT 0,
+    
+    -- CHỈ SỐ TĂNG TRƯỞNG (Cộng thêm mỗi khi lên 1 cấp)
+    -- Dùng FLOAT cho các chỉ số phần trăm vì nó có thể tăng lẻ (VD: +0.2% Chí mạng/cấp)
+    growth_hp INT DEFAULT 0,
+    growth_hp_regen INT DEFAULT 0,
+    growth_atk INT DEFAULT 0,
+    growth_dodge FLOAT DEFAULT 0,
+    growth_crit_rate FLOAT DEFAULT 0,
+    growth_crit_damage INT DEFAULT 0,
+    growth_lifesteal FLOAT DEFAULT 0,
+    growth_speed FLOAT DEFAULT 0,
+    
+    -- HÌNH ẢNH 3 GIAI ĐOẠN TIẾN HÓA
+    icon_non VARCHAR(255) NOT NULL,
+    icon_thieu_nien VARCHAR(255) NOT NULL,
+    icon_truong_thanh VARCHAR(255) NOT NULL,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================
+-- BẢNG 4: TÚI ĐỒ CỦA NGƯỜI CHƠI (PET)
+-- ==========================================
+CREATE TABLE player_pets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    player_id INT NOT NULL,
+    pet_id INT NOT NULL,              -- Trỏ tới ID trong bảng pets
+    level INT NOT NULL DEFAULT 1,     -- Cấp độ hiện tại (Max 100)
+    current_exp INT NOT NULL DEFAULT 0, 
+    is_equipped TINYINT(1) DEFAULT 0, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+);
+
+-- Chèn dữ liệu mới với thông số đã được cân bằng
+INSERT INTO pets (
+    pet_code, name, 
+    base_hp, base_hp_regen, base_atk, base_dodge, base_crit_rate, base_crit_damage, base_lifesteal, base_speed, 
+    growth_hp, growth_hp_regen, growth_atk, growth_dodge, growth_crit_rate, growth_crit_damage, growth_lifesteal, growth_speed, 
+    icon_non, icon_thieu_nien, icon_truong_thanh
+) VALUES 
+
+-- 1. KIẾN XANH: Cộng nhiều máu, dame vừa, có hút máu
+('kien_xanh', 'Kiến Xanh', 
+ 300, 0, 15, 0, 0, 0, 1, 0,            -- Base (Cấp 1)
+ 30, 0, 3, 0, 0, 0, 0.1, 0,            -- Tăng trưởng (Lv 100: +3270 HP, +312 ATK, +10.9% Hút Máu)
+ 'kien_xanh_1.png', 'kien_xanh_2.png', 'kien_xanh_3.png'),
+
+-- 2. KIẾN ĐỎ: Dame trung bình cao, tỉ lệ CM, máu vừa, né
+('kien_do', 'Kiến Đỏ', 
+ 150, 0, 25, 2, 2, 0, 0, 0,            -- Base
+ 15, 0, 5, 0.1, 0.2, 0, 0, 0,          -- Tăng trưởng (Lv 100: +1635 HP, +520 ATK, +11.9% Né, +21.8% Tỉ lệ CM)
+ 'kien_do_1.png', 'kien_do_2.png', 'kien_do_3.png'),
+
+-- 3. NGỌC LONG: Cộng Máu, hồi máu, hút máu, né (Bình máu di động)
+('ngoc_long', 'Ngọc Long', 
+ 250, 10, 0, 5, 0, 0, 2, 0,            -- Base
+ 25, 2, 0, 0.2, 0, 0, 0.2, 0,          -- Tăng trưởng (Lv 100: +2725 HP, +208 Hồi/s, +24.8% Né, +21.8% Hút Máu)
+ 'ngoc_long_1.png', 'ngoc_long_2.png', 'ngoc_long_3.png'),
+
+-- 4. PHƯỢNG HOÀNG BĂNG: Dame cao, máu nhiều, né cao, tỉ lệ CM cao, STCM cao, tốc độ vừa
+('phuong_hoang_bang', 'Phượng Hoàng Băng', 
+ 400, 0, 40, 10, 5, 20, 0, 10,         -- Base
+ 40, 0, 8, 0.3, 0.5, 3, 0, 1,          -- Tăng trưởng (Lv 100: +4360 HP, +832 ATK, +39.7% Né, +54.5% TLCM, +317% STCM, +109 Tốc)
+ 'phuong_hoang_1.png', 'phuong_hoang_2.png', 'phuong_hoang_3.png'),
+
+-- 5. RỒNG LỬA: Dame SIÊU cao, máu hơi nhiều, né hơi nhiều, tỉ lệ CM SIÊU cao, STCM SIÊU cao, tốc độ vừa
+('rong_lua', 'Rồng Lửa', 
+ 200, 0, 80, 5, 10, 50, 0, 10,         -- Base
+ 20, 0, 15, 0.2, 0.8, 6, 0, 1,         -- Tăng trưởng (Lv 100: +2180 HP, +1565 ATK, +24.8% Né, +89.2% TLCM, +644% STCM, +109 Tốc)
+ 'rong_lua_1.png', 'rong_lua_2.png', 'rong_lua_3.png');
 
 -- 1. Thêm 1 loại vật phẩm mẫu
 INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
@@ -471,3 +573,18 @@ INSERT INTO player_items (id, player_id, item_id, is_equipped) VALUES
 INSERT INTO player_items (id, player_id, item_id, is_equipped) VALUES
 (222,1,133,0), (223,1,133,0), (224,1,133,0), (225,1,133,0), (226,1,133,0), (227,1,133,0), (228,1,133,0),
 (229,1,133,0), (230,1,133,0), (231,1,133,0);
+
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+-- 10 Mảnh trứng thú cưng (ID: 212)
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0),
+(1, 212, 0);
+-- 1 Trứng thú cưng (ID: 213)
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES (1, 213, 0);

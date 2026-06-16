@@ -1,5 +1,10 @@
 import { CampaignScene } from './campaign.js';
 import { SKILL_CAMPAIGN_CONFIG } from './skills.js';
+import { playEggHatchAnimation } from './pet.js';
+
+window.playerPets = []; 
+window.equippedPet = null;
+let currentSelectedPet = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem('playerId', '1');
@@ -67,18 +72,39 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     const tabEquipBtn = document.getElementById('tab-equip-btn');
     const tabForgeBtn = document.getElementById('tab-forge-btn');
+    const tabPetBtn = document.getElementById('tab-pet-btn');
+
     const viewEquip = document.getElementById('view-equip');
     const viewForge = document.getElementById('view-forge');
+    const viewPet = document.getElementById('view-pet');
 
     let currentTab = 'equip';
     let forgeItems = [];
+
+    if (tabPetBtn) {
+        tabPetBtn.addEventListener('click', () => {
+            currentTab = 'pet';
+            tabEquipBtn.classList.remove('active');
+            tabForgeBtn.classList.remove('active');
+            tabPetBtn.classList.add('active');
+
+            viewEquip.style.display = 'none';
+            viewForge.style.display = 'none';
+            viewPet.style.display = 'block';
+
+            renderPetUI();
+        });
+    }
 
     tabEquipBtn.addEventListener('click', () => {
         currentTab = 'equip';
         tabEquipBtn.classList.add('active');
         tabForgeBtn.classList.remove('active');
-        viewEquip.classList.add('active');
-        viewForge.classList.remove('active');
+        tabPetBtn.classList.remove('active');
+
+        viewEquip.style.display = 'flex'; 
+        viewForge.style.display = 'none';
+        viewPet.style.display = 'none';
 
         // KHI CHUYỂN VỀ TAB TRANG BỊ, TRẢ HẾT ĐỒ TRONG LÒ VỀ BALO
         if (forgeItems.length > 0) {
@@ -93,8 +119,11 @@ document.addEventListener("DOMContentLoaded", () => {
         currentTab = 'forge';
         tabForgeBtn.classList.add('active');
         tabEquipBtn.classList.remove('active');
-        viewForge.classList.add('active');
-        viewEquip.classList.remove('active');
+        tabPetBtn.classList.remove('active');
+
+        viewForge.style.display = 'flex'; 
+        viewEquip.style.display = 'none';
+        viewPet.style.display = 'none';
     });
 
     const RARITY_CONFIG = {
@@ -140,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Trả các ô trên người về trạng thái "Trống" trước khi mặc đồ mới
                 document.querySelectorAll('.equip-slot').forEach(slot => {
                     let slotName = slot.getAttribute('data-slot');
+                    if (slotName === 'pet') return;
                     const slotLabels = { head: 'Mũ', chest: 'Áo', legs: 'Quần', weapon: 'Vũ khí', accessory: 'Bổ trợ', shoes: 'Giày' };
                     slot.innerHTML = `<span class="slot-label" style="opacity: 0.5">${slotLabels[slotName]}</span>`;
                     slot.style.borderColor = '#555';
@@ -168,6 +198,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         let textShadow = frontendItem.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
                         // Đổi sang dùng thẻ img
                         let imagePath = `../assets/items/${frontendItem.icon}`;
+                        if (frontendItem.item_id === 212 || frontendItem.item_id === 213) {
+                            imagePath = `../assets/pets/egg/${frontendItem.icon}`;
+                        }
+
                         slotDiv.innerHTML = `<img src="${imagePath}" alt="${frontendItem.name}" style="width: 40px; height: 40px; object-fit: contain;">
                                             <span class="item-rank" style="color: ${RARITY_CONFIG[frontendItem.rarity].color}; ${textShadow}">${frontendItem.rarity}</span>`;
                         slotDiv.style.borderColor = RARITY_CONFIG[frontendItem.rarity].color;
@@ -261,6 +295,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
+
+        if (window.equippedPet) {
+            let pInfo = window.equippedPet.pet;
+            let lvl = window.equippedPet.level;
+            currentStats.hp += Math.round(pInfo.base_hp + (lvl - 1) * pInfo.growth_hp);
+            currentStats.hpRegen += Math.round(pInfo.base_hp_regen + (lvl - 1) * pInfo.growth_hp_regen);
+            currentStats.atk += Math.round(pInfo.base_atk + (lvl - 1) * pInfo.growth_atk);
+            currentStats.dodge += Math.round(pInfo.base_dodge + (lvl - 1) * pInfo.growth_dodge);
+            currentStats.critRate += Math.round(pInfo.base_crit_rate + (lvl - 1) * pInfo.growth_crit_rate);
+            currentStats.critDamage += Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
+            currentStats.lifesteal += Math.round(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
+            currentStats.speed += Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
+        }
+
         window.playerStats = currentStats;
 
         document.getElementById('stat-hp').textContent = currentStats.hp;
@@ -349,6 +397,10 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Đổi sang dùng thẻ img
             let imagePath = `../assets/items/${item.icon}`;
+            if (item.item_id === 212 || item.item_id === 213) {
+                imagePath = `../assets/pets/egg/${item.icon}`;
+            }
+
             div.innerHTML = `<img src="${imagePath}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: contain;">
                             <span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
             div.setAttribute('data-tooltip', buildTooltip(item));
@@ -357,10 +409,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // SỰ KIỆN CLICK ĐỘNG (Dựa theo Tab hiện tại)
             div.addEventListener('click', () => {
+                if (item.item_id === 213) {
+                    document.getElementById('hatch-modal').style.display = 'flex';
+                    return;
+                }
+
                 if (currentTab === 'equip') {
                     equipItem(item);
                 } else if (currentTab === 'forge') {
                     addToForge(item);
+                }
+            });
+
+            // SỰ KIỆN NHẤP ĐÚP (Dùng để CHO PET ĂN)
+            div.addEventListener('dblclick', () => {
+                if (currentTab === 'pet') {
+                    // Không cho ăn mảnh trứng (212) hoặc trứng (213)
+                    if (item.item_id === 212 || item.item_id === 213) return; 
+
+                    if (!currentSelectedPet) {
+                        showDarkFantasyAlert("Vui lòng chọn Thú cưng trước!");
+                        return;
+                    }                   
+                    
+                    // Bật Popup xác nhận cho ăn
+                    document.getElementById('feed-modal').style.display = 'flex';
+                    document.getElementById('feed-pet-name').innerText = currentSelectedPet.pet.name;
+                    // Xử lý hiệu ứng chữ tỏa sáng cho Bậc S
+                    let feedNameEl = document.getElementById('feed-item-name');
+                    feedNameEl.innerText = `[Bậc ${item.rarity}] ${item.name}`;
+                    feedNameEl.style.color = rankInfo.color;
+                    
+                    if (item.rarity === 'S') {
+                        feedNameEl.style.textShadow = '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 10px #ffffff';
+                    } else {
+                        feedNameEl.style.textShadow = 'none'; // Reset lại bóng nếu là các bậc khác
+                    }
+                    
+                    let expRates = { 'F': 10, 'E': 30, 'D': 100, 'C': 500, 'B': 2000, 'A': 10000, 'S': 30000 };
+                    document.getElementById('feed-exp-amount').innerText = expRates[item.rarity] || 0;
+                    
+                    window.pendingFeedItemIds = [item.id]; // Lưu lại ID để nạp vào API
                 }
             });
             invGrid.appendChild(div);
@@ -795,4 +884,389 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // ==========================================
+    // HỆ THỐNG THÚ CƯNG (PET SYSTEM API & UI)
+    // ==========================================
+
+    // Gọi hàm này mỗi khi mở túi hoặc có thay đổi về Pet
+    async function loadPetsFromServer() {
+        let playerId = localStorage.getItem('playerId') || 1;
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/pets/${playerId}`);
+            const data = await response.json();
+            if (data.status === 'success') {
+                window.playerPets = data.pets;
+                window.equippedPet = window.playerPets.find(p => p.is_equipped == 1);
+                
+                // Vẽ ảnh Pet vào Ô dưới chân nhân vật ở Tab Trang bị
+                let slotPet = document.getElementById('slot-pet');
+                if (window.equippedPet) {
+                    let pInfo = window.equippedPet.pet;
+                    let lvl = window.equippedPet.level;
+                    let stageStr = lvl >= 100 ? "Trưởng Thành" : (lvl >= 50 ? "Thiếu Niên" : "Cấp Non");
+                    let stageIcon = lvl >= 100 ? pInfo.icon_truong_thanh : (lvl >= 50 ? pInfo.icon_thieu_nien : pInfo.icon_non);
+                    
+                    slotPet.innerHTML = `<img src="../assets/pets/${pInfo.pet_code}/${stageIcon}" style="width: 40px; height: 40px; object-fit: contain;">`;
+                    slotPet.style.borderColor = '#00ffcc';
+                    slotPet.style.boxShadow = `0 0 10px #00ffcc`;
+
+                    // --- [MỚI] TÍNH TOÁN VÀ GẮN TOOLTIP ---
+                    const formatVal = (val) => Number.isInteger(val) ? val : val.toFixed(1);
+                    let hp = Math.round(pInfo.base_hp + (lvl - 1) * pInfo.growth_hp);
+                    let hpRegen = Math.round(pInfo.base_hp_regen + (lvl - 1) * pInfo.growth_hp_regen);
+                    let atk = Math.round(pInfo.base_atk + (lvl - 1) * pInfo.growth_atk);
+                    let dodge = formatVal(pInfo.base_dodge + (lvl - 1) * pInfo.growth_dodge);
+                    let critRate = formatVal(pInfo.base_crit_rate + (lvl - 1) * pInfo.growth_crit_rate);
+                    let critDmg = Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
+                    let lifesteal = formatVal(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
+                    let speed = Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
+
+                    let tooltip = `[${stageStr}] ${pInfo.name.toUpperCase()}\n`;
+                    tooltip += `Cấp độ: ${lvl}\n`;
+                    tooltip += `-------------------\n`;
+                    if (hp > 0) tooltip += `+ Máu tối đa: ${hp}\n`;
+                    if (hpRegen > 0) tooltip += `+ Hồi máu/s: ${hpRegen}\n`;
+                    if (atk > 0) tooltip += `+ Tấn công: ${atk}\n`;
+                    if (dodge > 0) tooltip += `+ Tỉ lệ né: ${dodge}%\n`;
+                    if (critRate > 0) tooltip += `+ Tỉ lệ Chí mạng: ${critRate}%\n`;
+                    if (critDmg > 0) tooltip += `+ ST Chí mạng: ${critDmg}%\n`;
+                    if (lifesteal > 0) tooltip += `+ Hút máu: ${lifesteal}%\n`;
+                    if (speed > 0) tooltip += `+ Tốc độ chạy: ${speed}`;
+
+                    slotPet.setAttribute('data-tooltip', tooltip.trim());
+                } else {
+                    slotPet.innerHTML = `<span class="slot-label" style="opacity: 0.8; color: #00ffcc;">Thú Cưng</span>`;
+                    slotPet.style.boxShadow = 'none';
+                    slotPet.removeAttribute('data-tooltip');
+                }
+
+                updateStatsUI(); // Cập nhật lại thanh máu, dame sau khi có buff Pet
+                if (document.getElementById('view-pet').style.display === 'block') renderPetUI();
+            }
+        } catch (error) { console.error("Lỗi load Pets:", error); }
+    }
+
+    // Vẽ giao diện Tab Thú Cưng
+    function renderPetUI() {
+        let listDiv = document.getElementById('pet-list');
+        listDiv.innerHTML = '';
+
+        if (window.playerPets.length === 0) {
+            document.getElementById('pet-name').innerText = "Chưa có Thú Cưng";
+            return;
+        }
+
+        // Tự động chọn Pet đang xuất chiến nếu mới mở lên, nếu không thì chọn con đầu tiên
+        if (!currentSelectedPet) {
+            currentSelectedPet = window.playerPets.find(p => p.is_equipped == 1) || window.playerPets[0];
+        }
+
+        // VẼ DANH SÁCH PET TRÊN CÙNG
+        window.playerPets.forEach(p => {
+            let pInfo = p.pet;
+            let stageIcon = p.level >= 100 ? pInfo.icon_truong_thanh : (p.level >= 50 ? pInfo.icon_thieu_nien : pInfo.icon_non);
+            
+            let itemDiv = document.createElement('div');
+            // THAY ĐỔI: flex-shrink: 0 giúp ảnh không bị nén hẹp lại khi có nhiều Pet
+            itemDiv.style.cssText = `position: relative; flex-shrink: 0; width: 50px; height: 50px; border-radius: 5px; cursor: pointer; border: 2px solid ${p.id === currentSelectedPet.id ? '#00ffcc' : '#333'}`;
+            itemDiv.onclick = () => { currentSelectedPet = p; renderPetUI(); };
+
+            let imgBtn = document.createElement('img');
+            imgBtn.src = `../assets/pets/${pInfo.pet_code}/${stageIcon}`;
+            // THAY ĐỔI: object-fit: contain giúp ảnh giữ đúng tỷ lệ, không bị dẹt
+            imgBtn.style.cssText = `width: 100%; height: 100%; object-fit: contain;`; 
+            itemDiv.appendChild(imgBtn);
+
+            // THAY ĐỔI: ĐÁNH DẤU PET ĐANG ĐƯỢC XUẤT CHIẾN BẰNG ICON ⚔️
+            if (p.is_equipped == 1) {
+                let badge = document.createElement('div');
+                badge.innerHTML = '⚔️'; 
+                badge.style.cssText = 'position: absolute; top: -8px; right: -8px; background: #ff0000; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 1px solid #fff; z-index: 10;';
+                itemDiv.appendChild(badge);
+            }
+
+            listDiv.appendChild(itemDiv);
+        });
+
+        // Vẽ chi tiết con Pet đang chọn
+        let pInfo = currentSelectedPet.pet;
+        let lvl = currentSelectedPet.level;
+        let stageStr = lvl >= 100 ? "[Trưởng Thành]" : (lvl >= 50 ? "[Thiếu Niên]" : "[Cấp Non]");
+        let iconKey = lvl >= 100 ? pInfo.icon_truong_thanh : (lvl >= 50 ? pInfo.icon_thieu_nien : pInfo.icon_non);
+
+        document.getElementById('pet-preview').innerHTML = `<img src="../assets/pets/${pInfo.pet_code}/${iconKey}" style="width: 80%; height: 80%; object-fit: contain;">`;
+        document.getElementById('pet-name').innerText = pInfo.name;
+        document.getElementById('pet-stage').innerText = `Cấp ${lvl} ${stageStr}`;
+        
+        let expNeeded = lvl * 100;
+        let expPct = lvl >= 100 ? 100 : (currentSelectedPet.current_exp / expNeeded) * 100;
+        document.getElementById('pet-exp-fill').style.width = `${expPct}%`;
+        document.getElementById('pet-exp-text').innerText = lvl >= 100 ? "MAX LEVEL" : `${currentSelectedPet.current_exp} / ${expNeeded}`;
+
+        // Hàm phụ trợ để làm tròn số nếu là số nguyên, hoặc giữ 1 chữ số thập phân nếu lẻ
+        const formatVal = (val) => Number.isInteger(val) ? val : val.toFixed(1);
+
+        // Tính toán trọn bộ 8 Chỉ số Buff: Base + (Level - 1) * Growth
+        let hp = Math.round(pInfo.base_hp + (lvl - 1) * pInfo.growth_hp);
+        let hpRegen = Math.round(pInfo.base_hp_regen + (lvl - 1) * pInfo.growth_hp_regen);
+        let atk = Math.round(pInfo.base_atk + (lvl - 1) * pInfo.growth_atk);
+        let dodge = formatVal(pInfo.base_dodge + (lvl - 1) * pInfo.growth_dodge);
+        let critRate = formatVal(pInfo.base_crit_rate + (lvl - 1) * pInfo.growth_crit_rate);
+        let critDmg = Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
+        let lifesteal = formatVal(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
+        let speed = Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
+
+        // Đổ toàn bộ dữ liệu vào khung chứa dưới dạng Lưới (Grid) 2 cột
+        document.getElementById('pet-stats-container').innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; row-gap: 6px; font-size: 12px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; border: 1px solid #444; color: #ddd;">
+                <div>🩸 Máu: <span style="color: #00ff00">+${hp}</span></div>
+                <div>❤️ Hồi/s: <span style="color: #00ff00">+${hpRegen}</span></div>
+                <div>⚔️ ATK: <span style="color: #00ff00">+${atk}</span></div>
+                <div>💨 Né: <span style="color: #00ff00">+${dodge}%</span></div>
+                <div>💥 TL CM: <span style="color: #00ff00">+${critRate}%</span></div>
+                <div>🔥 ST CM: <span style="color: #00ff00">+${critDmg}%</span></div>
+                <div>🦇 Hút máu: <span style="color: #00ff00">+${lifesteal}%</span></div>
+                <div>⚡ Tốc độ: <span style="color: #00ff00">+${speed}</span></div>
+            </div>
+        `;
+
+        // THAY ĐỔI TRẠNG THÁI VÀ MÀU SẮC NÚT XUẤT CHIẾN / THU HỒI
+        let equipBtn = document.getElementById('btn-equip-pet');
+        if (currentSelectedPet.is_equipped == 1) {
+            equipBtn.innerText = "THU HỒI";
+            equipBtn.style.background = "linear-gradient(180deg, #aa0000, #440000)";
+            equipBtn.style.borderColor = "#ff3333";
+            equipBtn.style.boxShadow = "0 0 5px #ff0000";
+        } else {
+            equipBtn.innerText = "XUẤT CHIẾN";
+            equipBtn.style.background = "linear-gradient(180deg, #0055aa, #002255)";
+            equipBtn.style.borderColor = "#00aaff";
+            equipBtn.style.boxShadow = "0 0 5px #00aaff";
+        }
+    }
+
+    // API ẤP TRỨNG KẾT HỢP VỚI GAME PHASER
+    async function hatchEggApi() {
+        let playerId = localStorage.getItem('playerId') || 1;
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/pets/hatch', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player_id: playerId })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                let newPet = data.pet;
+                
+                // 1. Dọn dẹp giao diện HTML để xem phim
+                document.getElementById('inventory-modal').style.display = 'none';
+                let wasHomeVisible = document.getElementById('home-screen').style.display !== 'none';
+                if (wasHomeVisible) {
+                    document.getElementById('home-screen').style.display = 'none';
+                    document.getElementById('game-container').style.display = 'block';
+                }
+
+                // 2. Lấy Scene Game đang chạy ngầm và Load ảnh Pet
+                let activeScene = window.game.scene.getScenes(true)[0]; 
+                let imgKey = `pet_hatch_${newPet.pet.pet_code}`;
+                let imgPath = `../assets/pets/${newPet.pet.pet_code}/${newPet.pet.icon_non}`;
+
+                let startAnimation = () => {
+                    playEggHatchAnimation(activeScene, newPet.pet.name, imgKey, () => {
+                        alert(`Chúc mừng! Bạn đã nhận được ${newPet.pet.name}`);
+                        // Khôi phục lại giao diện cũ
+                        if (wasHomeVisible) {
+                            document.getElementById('home-screen').style.display = 'flex';
+                            document.getElementById('game-container').style.display = 'none';
+                        }
+                        document.getElementById('inventory-modal').style.display = 'flex';
+                        
+                        loadInventoryFromServer(); // Load lại túi đồ (vì mất trứng)
+                        loadPetsFromServer();     // Cập nhật danh sách Pet
+                    });
+                };
+
+                // Dynamic Load ảnh nếu chưa có trong Phaser
+                let assetsToLoad = 0;
+                let checkLoadComplete = () => {
+                    assetsToLoad--;
+                    if (assetsToLoad <= 0) startAnimation();
+                };
+
+                if (!activeScene.textures.exists(imgKey)) {
+                    activeScene.load.image(imgKey, imgPath);
+                    assetsToLoad++;
+                }
+                if (!activeScene.textures.exists('egg')) {
+                    activeScene.load.image('egg', '../assets/pets/egg/egg.png');
+                    assetsToLoad++;
+                }
+                if (!activeScene.textures.exists('crack')) {
+                    activeScene.load.image('crack', '../assets/pets/egg/crack.png');
+                    assetsToLoad++;
+                }
+
+                if (assetsToLoad > 0) {
+                    activeScene.load.once('complete', checkLoadComplete);
+                    activeScene.load.start();
+                } else {
+                    startAnimation();
+                }
+            } else {
+                showDarkFantasyAlert(data.message);
+            }
+        } catch (error) { console.error(error); }
+    }
+
+    // Các sự kiện Nút Bấm trong Tab Thú Cưng
+    document.getElementById('btn-confirm-feed').addEventListener('click', async () => {
+        if (window.pendingFeedItemIds && currentSelectedPet) {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/pets/feed', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: localStorage.getItem('playerId') || 1, pet_id: currentSelectedPet.id, material_ids: window.pendingFeedItemIds })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showDarkFantasyAlert(`Pet nhận được +${data.exp_gained} EXP!`);
+                    await loadInventoryFromServer();
+                    await loadPetsFromServer();
+                    currentSelectedPet = window.playerPets.find(p => p.id === currentSelectedPet.id);
+                    renderPetUI();
+                } else { showDarkFantasyAlert(data.message); }
+            } catch (err) { console.error(err); }
+            document.getElementById('feed-modal').style.display = 'none';
+        }
+    });
+
+    document.getElementById('btn-cancel-feed').addEventListener('click', () => { document.getElementById('feed-modal').style.display = 'none'; window.pendingFeedItemIds = []; });
+
+    // SỰ KIỆN: LƯỚT DANH SÁCH PET QUA LẠI BẰNG MŨI TÊN
+    document.getElementById('btn-pet-prev').addEventListener('click', () => {
+        // Cuộn sang trái 80px (kích thước 1 ô + khoảng cách)
+        document.getElementById('pet-list-wrapper').scrollBy({ left: -80, behavior: 'smooth' });
+    });
+
+    document.getElementById('btn-pet-next').addEventListener('click', () => {
+        // Cuộn sang phải 80px
+        document.getElementById('pet-list-wrapper').scrollBy({ left: 80, behavior: 'smooth' });
+    });
+
+    // SỰ KIỆN: BẤM NÚT XUẤT CHIẾN / THU HỒI
+    document.getElementById('btn-equip-pet').addEventListener('click', async () => {
+        if (currentSelectedPet) {
+            // Đã kiểm tra chuẩn logic == 1
+            let action = (currentSelectedPet.is_equipped == 1) ? 'unequip' : 'equip';
+            
+            await fetch('http://127.0.0.1:8000/api/pets/toggle-equip', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: localStorage.getItem('playerId') || 1, pet_id: currentSelectedPet.id, action: action })
+            });
+            
+            // Reload lại danh sách pet để lấy cờ is_equipped mới nhất và vẽ lại UI
+            await loadPetsFromServer();
+            
+            // Cập nhật lại currentSelectedPet với dữ liệu mới vừa tải về
+            currentSelectedPet = window.playerPets.find(p => p.id === currentSelectedPet.id);
+            renderPetUI();
+        }
+    });
+
+    // ----------------------------------------------------
+    // SỰ KIỆN: BẤM NÚT "THẢ ĐI" -> MỞ MODAL
+    // ----------------------------------------------------
+    document.getElementById('btn-release-pet').addEventListener('click', () => {
+        if (!currentSelectedPet) return showDarkFantasyAlert("Vui lòng chọn Thú cưng cần thả!");
+        if (currentSelectedPet.is_equipped == 1) return showDarkFantasyAlert("Vui lòng Thu hồi Pet trước khi thả đi!");
+
+        document.getElementById('release-pet-name').innerText = currentSelectedPet.pet.name;
+        document.getElementById('release-modal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-cancel-release').addEventListener('click', () => {
+        document.getElementById('release-modal').style.display = 'none';
+    });
+
+    document.getElementById('btn-confirm-release').addEventListener('click', async () => {
+        document.getElementById('release-modal').style.display = 'none'; // Ẩn modal ngay lập tức
+        try {
+            await fetch('http://127.0.0.1:8000/api/pets/release', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: localStorage.getItem('playerId') || 1, pet_id: currentSelectedPet.id })
+            });
+            currentSelectedPet = null;
+            showDarkFantasyAlert("Đã phóng sinh thú cưng thành công!");
+            await loadPetsFromServer(); // Load lại danh sách
+        } catch (err) { console.error(err); }
+    });
+
+    // ----------------------------------------------------
+    // SỰ KIỆN: CHO ĂN NHANH TỰ ĐỘNG BẰNG MODAL
+    // ----------------------------------------------------
+    document.getElementById('btn-fast-feed').addEventListener('click', () => {
+        if (!currentSelectedPet) return showDarkFantasyAlert("Vui lòng chọn Thú cưng!");
+        if (currentSelectedPet.level >= 100) return showDarkFantasyAlert("Thú cưng đã đạt cấp độ tối đa (MAX LEVEL)!");
+
+        // 1. Quét Balo lấy ra các trang bị Bậc F và E (Không tính đồ đang mặc, không tính trứng)
+        let trashItems = myInventory.filter(item => 
+            (item.rarity === 'F' || item.rarity === 'E') &&  
+            item.item_id !== 212 && item.item_id !== 213
+        );
+
+        if (trashItems.length === 0) {
+            return showDarkFantasyAlert("Không tìm thấy trang bị Bậc F hoặc E nào trong Balo!");
+        }
+
+        // 2. Tính toán EXP
+        let expRates = { 'F': 10, 'E': 30 };
+        let totalExp = trashItems.reduce((sum, item) => sum + (expRates[item.rarity] || 0), 0);
+
+        // 3. Đưa ID các trang bị rác vào biến lưu trữ để API sử dụng
+        window.pendingFeedItemIds = trashItems.map(item => item.id);
+
+        // 4. Hiển thị thông số lên Modal và mở Modal
+        document.getElementById('fast-feed-count').innerText = trashItems.length;
+        document.getElementById('fast-feed-total-exp').innerText = totalExp;
+        document.getElementById('fast-feed-modal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-cancel-fast-feed').addEventListener('click', () => {
+        document.getElementById('fast-feed-modal').style.display = 'none';
+        window.pendingFeedItemIds = [];
+    });
+
+    document.getElementById('btn-confirm-fast-feed').addEventListener('click', async () => {
+        document.getElementById('fast-feed-modal').style.display = 'none';
+        if (window.pendingFeedItemIds && currentSelectedPet) {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/pets/feed', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: localStorage.getItem('playerId') || 1, pet_id: currentSelectedPet.id, material_ids: window.pendingFeedItemIds })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showDarkFantasyAlert(`Tuyệt vời! Pet nhận được +${data.exp_gained} EXP!`);
+                    await loadInventoryFromServer();
+                    await loadPetsFromServer();
+                    currentSelectedPet = window.playerPets.find(p => p.id === currentSelectedPet.id);
+                    renderPetUI();
+                } else { showDarkFantasyAlert(data.message); }
+            } catch (err) { console.error(err); }
+        }
+    });
+
+    // ----------------------------------------------------
+    // SỰ KIỆN: BẤM NÚT ẤP TRỨNG TRONG MODAL
+    // ----------------------------------------------------
+    document.getElementById('btn-cancel-hatch').addEventListener('click', () => {
+        document.getElementById('hatch-modal').style.display = 'none'; // Ẩn modal đi nếu bấm Hủy
+    });
+
+    document.getElementById('btn-confirm-hatch').addEventListener('click', () => {
+        document.getElementById('hatch-modal').style.display = 'none'; // Ẩn modal
+        hatchEggApi(); // Gọi hàm chạy video nổ trứng và trừ đồ ở Backend
+    });
+
+    // NHỚ KHỞI ĐỘNG LOAD PET CÙNG VỚI INVENTORY KHI MỞ GAME
+    loadPetsFromServer();
 });
