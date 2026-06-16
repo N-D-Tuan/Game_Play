@@ -82,6 +82,7 @@
                 <div class="panel-tabs">
                     <button id="tab-equip-btn" class="panel-tab-btn active">Trang Bị</button>
                     <button id="tab-forge-btn" class="panel-tab-btn">Ghép Đồ</button>
+                    <button id="tab-pet-btn" class="panel-tab-btn">Thú Cưng</button>
                 </div>
 
                 <!-- 2. VIEW: TRANG BỊ -->
@@ -97,8 +98,12 @@
                             <div class="equip-slot" id="slot-legs" data-slot="legs"><span class="slot-label" style="opacity: 0.5">Quần</span></div>
                         </div>
 
-                        <div class="char-preview-container">
+                        <div class="char-preview-container" style="position: relative; display: flex; justify-content: center; align-items: center;">                           
                             <div id="char-preview-sprite"></div>
+                            
+                            <div class="equip-slot" id="slot-pet" data-slot="pet" style="position: absolute; bottom: -45px; left: 50%; transform: translateX(-50%); width: 50px; height: 50px; border-color: #00ffcc; z-index: 10;">
+                                <span class="slot-label" style="opacity: 0.8; color: #00ffcc;">Thú Cưng</span>
+                            </div>                  
                         </div>
 
                         <div class="equip-col">
@@ -157,6 +162,47 @@
 
                     <button id="btn-forge-submit" class="forge-action-btn">TIẾN HÀNH HIẾN TẾ</button>
                 </div>
+                
+                <!-- 4. VIEW: PET -->
+                <div id="view-pet" class="panel-view" style="display: none;">
+                    <div class="char-header">
+                        <h3 style="color: #00ffcc; text-shadow: 0 0 10px #00ffff;">TRẠI THÚ CƯNG</h3>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 15px; background: #000; border-radius: 8px; padding: 5px 0;">
+                        <button id="btn-pet-prev" style="background: none; border: none; color: #ffcc00; font-size: 20px; cursor: pointer; padding: 0 5px;">◀</button>
+                        
+                        <div id="pet-list-wrapper" style="width: 230px; overflow-x: hidden; display: flex; scroll-behavior: smooth;">
+                            <div id="pet-list" style="display: flex; gap: 10px; padding: 5px;"></div>
+                        </div>
+
+                        <button id="btn-pet-next" style="background: none; border: none; color: #ffcc00; font-size: 20px; cursor: pointer; padding: 0 5px;">▶</button>
+                    </div>
+
+                    <div class="pet-container" style="display: flex; flex-direction: column; align-items: center;">
+                        <div id="pet-preview" style="width: 80px; height: 80px; background: rgba(0,0,0,0.5); border: 2px solid #00ffcc; border-radius: 10px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                            <span style="color: #666; font-size: 12px;">Chưa có</span>
+                        </div>
+                        
+                        <h4 id="pet-name" style="color: #fff; margin: 0 0 5px 0;">Tên Thú Cưng</h4>
+                        <span id="pet-stage" style="color: #ffaa00; font-size: 14px; margin-bottom: 5px;">[Cấp 1]</span>
+
+                        <div style="width: 85%; background: #222; height: 16px; border-radius: 8px; margin-bottom: 12px; position: relative; border: 1px solid #555; box-shadow: inset 0 0 5px #000;">
+                            <div id="pet-exp-fill" style="width: 0%; background: linear-gradient(90deg, #0088ff, #00ffcc); height: 100%; border-radius: 7px; transition: width 0.3s;"></div>
+                            <span id="pet-exp-text" style="position: absolute; width: 100%; text-align: center; top: 50%; transform: translateY(-50%); font-size: 11px; color: #fff; font-weight: bold; text-shadow: 1px 1px 2px #000;">0 / 100</span>
+                        </div>
+
+                        <div id="pet-stats-container" style="width: 90%; margin-bottom: 15px;"></div>
+
+                        <button id="btn-fast-feed" style="width: 90%; padding: 8px 0; margin-bottom: 10px; font-family: 'MedievalSharp', cursive; font-size: 16px; background: linear-gradient(180deg, #008800, #004400); border: 1px solid #00ff00; color: #fff; cursor: pointer; border-radius: 5px; box-shadow: 0 0 5px #00ff00; transition: 0.2s; text-transform: uppercase;">Cho ăn nhanh (F, E)</button>
+
+                        <div style="display: flex; gap: 15px; width: 90%;">
+                            <button id="btn-equip-pet" style="flex: 1; padding: 8px 0; font-family: 'MedievalSharp', cursive; font-size: 16px; background: linear-gradient(180deg, #0055aa, #002255); border: 1px solid #00aaff; color: #fff; cursor: pointer; border-radius: 5px; box-shadow: 0 0 5px #00aaff; transition: 0.2s; text-transform: uppercase;">Xuất chiến</button>
+                            <button id="btn-release-pet" style="flex: 1; padding: 8px 0; font-family: 'MedievalSharp', cursive; font-size: 16px; background: linear-gradient(180deg, #aa0000, #440000); border: 1px solid #ff3333; color: #fff; cursor: pointer; border-radius: 5px; box-shadow: 0 0 5px #ff0000; transition: 0.2s; text-transform: uppercase;">Thả đi</button>
+                        </div>
+                        <p style="color: #aaa; font-size: 11px; margin-top: 15px; text-align: center;"><b>MẸO:</b> Nhấp ĐÚP CHUỘT vào trang bị rác bên Balo để cho Pet ăn!</p>
+                    </div>
+                </div>
             </div>
 
             <div class="backpack-panel">
@@ -186,6 +232,54 @@
     <div id="dark-fantasy-toast" class="toast-container" style="display: none;">
         <div class="toast-content">
             <span class="toast-message" id="toast-text">Không thể thay đổi trang bị khi đang chiến đấu!</span>
+        </div>
+    </div>
+
+    <div id="feed-modal" class="modal-overlay" style="display: none; z-index: 99999 !important;">
+        <div style="background: #111; border: 2px solid #00ffcc; padding: 25px; border-radius: 10px; text-align: center; color: white;">
+            <h3 style="color: #00ffcc; margin-top: 0;">CHO ĂN TRANG BỊ</h3>
+            <p id="feed-msg" style="font-size: 16px;">Cho <b id="feed-pet-name">Pet</b> ăn <span id="feed-item-name" style="color: #ffaa00;">Trang bị</span>?</p>
+            <p style="font-size: 18px; color: #00ff00; font-weight: bold; margin-bottom: 20px;">Kinh nghiệm nhận được: + <span id="feed-exp-amount">0</span> EXP</p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btn-confirm-feed" class="forge-action-btn" style="padding: 10px 20px; background: #008800; border: none;">ĐỒNG Ý</button>
+                <button id="btn-cancel-feed" class="forge-action-btn" style="padding: 10px 20px; background: #880000; border: none;">HỦY BỎ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="fast-feed-modal" class="modal-overlay" style="display: none; z-index: 99999 !important;">
+        <div style="background: #111; border: 2px solid #00ff00; padding: 25px; border-radius: 10px; text-align: center; color: white;">
+            <h3 style="color: #00ff00; margin-top: 0;">CHO ĂN NHANH TỰ ĐỘNG</h3>
+            <p style="font-size: 16px;">Đã tìm thấy <b id="fast-feed-count" style="color: #ffcc00; font-size: 20px;">0</b> trang bị Bậc F và E.</p>
+            <p style="font-size: 18px; color: #00ff00; font-weight: bold; margin-bottom: 20px;">Tổng EXP nhận được: + <span id="fast-feed-total-exp">0</span> EXP</p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btn-confirm-fast-feed" class="forge-action-btn" style="padding: 10px 20px; background: #008800; border: none; border-radius: 5px; color: white; cursor: pointer;">HIẾN TẾ</button>
+                <button id="btn-cancel-fast-feed" class="forge-action-btn" style="padding: 10px 20px; background: #880000; border: none; border-radius: 5px; color: white; cursor: pointer;">HỦY BỎ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="release-modal" class="modal-overlay" style="display: none; z-index: 99999 !important;">
+        <div style="background: #111; border: 2px solid #ff0000; padding: 25px; border-radius: 10px; text-align: center; color: white;">
+            <h3 style="color: #ff0000; margin-top: 0;">CẢNH BÁO PHÓNG SINH</h3>
+            <p style="font-size: 16px;">Bạn có chắc chắn muốn thả <b id="release-pet-name" style="color: #ffaa00;">Pet</b> đi không?</p>
+            <p style="font-size: 14px; color: #ff5555; font-style: italic; margin-bottom: 20px;">Hành động này KHÔNG THỂ hoàn tác, Pet sẽ biến mất vĩnh viễn!</p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btn-confirm-release" class="forge-action-btn" style="padding: 10px 20px; background: #880000; border: none; border-radius: 5px; color: white; cursor: pointer;">THẢ</button>
+                <button id="btn-cancel-release" class="forge-action-btn" style="padding: 10px 20px; background: #444; border: none; border-radius: 5px; color: white; cursor: pointer;">GIỮ LẠI</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="hatch-modal" class="modal-overlay" style="display: none; z-index: 999999 !important;">
+        <div style="background: #111; border: 2px solid #ffcc00; padding: 25px; border-radius: 10px; text-align: center; color: white;">
+            <h3 style="color: #ffcc00; margin-top: 0;">ẤP TRỨNG THÚ CƯNG</h3>
+            <p style="font-size: 16px;">Bạn có muốn tiến hành ấp quả <b style="color: #ffaa00;">Trứng Thú Cưng</b> này không?</p>
+            <p style="font-size: 14px; color: #aaa; font-style: italic; margin-bottom: 20px;">Một Thú cưng ngẫu nhiên sẽ được sinh ra!</p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btn-confirm-hatch" class="forge-action-btn" style="padding: 10px 20px; background: #008800; border: none; border-radius: 5px; color: white; cursor: pointer;">TIẾN HÀNH ẤP</button>
+                <button id="btn-cancel-hatch" class="forge-action-btn" style="padding: 10px 20px; background: #880000; border: none; border-radius: 5px; color: white; cursor: pointer;">HỦY BỎ</button>
+            </div>
         </div>
     </div>
 

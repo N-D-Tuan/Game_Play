@@ -354,7 +354,7 @@ body, html {
 }
 
 /* Bảng thông số */
-.char-stats { background: #111; padding: 15px; border-radius: 8px; margin-top: auto; border: 1px solid #333; }
+.char-stats { background: #111; padding: 15px; border-radius: 8px; margin-top: 40px; border: 1px solid #333; }
 .stat-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
 .stat-row span:last-child { color: #00ff00; font-weight: bold; }
 
@@ -404,7 +404,7 @@ body, html {
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.85); /* Nền đen mờ che trang chủ */
-    z-index: 99999 !important; /* QUAN TRỌNG: Trị số khổng lồ để đè lên mọi UI khác */
+    z-index: 99998;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -438,7 +438,7 @@ body, html {
 /* 2. Căn giữa hoàn hảo cho chữ Trống/Tên trang bị */
 .slot-label {
     font-size: 11px; color: #777; position: absolute;
-    top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    top: 58%; left: 50%; transform: translate(-50%, -50%); 
     pointer-events: none; width: 100%; text-align: center;
 }
 
@@ -609,6 +609,9 @@ body, html {
 /* Nút tiến hành ghép */
 .forge-action-btn {
     margin-top: auto;
+    align-self: center; 
+    width: 80%; 
+    margin-bottom: 20px;
     background: linear-gradient(90deg, transparent, #8b0000, transparent);
     color: #ffcc00;
     font-family: 'MedievalSharp', cursive;
@@ -624,5 +627,17 @@ body, html {
     background: linear-gradient(90deg, transparent, #ff0000, transparent);
     color: #fff;
     box-shadow: 0 0 15px #ff0000;
-    letter-spacing: 2px;
+}
+
+.modal-overlay {
+    position: fixed; /* Bắt buộc phải có dòng này để z-index hoạt động */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8); /* Nền đen mờ che đi kho đồ ở dưới */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999 !important; /* Đè lên tất cả */
 }
