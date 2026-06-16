@@ -185,4 +185,43 @@ class PetController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'Đã phóng sinh thú cưng.']);
     }
+
+    // ==========================================
+    // 5. API: GHÉP MẢNH TRỨNG (GHÉP SỈ)
+    // ==========================================
+    public function mergeEggPieces(Request $request)
+    {
+        $playerId = $request->player_id;
+
+        return DB::transaction(function () use ($playerId) {
+            // Lấy TẤT CẢ các mảnh trứng hiện có của người chơi
+            $pieces = PlayerItem::where('player_id', $playerId)->where('item_id', 212)->get();
+            $totalPieces = $pieces->count();
+
+            if ($totalPieces < 10) {
+                return response()->json(['status' => 'error', 'message' => 'Bạn cần ít nhất 10 mảnh để tiến hành ghép!'], 400);
+            }
+
+            // Tính toán số lượng trứng có thể tạo ra và số mảnh bị trừ đi
+            $eggsToMake = floor($totalPieces / 10);
+            $piecesToDelete = $eggsToMake * 10;
+
+            // Xóa đúng số lượng mảnh đã dùng để ghép
+            $idsToDelete = $pieces->take($piecesToDelete)->pluck('id');
+            PlayerItem::whereIn('id', $idsToDelete)->delete();
+
+            for ($i = 0; $i < $eggsToMake; $i++) {
+                PlayerItem::create([
+                    'player_id' => $playerId,
+                    'item_id' => 213,
+                    'is_equipped' => 0
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success', 
+                'message' => "Đã dung hợp {$piecesToDelete} mảnh, tạo thành công {$eggsToMake} Trứng Thú Cưng!"
+            ]);
+        });
+    }
 }

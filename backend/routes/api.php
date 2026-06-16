@@ -16,6 +16,7 @@ Route::prefix('pets')->group(function () {
     Route::post('/feed', [PetController::class, 'feedPet']);
     Route::post('/toggle-equip', [PetController::class, 'toggleEquipPet']);
     Route::post('/release', [PetController::class, 'releasePet']);
+    Route::post('/merge-pieces', [PetController::class, 'mergeEggPieces']);
 });
 
 Route::get('/user', function (Request $request) {
