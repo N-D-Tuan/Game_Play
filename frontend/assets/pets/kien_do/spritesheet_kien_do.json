@@ -1,0 +1,188 @@
+{
+	"textures": [
+		{
+			"image": "spritesheet_kien_do.png",
+			"format": "RGBA8888",
+			"size": {
+				"w": 254,
+				"h": 511
+			},
+			"scale": 1,
+			"frames": [
+				{
+					"filename": "kien_do_attack_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 123,
+						"h": 101
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 123,
+						"h": 101
+					},
+					"frame": {
+						"x": 127,
+						"y": 406,
+						"w": 123,
+						"h": 101
+					}
+				},
+				{
+					"filename": "kien_do_attack_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 124,
+						"h": 104
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 124,
+						"h": 104
+					},
+					"frame": {
+						"x": 1,
+						"y": 406,
+						"w": 124,
+						"h": 104
+					}
+				},
+				{
+					"filename": "kien_do_attack_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 160,
+						"h": 94
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 160,
+						"h": 94
+					},
+					"frame": {
+						"x": 1,
+						"y": 1,
+						"w": 160,
+						"h": 94
+					}
+				},
+				{
+					"filename": "kien_do_attack_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 115,
+						"h": 99
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 115,
+						"h": 99
+					},
+					"frame": {
+						"x": 138,
+						"y": 97,
+						"w": 115,
+						"h": 99
+					}
+				},
+				{
+					"filename": "kien_do_run_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 117,
+						"h": 114
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 117,
+						"h": 114
+					},
+					"frame": {
+						"x": 134,
+						"y": 206,
+						"w": 117,
+						"h": 114
+					}
+				},
+				{
+					"filename": "kien_do_run_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 131,
+						"h": 101
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 131,
+						"h": 101
+					},
+					"frame": {
+						"x": 1,
+						"y": 206,
+						"w": 131,
+						"h": 101
+					}
+				},
+				{
+					"filename": "kien_do_run_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 131,
+						"h": 95
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 131,
+						"h": 95
+					},
+					"frame": {
+						"x": 1,
+						"y": 309,
+						"w": 131,
+						"h": 95
+					}
+				},
+				{
+					"filename": "kien_do_run_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 135,
+						"h": 107
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 135,
+						"h": 107
+					},
+					"frame": {
+						"x": 1,
+						"y": 97,
+						"w": 135,
+						"h": 107
+					}
+				}
+			]
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "3.0",
+		"smartupdate": "$TexturePacker:SmartUpdate:0593b19ef90e52a54281df6c6029f0fe:a29f2e5daa646fd1c685d70625ee7eb0:f03543b5c75fed30cd1135a579f990a4$"
+	}
+}
