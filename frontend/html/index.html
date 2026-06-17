@@ -64,6 +64,9 @@
                             <div class="keybind-row"><span>Vạn tiễn</span><button class="key-btn" data-type="skill" data-key="arrows">7</button></div>
                             <div class="keybind-row"><span>Tàu chiến</span><button class="key-btn" data-type="skill" data-key="anchor">8</button></div>
                             <div class="keybind-row"><span>Hình nhân</span><button class="key-btn" data-type="skill" data-key="doll">9</button></div>
+                            <h3 style="color: #00ffcc; margin-top: 20px;">Kỹ năng Thú Cưng</h3>
+                            <div class="keybind-row"><span>Chủ động 1 (Cấp 50)</span><button class="key-btn" data-type="pet_skill" data-key="pet_skill_1">O</button></div>
+                            <div class="keybind-row"><span>Chủ động 2 (Cấp 100)</span><button class="key-btn" data-type="pet_skill" data-key="pet_skill_2">P</button></div>
                         </div>
                     </div>
                 </div>
@@ -164,7 +167,7 @@
                 </div>
                 
                 <!-- 4. VIEW: PET -->
-                <div id="view-pet" class="panel-view" style="display: none;">
+                <div id="view-pet" class="panel-view" style="display: none; overflow-y: auto; overflow-x: hidden; padding-bottom: 20px;">
                     <div class="char-header">
                         <h3 style="color: #00ffcc; text-shadow: 0 0 10px #00ffff;">TRẠI THÚ CƯNG</h3>
                     </div>
@@ -191,6 +194,8 @@
                             <div id="pet-exp-fill" style="width: 0%; background: linear-gradient(90deg, #0088ff, #00ffcc); height: 100%; border-radius: 7px; transition: width 0.3s;"></div>
                             <span id="pet-exp-text" style="position: absolute; width: 100%; text-align: center; top: 50%; transform: translateY(-50%); font-size: 11px; color: #fff; font-weight: bold; text-shadow: 1px 1px 2px #000;">0 / 100</span>
                         </div>
+
+                        <div id="pet-skills-container" style="display: flex; gap: 15px; margin-bottom: 15px; justify-content: center;"></div>
 
                         <div id="pet-stats-container" style="width: 90%; margin-bottom: 15px;"></div>
 
@@ -253,8 +258,8 @@
             <p style="font-size: 16px;">Đã tìm thấy <b id="fast-feed-count" style="color: #ffcc00; font-size: 20px;">0</b> trang bị Bậc F và E.</p>
             <p style="font-size: 18px; color: #00ff00; font-weight: bold; margin-bottom: 20px;">Tổng EXP nhận được: + <span id="fast-feed-total-exp">0</span> EXP</p>
             <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="btn-confirm-fast-feed" class="forge-action-btn" style="padding: 10px 20px; background: #008800; border: none; border-radius: 5px; color: white; cursor: pointer;">HIẾN TẾ</button>
-                <button id="btn-cancel-fast-feed" class="forge-action-btn" style="padding: 10px 20px; background: #880000; border: none; border-radius: 5px; color: white; cursor: pointer;">HỦY BỎ</button>
+                <button id="btn-confirm-fast-feed" class="forge-action-btn" style="width: auto; min-width: 140px; margin: 0; padding: 10px 20px; background: #008800; border: none; border-radius: 5px; color: white; cursor: pointer;">HIẾN TẾ</button>
+                <button id="btn-cancel-fast-feed" class="forge-action-btn" style="width: auto; min-width: 140px; margin: 0; padding: 10px 20px; background: #880000; border: none; border-radius: 5px; color: white; cursor: pointer;">HỦY BỎ</button>
             </div>
         </div>
     </div>

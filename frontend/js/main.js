@@ -1,10 +1,14 @@
 import { CampaignScene } from './campaign.js';
 import { SKILL_CAMPAIGN_CONFIG } from './skills.js';
 import { playEggHatchAnimation } from './pet.js';
+import { PET_SKILL_DATA, PET_SKILL_HOTKEYS } from './pet_skills.js';
 
 window.playerPets = []; 
 window.equippedPet = null;
 let currentSelectedPet = null;
+
+window.PET_SKILL_HOTKEYS = PET_SKILL_HOTKEYS;
+window.PET_SKILL_DATA = PET_SKILL_DATA;
 
 document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem('playerId', '1');
@@ -169,6 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Trả các ô trên người về trạng thái "Trống" trước khi mặc đồ mới
                 document.querySelectorAll('.equip-slot').forEach(slot => {
                     let slotName = slot.getAttribute('data-slot');
+                    if (!slotName || slotName === 'pet') return;
                     if (slotName === 'pet') return;
                     const slotLabels = { head: 'Mũ', chest: 'Áo', legs: 'Quần', weapon: 'Vũ khí', accessory: 'Bổ trợ', shoes: 'Giày' };
                     slot.innerHTML = `<span class="slot-label" style="opacity: 0.5">${slotLabels[slotName]}</span>`;
@@ -723,7 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 btn.textContent = newKey;
                 btn.classList.remove('waiting');
                 
-                // [ĐÃ FIX]: Sau khi nhập xong thì khóa lại, tháo hoàn toàn sự kiện lắng nghe bàn phím
+                // Sau khi nhập xong thì khóa lại, tháo hoàn toàn sự kiện lắng nghe bàn phím
                 isWaitingForKey = false;
                 currentWaitingBtn = null;
                 document.removeEventListener('keydown', keydownHandler);
@@ -753,6 +758,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     try { 
                         if (typeof window.refreshCampaignSkillHotkeysUI === 'function') window.refreshCampaignSkillHotkeysUI(); 
                     } catch (error) {}
+                } else if (type === 'pet_skill') {
+                    window.PET_SKILL_HOTKEYS[keyName] = newKey;
+                    // Ép màn hình Vượt Ải vẽ lại chữ trên icon nếu đang mở
+                    let activeScene = window.game && window.game.scene.isActive('CampaignScene') ? window.game.scene.getScene('CampaignScene') : null;
+                    if (activeScene && activeScene.petCampaignSkills) {
+                        let sk = activeScene.petCampaignSkills[keyName];
+                        if (sk && sk.ui.hkTxt) sk.ui.hkTxt.setText(newKey);
+                    }
                 }
             };
 
@@ -1090,6 +1103,53 @@ document.addEventListener("DOMContentLoaded", () => {
         let lifesteal = formatVal(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
         let speed = Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
 
+        // ==========================================
+        // VẼ 3 Ô KỸ NĂNG (BỊ ĐỘNG & CHỦ ĐỘNG) CỦA PET
+        // ==========================================
+        let skillHtml = '';
+        let petCode = pInfo.pet_code;
+        let pSkills = window.PET_SKILL_DATA[petCode] || window.PET_SKILL_DATA['default'];
+        
+        [1, 50, 100].forEach((reqLvl, idx) => {
+            let sk = pSkills[reqLvl];
+            let isUnlocked = lvl >= reqLvl;
+
+            let specificIcon = pInfo.icon_non;
+            if (reqLvl === 50) specificIcon = pInfo.icon_thieu_nien;
+            if (reqLvl === 100) specificIcon = pInfo.icon_truong_thanh;
+            
+            // Nếu DB bị thiếu ảnh, lấy tạm ảnh Non bù vào để không bị móp UI
+            let validIcon = specificIcon || pInfo.icon_non;
+            let iconImg = `../assets/pets/${pInfo.pet_code}/${validIcon}`;
+            
+            let filterStyle = !isUnlocked ? 'filter: grayscale(100%) brightness(40%);' : '';
+            let lockHtml = !isUnlocked ? `<img src="../assets/lock.png" style="position:absolute; width:22px; height:22px; top:50%; left:50%; transform:translate(-50%,-50%); z-index:2;">` : '';
+            let borderStyle = isUnlocked ? 'border: 2px solid #ffcc00; box-shadow: 0 0 10px #ffcc00;' : 'border: 2px solid #444;';
+            
+            let tooltipText = isUnlocked 
+                ? `[${reqLvl == 1 ? 'Bị động' : 'Chủ động'}] ${sk ? sk.name.toUpperCase() : 'CHƯA RÕ'}\n-------------------\n${sk ? sk.desc : ''}` 
+                : `[CHƯA MỞ KHÓA]\nYêu cầu Thú cưng đạt Cấp ${reqLvl}.`;
+            
+            // Kiểm tra xem HOTKEYS đã load xong chưa rồi mới lấy phím
+            let hotkeyStr = '';
+            if (window.PET_SKILL_HOTKEYS) {
+                if (idx === 1) hotkeyStr = window.PET_SKILL_HOTKEYS.pet_skill_1 || '';
+                if (idx === 2) hotkeyStr = window.PET_SKILL_HOTKEYS.pet_skill_2 || '';
+            }
+
+            let hotkeyHtml = (isUnlocked && reqLvl > 1 && hotkeyStr !== '') 
+                ? `<span style="position:absolute; bottom:-8px; right:-5px; font-size:11px; background:#111; padding:1px 5px; border-radius:4px; color:#00ffcc; border:1px solid #00ffcc; z-index:3; font-weight:bold;">${hotkeyStr}</span>` 
+                : '';
+
+            skillHtml += `
+            <div class="equip-slot" style="width: 50px; height: 50px; border-radius: 50%; position: relative; flex-shrink: 0; ${borderStyle}" data-tooltip="${tooltipText}">
+                <img src="${iconImg}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; ${filterStyle}">
+                ${lockHtml}
+                ${hotkeyHtml}
+            </div>`;
+        });
+        document.getElementById('pet-skills-container').innerHTML = skillHtml;
+        
         // Đổ toàn bộ dữ liệu vào khung chứa dưới dạng Lưới (Grid) 2 cột
         document.getElementById('pet-stats-container').innerHTML = `
             <div style="display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; row-gap: 6px; font-size: 12px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; border: 1px solid #444; color: #ddd;">

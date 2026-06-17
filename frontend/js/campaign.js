@@ -83,7 +83,6 @@ export class CampaignScene extends Phaser.Scene {
         this.load.spritesheet('monster2', '../assets/monster2_spritesheet.png', { frameWidth: 100, frameHeight: 70 });
         this.load.spritesheet('monster3', '../assets/monster3_spritesheet.png', { frameWidth: 96, frameHeight: 96 });
         
-        // SPRITESHEET MỚI CHO RƯƠNG VÀ CỔNG
         this.load.spritesheet('chest', '../assets/chest_spritesheet.png', { frameWidth: 235, frameHeight: 353 });
         this.load.spritesheet('gateway', '../assets/gateway_spritesheet.png', { frameWidth: 50, frameHeight: 200 });
 
@@ -92,6 +91,25 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('egg', '../assets/pets/egg/egg.png');
         this.load.image('crack', '../assets/pets/egg/crack.png');
         this.load.image('egg_piece', '../assets/pets/egg/egg_piece.png');
+
+        if (window.equippedPet) {
+            let pInfo = window.equippedPet.pet;
+            let lvl = window.equippedPet.level;            
+            
+            // Lấy tên file ảnh, nếu DB thiếu thì dùng tạm ảnh Non để không bị lỗi
+            let icon1 = pInfo.icon_non;
+            let icon2 = pInfo.icon_thieu_nien || icon1;
+            let icon3 = pInfo.icon_truong_thanh || icon1;
+
+            // Load 3 ảnh vào bộ nhớ với 3 Key phân biệt
+            if (!this.textures.exists(`pet_ui_${pInfo.pet_code}_1`)) this.load.image(`pet_ui_${pInfo.pet_code}_1`, `../assets/pets/${pInfo.pet_code}/${icon1}`);
+            if (!this.textures.exists(`pet_ui_${pInfo.pet_code}_2`)) this.load.image(`pet_ui_${pInfo.pet_code}_2`, `../assets/pets/${pInfo.pet_code}/${icon2}`);
+            if (!this.textures.exists(`pet_ui_${pInfo.pet_code}_3`)) this.load.image(`pet_ui_${pInfo.pet_code}_3`, `../assets/pets/${pInfo.pet_code}/${icon3}`);
+            
+            // Lưu lại Key của Avatar để vẽ vòng tròn chính
+            let stageNum = lvl >= 100 ? 3 : (lvl >= 50 ? 2 : 1);
+            this.currentPetUiKey = `pet_ui_${pInfo.pet_code}_${stageNum}`;
+        }
     }
 
     create() {
@@ -158,10 +176,6 @@ export class CampaignScene extends Phaser.Scene {
         this.player.aaLevel = this.currentPlayerLevel; 
         this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
 
-        if (window.equippedPet) {
-            this.myPet = new CompanionPet(this, this.player.x, this.player.y, window.equippedPet.icon);
-        }
-
         this.weatherType = this.chooseRandomWeather();
         this.applyWeatherAndBackground(this.weatherType);
         
@@ -205,6 +219,21 @@ export class CampaignScene extends Phaser.Scene {
             if (key === window.MOVE_CONFIG.down) this.moveState.down = true;
             if (key === window.MOVE_CONFIG.left) this.moveState.left = true;
             if (key === window.MOVE_CONFIG.right) this.moveState.right = true;
+
+            if (this.petCampaignSkills) {
+                for (let pKey in this.petCampaignSkills) {
+                    if (key === window.PET_SKILL_HOTKEYS[pKey]) {
+                        let sk = this.petCampaignSkills[pKey];
+                        if (sk.currentCd <= 0) {
+                            // THI TRIỂN KỸ NĂNG PET Ở ĐÂY
+                            console.log(`Pet thi triển: ${sk.data.name}!`);
+                            sk.currentCd = sk.cd; // Reset hồi chiêu
+                            sk.ui.text.setVisible(true);
+                        }
+                        return;
+                    }
+                }
+            }
         });
 
         this.input.keyboard.on('keyup', (event) => {
@@ -312,8 +341,8 @@ export class CampaignScene extends Phaser.Scene {
         
         this.drawHealthBar();
         this.createSkillUI();
-        this.createStageUI(); // Gọi UI hiển thị Tên Ải
-        // Tạo nút bấm mở Túi
+        this.createStageUI();
+        this.createPetCampaignUI();
         this.createBagUI();
         // Cập nhật ngay con số hiển thị trên túi UI
         if (this.bagCountText) this.bagCountText.setText(this.sessionLoot.length);
@@ -440,6 +469,66 @@ export class CampaignScene extends Phaser.Scene {
         // Xử lý tương tác Rương và Cổng
         this.physics.add.overlap(this.player, this.chestGroup, this.openChest, null, this);
         this.physics.add.overlap(this.player, this.gateGroup, this.enterGateway, null, this);
+    }
+
+    createPetCampaignUI() {
+        if (!window.equippedPet) return;
+        
+        let cx = this.cameras.main.width - 95;
+        let cy = this.cameras.main.height - 95;
+        let pInfo = window.equippedPet.pet;
+        let lvl = window.equippedPet.level;
+        
+        // 1. Vẽ Vòng tròn Avatar của Pet (Góc dưới cùng bên phải)
+        this.add.circle(cx, cy, 50, 0x111111, 0.9).setDepth(14000).setScrollFactor(0).setStrokeStyle(3, 0x00ffcc);
+        let petImg = this.add.image(cx, cy, this.currentPetUiKey).setDepth(14001).setScrollFactor(0);
+        petImg.setScale(75 / Math.max(petImg.width, petImg.height));
+
+        // 2. Vẽ các Kỹ năng Chủ động (Chỉ vẽ nếu đã đủ cấp 50 hoặc 100)
+        this.petCampaignSkills = {};
+        let pSkills = window.PET_SKILL_DATA[pInfo.pet_code] || window.PET_SKILL_DATA['default'];
+        
+        // Thiết kế vị trí 2 cục kỹ năng xòe ra quanh Avatar
+        let skillConfigs = [
+            { req: 50, key: 'pet_skill_1', offsetX: -100, offsetY: 25 },
+            { req: 100, key: 'pet_skill_2', offsetX: -25, offsetY: -100 }
+        ];
+        
+        skillConfigs.forEach(conf => {
+            if (lvl >= conf.req) {
+                let skX = cx + conf.offsetX; let skY = cy + conf.offsetY;
+                let skData = pSkills[conf.req];
+                
+                // Nền
+                this.add.circle(skX, skY, 36, 0x000000, 0.7).setDepth(14000).setScrollFactor(0).setStrokeStyle(2, 0xffcc00);
+                
+                // [ĐÃ SỬA]: Chọn đúng hình ảnh theo cấp độ yêu cầu của Kỹ năng
+                let skillStageNum = conf.req === 100 ? 3 : (conf.req === 50 ? 2 : 1);
+                let skillIconKey = `pet_ui_${pInfo.pet_code}_${skillStageNum}`;
+                
+                // Phòng hờ nếu ảnh chưa load kịp thì lấy avatar đắp vào
+                if (!this.textures.exists(skillIconKey)) skillIconKey = this.currentPetUiKey;
+
+                // Vẽ Icon kỹ năng
+                let ico = this.add.image(skX, skY, skillIconKey).setDepth(14001).setScrollFactor(0);
+                ico.setScale(45 / Math.max(ico.width, ico.height));
+
+                // Chữ Phím tắt (O, P)
+                let hkTxt = this.add.text(skX + 36, skY + 36, window.PET_SKILL_HOTKEYS[conf.key], { 
+                    fontSize: '14px', fill: '#00ffcc', backgroundColor: '#111', fontStyle: 'bold', stroke: '#000', strokeThickness: 2 
+                }).setOrigin(0.5).setDepth(14005).setScrollFactor(0);
+                
+                // Hiệu ứng Cooldown
+                let overlay = this.add.graphics().setDepth(14003).setScrollFactor(0);
+                let cdTxt = this.add.text(skX, skY, '', { fontSize: '20px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(14004).setScrollFactor(0).setVisible(false);
+                let glow = this.add.graphics().setDepth(14002).setScrollFactor(0).lineStyle(3, 0xffcc00, 1).strokeCircle(skX, skY, 37);
+                
+                this.petCampaignSkills[conf.key] = {
+                    data: skData, x: skX, y: skY, currentCd: 0, cd: skData.cd,
+                    ui: { overlay: overlay, text: cdTxt, glow: glow, hkTxt: hkTxt }
+                };
+            }
+        });
     }
 
     // ==========================================
@@ -1287,11 +1376,27 @@ export class CampaignScene extends Phaser.Scene {
             }
         }
 
-        this.updateRadar();
-
-        if (this.myPet) {
-            this.myPet.updateBehavior(this.player);
+        if (this.petCampaignSkills) {
+            for (let key in this.petCampaignSkills) {
+                let sk = this.petCampaignSkills[key];
+                if (sk.currentCd > 0) {
+                    if (delta) sk.currentCd -= delta;
+                    if (sk.currentCd <= 0) {
+                        sk.currentCd = 0;
+                        sk.ui.overlay.clear(); sk.ui.text.setVisible(false); sk.ui.glow.setVisible(true);
+                    } else {
+                        let progress = sk.currentCd / sk.cd;
+                        let startAngle = Phaser.Math.DegToRad(-90);
+                        let endAngle = startAngle + (Math.PI * 2 * progress);
+                        sk.ui.overlay.clear().fillStyle(0x000000, 0.75).beginPath().moveTo(sk.x, sk.y).arc(sk.x, sk.y, 36, startAngle, endAngle, false).closePath().fillPath();
+                        sk.ui.text.setText(Math.ceil(sk.currentCd / 1000));
+                        sk.ui.glow.setVisible(false);
+                    }
+                }
+            }
         }
+
+        this.updateRadar();
     }
 
     // (Giữ nguyên các hàm sinh map, thời tiết, radar, tạo thanh máu, menu pause và bắn kỹ năng bên dưới)
