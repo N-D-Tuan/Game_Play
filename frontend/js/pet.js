@@ -95,7 +95,7 @@ export function playEggHatchAnimation(scene, petName, petImageKey, onComplete) {
 }
 
 // ==========================================
-// 2. CLASS: THÚ CƯNG THEO ĐUÔI
+// 2. CLASS: THÚ CƯNG THEO ĐUÔI (HỖ TRỢ SPRITESHEET ĐỘNG)
 // ==========================================
 export class CompanionPet extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, textureKey) {
@@ -103,60 +103,79 @@ export class CompanionPet extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.setScale(0.8); // Độ to của Pet trên bản đồ
+        this.setScale(1); // Điều chỉnh lại độ to nhỏ của Pet (có thể đổi thành 0.8, 1.2 tùy size ảnh)
         this.setDepth(y + 10);
         
         this.isIdle = false;
         this.idleTimer = null;
+        this.textureKey = textureKey; // Lưu lại key để gọi animation sau này
+
+        // KHỞI TẠO 4 HƯỚNG HOẠT ẢNH (Dựa trên cấu trúc 4 hàng x 4 cột của bạn)
+        if (!scene.anims.exists(textureKey + '_down')) {
+            // Hàng 1 (Frame 0 đến 3): Đi Xuống
+            scene.anims.create({ key: textureKey + '_down', frames: scene.anims.generateFrameNumbers(textureKey, { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+            // Hàng 2 (Frame 4 đến 7): Đi Trái
+            scene.anims.create({ key: textureKey + '_left', frames: scene.anims.generateFrameNumbers(textureKey, { start: 4, end: 7 }), frameRate: 8, repeat: -1 });
+            // Hàng 3 (Frame 8 đến 11): Đi Phải
+            scene.anims.create({ key: textureKey + '_right', frames: scene.anims.generateFrameNumbers(textureKey, { start: 8, end: 11 }), frameRate: 8, repeat: -1 });
+            // Hàng 4 (Frame 12 đến 15): Đi Lên
+            scene.anims.create({ key: textureKey + '_up', frames: scene.anims.generateFrameNumbers(textureKey, { start: 12, end: 15 }), frameRate: 8, repeat: -1 });
+        }
+
+        this.play(textureKey + '_down', true); // Mặc định đứng quay mặt xuống
+        this.stop(); // Dừng animation lại (chờ chạy mới play)
     }
 
     updateBehavior(player) {
         let scene = this.scene;
         if (!player || !player.active) return;
 
-        // Vị trí muốn Pet bay tới (Chếch lên trên vai người chơi)
         let targetX = player.flipX ? player.x + 45 : player.x - 45;
         let targetY = player.y - 45;
 
-        // ==========================================
-        // ĐỒNG BỘ TỐC ĐỘ VỚI NGƯỜI CHƠI
-        // ==========================================
         let baseSpeed = window.playerStats ? window.playerStats.speed : 200;
         let playerSpeed = baseSpeed * player.speedMultiplier;
-        
-        // Cho Pet bay nhanh hơn người chơi đúng 10% để nó không bị tụt lại quá xa khi người chơi đổi hướng đột ngột
         let petSpeed = playerSpeed * 1.1; 
 
-        // BẮT ĐẦU CHẠY
-        if (player.body.velocity.x !== 0 || player.body.velocity.y !== 0) {
+        // Kiểm tra xem Chủ nhân đang chạy hay Pet đang phải lết theo
+        let isMoving = (player.body.velocity.x !== 0 || player.body.velocity.y !== 0);
+        let dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
+
+        if (isMoving || dist >= 30) {
+            // ĐANG DI CHUYỂN
             this.isIdle = false;
             if (this.idleTimer) { scene.time.removeEvent(this.idleTimer); this.idleTimer = null; }
             
-            scene.tweens.killTweensOf(this); // Ngắt lập tức hoạt ảnh lộn nhào
+            scene.tweens.killTweensOf(this); // Ngắt lộn nhào
             this.setRotation(0);
 
-            // Sử dụng tốc độ động vừa tính toán
+            // Bám theo mục tiêu
             scene.physics.moveTo(this, targetX, targetY, petSpeed);
 
-            // Lật mặt Pet theo hướng bay
-            if (this.body.velocity.x > 0) this.setFlipX(false);
-            else if (this.body.velocity.x < 0) this.setFlipX(true);
-            
-        } else {
-            // ĐỨNG YÊN
-            let dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
-            if (dist < 30) {
-                this.setVelocity(0, 0); // Đã tới vai -> Phanh lại
-                if (!this.isIdle) {
-                    this.isIdle = true;
-                    // Nếu đứng im 1.5 giây thì bắt đầu lộn nhào giải trí
-                    this.idleTimer = scene.time.delayedCall(1500, () => this.playAcrobatics());
-                }
+            // TÍNH TOÁN HOẠT ẢNH DỰA VÀO VẬN TỐC CỦA CHÍNH CON PET
+            let vx = this.body.velocity.x;
+            let vy = this.body.velocity.y;
+
+            if (Math.abs(vx) > Math.abs(vy)) {
+                // Đi ngang nhiều hơn
+                if (vx > 0) this.play(this.textureKey + '_right', true);
+                else this.play(this.textureKey + '_left', true);
             } else {
-                // Sử dụng tốc độ động để bám theo khi người chơi vừa dừng lại
-                scene.physics.moveTo(this, targetX, targetY, petSpeed);
+                // Đi dọc nhiều hơn
+                if (vy > 0) this.play(this.textureKey + '_down', true);
+                else if (vy < 0) this.play(this.textureKey + '_up', true);
+            }
+        } else {
+            // ĐÃ TỚI VAI CHỦ NHÂN -> ĐỨNG YÊN
+            this.setVelocity(0, 0); 
+            this.stop(); // Dừng animation đi bộ
+            
+            if (!this.isIdle) {
+                this.isIdle = true;
+                this.idleTimer = scene.time.delayedCall(1500, () => this.playAcrobatics());
             }
         }
+        
         this.setDepth(this.y + 10);
     }
 
@@ -165,31 +184,20 @@ export class CompanionPet extends Phaser.Physics.Arcade.Sprite {
         let scene = this.scene;
         let startX = this.x;
         let startY = this.y;
-
         let tValue = { v: 0 };
         
-        // Tween vẽ đường bay hình số 8
+        // Vẫn giữ lại hoạt ảnh bay vòng số 8 giải trí
         scene.tweens.add({
-            targets: tValue,
-            v: Math.PI * 2,
-            duration: 3000,
-            ease: 'Sine.easeInOut',
+            targets: tValue, v: Math.PI * 2, duration: 3000, ease: 'Sine.easeInOut',
             onUpdate: () => {
                 this.setPosition(startX + 40 * Math.sin(tValue.v), startY + 15 * Math.sin(tValue.v) * Math.cos(tValue.v));
             },
             onComplete: () => {
                 if (!this.isIdle) return;
-                // Bay vút lên lộn vòng 360 độ (Backflip)
                 scene.tweens.add({
-                    targets: this,
-                    y: this.y - 60,
-                    angle: 360,
-                    duration: 600,
-                    yoyo: true,
-                    ease: 'Quad.easeOut',
+                    targets: this, y: this.y - 60, angle: 360, duration: 600, yoyo: true, ease: 'Quad.easeOut',
                     onComplete: () => {
                         this.setAngle(0);
-                        // Cứ thế lặp lại mãi cho đến khi bị gọi đi
                         if (this.isIdle) this.idleTimer = scene.time.delayedCall(1000, () => this.playAcrobatics());
                     }
                 });
