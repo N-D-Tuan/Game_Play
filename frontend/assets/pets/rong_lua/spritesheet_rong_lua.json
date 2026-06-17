@@ -1,0 +1,188 @@
+{
+	"textures": [
+		{
+			"image": "spritesheet_rong_lua.png",
+			"format": "RGBA8888",
+			"size": {
+				"w": 978,
+				"h": 1369
+			},
+			"scale": 1,
+			"frames": [
+				{
+					"filename": "rong_lua_dash_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 406,
+						"h": 186
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 406,
+						"h": 186
+					},
+					"frame": {
+						"x": 1,
+						"y": 1174,
+						"w": 406,
+						"h": 186
+					}
+				},
+				{
+					"filename": "rong_lua_dash_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 427,
+						"h": 196
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 427,
+						"h": 196
+					},
+					"frame": {
+						"x": 450,
+						"y": 1172,
+						"w": 427,
+						"h": 196
+					}
+				},
+				{
+					"filename": "rong_lua_dash_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 432,
+						"h": 216
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 432,
+						"h": 216
+					},
+					"frame": {
+						"x": 450,
+						"y": 954,
+						"w": 432,
+						"h": 216
+					}
+				},
+				{
+					"filename": "rong_lua_dash_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 527,
+						"h": 225
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 527,
+						"h": 225
+					},
+					"frame": {
+						"x": 450,
+						"y": 727,
+						"w": 527,
+						"h": 225
+					}
+				},
+				{
+					"filename": "rong_lua_fly_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 349,
+						"h": 284
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 349,
+						"h": 284
+					},
+					"frame": {
+						"x": 535,
+						"y": 441,
+						"w": 349,
+						"h": 284
+					}
+				},
+				{
+					"filename": "rong_lua_fly_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 426,
+						"h": 438
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 426,
+						"h": 438
+					},
+					"frame": {
+						"x": 535,
+						"y": 1,
+						"w": 426,
+						"h": 438
+					}
+				},
+				{
+					"filename": "rong_lua_fly_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 447,
+						"h": 525
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 447,
+						"h": 525
+					},
+					"frame": {
+						"x": 1,
+						"y": 647,
+						"w": 447,
+						"h": 525
+					}
+				},
+				{
+					"filename": "rong_lua_fly_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 532,
+						"h": 644
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 532,
+						"h": 644
+					},
+					"frame": {
+						"x": 1,
+						"y": 1,
+						"w": 532,
+						"h": 644
+					}
+				}
+			]
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "3.0",
+		"smartupdate": "$TexturePacker:SmartUpdate:f0d0e882289033a9d58c05487d4cbf25:c248161dadcb59621dad286a5c67b992:d070c518b6e01ee02f73dc25d298eeab$"
+	}
+}

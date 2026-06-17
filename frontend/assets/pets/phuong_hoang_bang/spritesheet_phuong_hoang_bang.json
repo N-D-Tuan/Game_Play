@@ -1,0 +1,188 @@
+{
+	"textures": [
+		{
+			"image": "spritesheet_phuong_hoang_bang.png",
+			"format": "RGBA8888",
+			"size": {
+				"w": 252,
+				"h": 565
+			},
+			"scale": 1,
+			"frames": [
+				{
+					"filename": "phuong_hoang_bang_down_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 119,
+						"h": 108
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 119,
+						"h": 108
+					},
+					"frame": {
+						"x": 126,
+						"y": 429,
+						"w": 119,
+						"h": 108
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_down_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 121,
+						"h": 100
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 121,
+						"h": 100
+					},
+					"frame": {
+						"x": 1,
+						"y": 464,
+						"w": 121,
+						"h": 100
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_down_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 122,
+						"h": 116
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 122,
+						"h": 116
+					},
+					"frame": {
+						"x": 126,
+						"y": 311,
+						"w": 122,
+						"h": 116
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_down_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 123,
+						"h": 152
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 123,
+						"h": 152
+					},
+					"frame": {
+						"x": 1,
+						"y": 310,
+						"w": 123,
+						"h": 152
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_up_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 113,
+						"h": 133
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 113,
+						"h": 133
+					},
+					"frame": {
+						"x": 138,
+						"y": 1,
+						"w": 113,
+						"h": 133
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_up_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 135,
+						"h": 139
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 135,
+						"h": 139
+					},
+					"frame": {
+						"x": 1,
+						"y": 1,
+						"w": 135,
+						"h": 139
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_up_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 119,
+						"h": 167
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 119,
+						"h": 167
+					},
+					"frame": {
+						"x": 131,
+						"y": 142,
+						"w": 119,
+						"h": 167
+					}
+				},
+				{
+					"filename": "phuong_hoang_bang_up_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 128,
+						"h": 166
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 128,
+						"h": 166
+					},
+					"frame": {
+						"x": 1,
+						"y": 142,
+						"w": 128,
+						"h": 166
+					}
+				}
+			]
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "3.0",
+		"smartupdate": "$TexturePacker:SmartUpdate:1127c1e32d31c5174c3040202c2f41cb:dbbcf374fcca9ef72f3838ada520fba7:ec4b55fcc590b35253552edf36712717$"
+	}
+}

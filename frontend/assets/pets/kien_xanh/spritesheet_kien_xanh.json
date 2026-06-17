@@ -1,0 +1,188 @@
+{
+	"textures": [
+		{
+			"image": "spritesheet_kien_xanh.png",
+			"format": "RGBA8888",
+			"size": {
+				"w": 436,
+				"h": 232
+			},
+			"scale": 1,
+			"frames": [
+				{
+					"filename": "kien_xanh_down_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 139,
+						"h": 107
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 139,
+						"h": 107
+					},
+					"frame": {
+						"x": 152,
+						"y": 120,
+						"w": 139,
+						"h": 107
+					}
+				},
+				{
+					"filename": "kien_xanh_down_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 149,
+						"h": 88
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 149,
+						"h": 88
+					},
+					"frame": {
+						"x": 1,
+						"y": 137,
+						"w": 149,
+						"h": 88
+					}
+				},
+				{
+					"filename": "kien_xanh_down_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 142,
+						"h": 67
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 142,
+						"h": 67
+					},
+					"frame": {
+						"x": 293,
+						"y": 118,
+						"w": 142,
+						"h": 67
+					}
+				},
+				{
+					"filename": "kien_xanh_down_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 132,
+						"h": 29
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 132,
+						"h": 29
+					},
+					"frame": {
+						"x": 277,
+						"y": 87,
+						"w": 132,
+						"h": 29
+					}
+				},
+				{
+					"filename": "kien_xanh_up_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 139,
+						"h": 44
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 139,
+						"h": 44
+					},
+					"frame": {
+						"x": 293,
+						"y": 187,
+						"w": 139,
+						"h": 44
+					}
+				},
+				{
+					"filename": "kien_xanh_up_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 146,
+						"h": 84
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 146,
+						"h": 84
+					},
+					"frame": {
+						"x": 277,
+						"y": 1,
+						"w": 146,
+						"h": 84
+					}
+				},
+				{
+					"filename": "kien_xanh_up_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 140,
+						"h": 117
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 140,
+						"h": 117
+					},
+					"frame": {
+						"x": 135,
+						"y": 1,
+						"w": 140,
+						"h": 117
+					}
+				},
+				{
+					"filename": "kien_xanh_up_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 132,
+						"h": 134
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 132,
+						"h": 134
+					},
+					"frame": {
+						"x": 1,
+						"y": 1,
+						"w": 132,
+						"h": 134
+					}
+				}
+			]
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "3.0",
+		"smartupdate": "$TexturePacker:SmartUpdate:5abc83a47e30c848279117a547fcde02:4c7e02bc797dea2e296e93fbe5ccc6cc:17e73b7a78aeccc59ab18258d8b2a882$"
+	}
+}
