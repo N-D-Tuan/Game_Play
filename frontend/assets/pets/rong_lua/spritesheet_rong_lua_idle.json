@@ -1,0 +1,104 @@
+{
+	"textures": [
+		{
+			"image": "spritesheet_rong_lua_idle.png",
+			"format": "RGBA8888",
+			"size": {
+				"w": 506,
+				"h": 587
+			},
+			"scale": 1,
+			"frames": [
+				{
+					"filename": "rong_lua_idle_1.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 250,
+						"h": 270
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 250,
+						"h": 270
+					},
+					"frame": {
+						"x": 1,
+						"y": 316,
+						"w": 250,
+						"h": 270
+					}
+				},
+				{
+					"filename": "rong_lua_idle_2.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 269,
+						"h": 267
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 269,
+						"h": 267
+					},
+					"frame": {
+						"x": 236,
+						"y": 1,
+						"w": 269,
+						"h": 267
+					}
+				},
+				{
+					"filename": "rong_lua_idle_3.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 233,
+						"h": 313
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 233,
+						"h": 313
+					},
+					"frame": {
+						"x": 1,
+						"y": 1,
+						"w": 233,
+						"h": 313
+					}
+				},
+				{
+					"filename": "rong_lua_idle_4.png",
+					"rotated": false,
+					"trimmed": false,
+					"sourceSize": {
+						"w": 243,
+						"h": 295
+					},
+					"spriteSourceSize": {
+						"x": 0,
+						"y": 0,
+						"w": 243,
+						"h": 295
+					},
+					"frame": {
+						"x": 253,
+						"y": 270,
+						"w": 243,
+						"h": 295
+					}
+				}
+			]
+		}
+	],
+	"meta": {
+		"app": "https://www.codeandweb.com/texturepacker",
+		"version": "3.0",
+		"smartupdate": "$TexturePacker:SmartUpdate:66820862af750361805dea998050c80d:20e26e5e603a93405fc20b72469bce5b:a29f1f86eba7fb9e26c26b7ac42851e3$"
+	}
+}

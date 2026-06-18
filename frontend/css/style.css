@@ -667,3 +667,8 @@ body, html {
     background: linear-gradient(180deg, #8b0000, #cc0000);
     border: 1px solid #ff6666;
 }
+
+#view-pet .equip-slot[data-tooltip]:hover::after {
+    top: auto;
+    bottom: 120%;
+}

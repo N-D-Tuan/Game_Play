@@ -30,9 +30,9 @@ export class Monster1 extends BaseMonster {
         super(scene, x, y, 'monster1');
         
         // Bạn có thể ghi đè các chỉ số ở đây nếu muốn
-        this.hp = 100;
-        this.maxHp = 100;
-        this.damage = 5;
+        this.hp = 10000;
+        this.maxHp = 10000;
+        this.damage = 100;
         this.speed = 100;
     }
 
