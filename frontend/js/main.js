@@ -1,7 +1,7 @@
 import { CampaignScene } from './campaign.js';
 import { SKILL_CAMPAIGN_CONFIG } from './skills.js';
 import { playEggHatchAnimation } from './pet.js';
-import { PET_SKILL_DATA, PET_SKILL_HOTKEYS } from './pet_skills.js';
+import { PET_SKILL_DATA, PET_SKILL_HOTKEYS, getPetDynamicBuffs } from './pet_skills.js';
 
 window.playerPets = []; 
 window.equippedPet = null;
@@ -334,9 +334,29 @@ document.addEventListener("DOMContentLoaded", () => {
             currentStats.critDamage += Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
             currentStats.lifesteal += Math.round(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
             currentStats.speed += Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
-        }
 
-        window.playerStats = currentStats;
+            window.playerStats = { ...currentStats };
+            
+            // ==========================================
+            // ĐỌC BUFF ĐỘNG TỪ TRẬN CHIẾN
+            // ==========================================
+            // Kiểm tra xem game có đang chạy màn Vượt Ải hay không
+            let activeScene = window.game && window.game.scene.isActive('CampaignScene') ? window.game.scene.getScene('CampaignScene') : null;
+            
+            // Nếu đang trong trận, lấy các buff tạm thời (Máu < 50% hoặc đang bật chiêu O) cộng vào UI
+            if (activeScene && activeScene.player) {                
+                let dynamicBuffs = getPetDynamicBuffs(activeScene, pInfo.pet_code, lvl);
+
+                //Kiến xanh
+                currentStats.lifesteal += (dynamicBuffs.lifesteal || 0);
+                currentStats.hpRegen += (dynamicBuffs.hpRegen || 0);
+
+                //Kiến đỏ
+                currentStats.atk += Math.round(currentStats.atk * ((dynamicBuffs.atkPercent || 0) / 100)); 
+                currentStats.critRate += (dynamicBuffs.critRate || 0);
+                currentStats.dodge += (dynamicBuffs.dodge || 0);
+            }
+        }
 
         document.getElementById('stat-hp').textContent = currentStats.hp;
         document.getElementById('stat-hpRegen').textContent = currentStats.hpRegen;
@@ -997,7 +1017,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     slotPet.style.borderColor = '#00ffcc';
                     slotPet.style.boxShadow = `0 0 10px #00ffcc`;
 
-                    // --- [MỚI] TÍNH TOÁN VÀ GẮN TOOLTIP ---
+                    // --- TÍNH TOÁN VÀ GẮN TOOLTIP ---
                     const formatVal = (val) => Number.isInteger(val) ? val : val.toFixed(1);
                     let hp = Math.round(pInfo.base_hp + (lvl - 1) * pInfo.growth_hp);
                     let hpRegen = Math.round(pInfo.base_hp_regen + (lvl - 1) * pInfo.growth_hp_regen);
@@ -1226,7 +1246,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
 
                 // ==========================================
-                // ĐÃ FIX: DYNAMIC LOAD ẢNH TRONG PHASER 3
+                // DYNAMIC LOAD ẢNH TRONG PHASER 3
                 // ==========================================
                 let needsLoading = false;
 

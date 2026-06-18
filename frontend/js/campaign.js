@@ -1,4 +1,3 @@
-// file: js/campaign.js
 import { SKILL_CAMPAIGN_CONFIG, EVO_COLORS, evolveSkill, castBasicAttack, handleBasicAttackCollision, castMeteorEvo, castSwordsEvo, castLightningEvo, castShieldEvo, triggerShieldExplosion, castHealEvo, castEarthEvo, castArrowsEvo, castAnchorEvo, castDollEvo } from './skills.js';
 import { Player, createPlayerAnimations } from './player.js';
 import { Monster1, createMonster1Animations } from './monster1.js';
@@ -6,6 +5,7 @@ import { Monster2, createMonster2Animations } from './monster2.js';
 import { Monster3, createMonster3Animations } from './monster3.js';
 import { Boss, createBossAnimations } from './boss.js';
 import { CompanionPet } from './pet.js';
+import { getPetDynamicBuffs, executePetActiveSkill, triggerPetPassiveOnCrit, triggerPetPassiveOnHit } from './pet_skills.js';
 
 export class CampaignScene extends Phaser.Scene {
     constructor() {
@@ -70,6 +70,7 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('icon_boss', '../assets/icon_boss.png');
 
         this.load.atlas('boss', '../assets/boss_spritesheet.png', '../assets/boss_spritesheet.json');
+        this.load.atlas('rong_lua_atlas', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.png', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.json');
 
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
@@ -77,6 +78,7 @@ export class CampaignScene extends Phaser.Scene {
         this.load.audio('snow_bgm', '../assets/snow.mp3');
         this.load.audio('desert_bgm', '../assets/desert.mp3');
         this.load.audio('thunder', '../assets/thunder.mp3');
+        this.load.audio('rong_ngam', '../assets/pets/rong_lua/rong_ngam.mp3');
 
         this.load.spritesheet('player_anim', '../assets/player_spritesheet.png', { frameWidth: 60, frameHeight: 89 });
         this.load.spritesheet('monster1', '../assets/monster1_spritesheet.png', { frameWidth: 126, frameHeight: 37, margin: 2, spacing: 2 });
@@ -225,8 +227,10 @@ export class CampaignScene extends Phaser.Scene {
                     if (key === window.PET_SKILL_HOTKEYS[pKey]) {
                         let sk = this.petCampaignSkills[pKey];
                         if (sk.currentCd <= 0) {
-                            // THI TRIỂN KỸ NĂNG PET Ở ĐÂY
-                            console.log(`Pet thi triển: ${sk.data.name}!`);
+                            
+                            // GỌI HÀM TUNG CHIÊU TỪ PET_SKILLS.JS
+                            executePetActiveSkill(this, window.equippedPet.pet.pet_code, sk.reqLvl);
+                            
                             sk.currentCd = sk.cd; // Reset hồi chiêu
                             sk.ui.text.setVisible(true);
                         }
@@ -400,6 +404,13 @@ export class CampaignScene extends Phaser.Scene {
         createMonster2Animations(this);
         createMonster3Animations(this);
         createBossAnimations(this);
+
+        this.anims.create({
+            key: 'rong_lua_anim',
+            frames: this.anims.generateFrameNames('rong_lua_atlas', { prefix: 'rong_lua_idle_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 8,
+            repeat: -1
+        });
         
         this.anims.create({
             key: 'gateway-idle',
@@ -415,9 +426,17 @@ export class CampaignScene extends Phaser.Scene {
             callback: () => {
                 // Không hồi máu nếu đang chết hoặc đang tạm dừng
                 if (this.isGameOver || this.isPaused || this.playerHealth <= 0) return;
-                
+
                 // Lấy chỉ số Hồi máu từ Balo
-                let regenAmount = window.playerStats ? window.playerStats.hpRegen : 5;
+                let baseRegen = window.playerStats ? window.playerStats.hpRegen : 5;
+                
+                // LẤY BUFF ĐỘNG TỪ PET
+                let dynamicBuffs = { hpRegen: 0 };
+                if (window.equippedPet) {
+                    dynamicBuffs = getPetDynamicBuffs(this, window.equippedPet.pet.pet_code, window.equippedPet.level);
+                }
+                
+                let regenAmount = baseRegen + dynamicBuffs.hpRegen;
                 
                 if (regenAmount > 0 && this.playerHealth < this.maxHealth) {
                     this.playerHealth = Math.min(this.maxHealth, this.playerHealth + regenAmount);
@@ -480,9 +499,9 @@ export class CampaignScene extends Phaser.Scene {
         let lvl = window.equippedPet.level;
         
         // 1. Vẽ Vòng tròn Avatar của Pet (Góc dưới cùng bên phải)
-        this.add.circle(cx, cy, 50, 0x111111, 0.9).setDepth(14000).setScrollFactor(0).setStrokeStyle(3, 0x00ffcc);
-        let petImg = this.add.image(cx, cy, this.currentPetUiKey).setDepth(14001).setScrollFactor(0);
-        petImg.setScale(75 / Math.max(petImg.width, petImg.height));
+        this.petAvatarBg = this.add.circle(cx, cy, 50, 0x111111, 0.9).setDepth(14000).setScrollFactor(0).setStrokeStyle(3, 0x00ffcc);
+        this.petAvatarImg = this.add.image(cx, cy, this.currentPetUiKey).setDepth(14001).setScrollFactor(0);
+        this.petAvatarImg.setScale(75 / Math.max(this.petAvatarImg.width, this.petAvatarImg.height));
 
         // 2. Vẽ các Kỹ năng Chủ động (Chỉ vẽ nếu đã đủ cấp 50 hoặc 100)
         this.petCampaignSkills = {};
@@ -500,13 +519,11 @@ export class CampaignScene extends Phaser.Scene {
                 let skData = pSkills[conf.req];
                 
                 // Nền
-                this.add.circle(skX, skY, 36, 0x000000, 0.7).setDepth(14000).setScrollFactor(0).setStrokeStyle(2, 0xffcc00);
+                let bgCircle = this.add.circle(skX, skY, 36, 0x000000, 0.7).setDepth(14000).setScrollFactor(0).setStrokeStyle(2, 0xffcc00);
                 
-                // [ĐÃ SỬA]: Chọn đúng hình ảnh theo cấp độ yêu cầu của Kỹ năng
+                // Chọn đúng hình ảnh theo cấp độ yêu cầu của Kỹ năng
                 let skillStageNum = conf.req === 100 ? 3 : (conf.req === 50 ? 2 : 1);
                 let skillIconKey = `pet_ui_${pInfo.pet_code}_${skillStageNum}`;
-                
-                // Phòng hờ nếu ảnh chưa load kịp thì lấy avatar đắp vào
                 if (!this.textures.exists(skillIconKey)) skillIconKey = this.currentPetUiKey;
 
                 // Vẽ Icon kỹ năng
@@ -515,7 +532,7 @@ export class CampaignScene extends Phaser.Scene {
 
                 // Chữ Phím tắt (O, P)
                 let hkTxt = this.add.text(skX + 36, skY + 36, window.PET_SKILL_HOTKEYS[conf.key], { 
-                    fontSize: '14px', fill: '#00ffcc', backgroundColor: '#111', fontStyle: 'bold', stroke: '#000', strokeThickness: 2 
+                    fontSize: '14px', fill: '#00ffcc', fontStyle: 'bold', stroke: '#000', strokeThickness: 2 
                 }).setOrigin(0.5).setDepth(14005).setScrollFactor(0);
                 
                 // Hiệu ứng Cooldown
@@ -524,8 +541,8 @@ export class CampaignScene extends Phaser.Scene {
                 let glow = this.add.graphics().setDepth(14002).setScrollFactor(0).lineStyle(3, 0xffcc00, 1).strokeCircle(skX, skY, 37);
                 
                 this.petCampaignSkills[conf.key] = {
-                    data: skData, x: skX, y: skY, currentCd: 0, cd: skData.cd,
-                    ui: { overlay: overlay, text: cdTxt, glow: glow, hkTxt: hkTxt }
+                    data: skData, reqLvl: conf.req, x: skX, y: skY, currentCd: 0, cd: skData.cd,
+                    ui: { bgCircle: bgCircle, icon: ico, overlay: overlay, text: cdTxt, glow: glow, hkTxt: hkTxt }
                 };
             }
         });
@@ -537,7 +554,7 @@ export class CampaignScene extends Phaser.Scene {
     createStageUI() {
         let cx = this.cameras.main.width / 2;
         
-        // [ĐÃ SỬA]: Lưu bảng nền vào biến this.stageBgUI
+        // Lưu bảng nền vào biến this.stageBgUI
         this.stageBgUI = this.add.graphics().setScrollFactor(0).setDepth(13000);
         this.stageBgUI.fillStyle(0x111111, 0.85);
         this.stageBgUI.fillRect(cx - 100, 10, 200, 45);
@@ -631,6 +648,9 @@ export class CampaignScene extends Phaser.Scene {
         // Ẩn/Hiện cả cái bảng nền đen
         if (this.stageBgUI) this.stageBgUI.setVisible(isVisible); 
         if (this.stageTextUI) this.stageTextUI.setVisible(isVisible);
+
+        if (this.petAvatarBg) this.petAvatarBg.setVisible(isVisible);
+        if (this.petAvatarImg) this.petAvatarImg.setVisible(isVisible);
         
         for (let key in SKILL_CAMPAIGN_CONFIG) {
             let sk = SKILL_CAMPAIGN_CONFIG[key];
@@ -1355,7 +1375,17 @@ export class CampaignScene extends Phaser.Scene {
             });
         }
 
-        this.monsters.getChildren().forEach(mon => { mon.updateAI(this.player); });
+        this.monsters.getChildren().forEach(mon => {
+            mon.updateAI(this.player);
+
+            if (mon.isSlowed && !mon.isDead) {
+                mon.body.velocity.x *= 0.4;
+                mon.body.velocity.y *= 0.4;
+                mon.setTint(0x00ffff);
+            } else if (mon.isBurning && !mon.isDead) {
+                mon.setTint(0xff5500);
+            }
+        });
 
         for (let key in SKILL_CAMPAIGN_CONFIG) {
             let skill = SKILL_CAMPAIGN_CONFIG[key];
@@ -1491,13 +1521,28 @@ export class CampaignScene extends Phaser.Scene {
         if (!monster || !monster.active || monster.isDead) return;
 
         let stats = window.playerStats || { atk: 50, critRate: 5, critDamage: 150, lifesteal: 0 };
+
+        // LẤY BUFF ĐỘNG TỪ PET
+        let dynamicBuffs = { lifesteal: 0, hpRegen: 0, atkPercent: 0, critRate: 0, dodge: 0 };
+        if (window.equippedPet) {
+            dynamicBuffs = getPetDynamicBuffs(this, window.equippedPet.pet.pet_code, window.equippedPet.level);
+        }
         
-        // 1. Tính toán Chí Mạng
-        let isCrit = (Math.random() * 100) < stats.critRate;
+        // 1. Cộng dồn Tỉ lệ Chí mạng và Tính sát thương tăng cường (Của chiêu Cuồng Nộ)
+        let totalCritRate = stats.critRate + dynamicBuffs.critRate;
+        // Nhân sát thương gốc lên (Ví dụ: atkPercent = 50 -> Sát thương x 1.5)
+        rawDamage = rawDamage * (1 + (dynamicBuffs.atkPercent / 100));
+
+        let isCrit = (Math.random() * 100) < totalCritRate;
         let finalDamage = rawDamage;
 
         if (isCrit) {
             finalDamage = rawDamage * (stats.critDamage / 100);
+            
+            // BẮN SỰ KIỆN CHÍ MẠNG CHO PET
+            if (window.equippedPet) {
+                triggerPetPassiveOnCrit(this, window.equippedPet.pet.pet_code, window.equippedPet.level);
+            }
         }
 
         // 2. Gây sát thương lên quái (truyền thêm cờ isCrit để đổi màu text)
@@ -1505,13 +1550,21 @@ export class CampaignScene extends Phaser.Scene {
             monster.takeDamage(finalDamage, isCrit);
         }
 
+        // Kích hoạt hiệu ứng làm chậm của Phượng hoàng băng
+        if (window.equippedPet) {
+            triggerPetPassiveOnHit(this, window.equippedPet.pet.pet_code, window.equippedPet.level, monster);
+        }
+
         // 3. Tính toán Hút Máu
-        if (stats.lifesteal > 0 && this.playerHealth < this.maxHealth) {
-            let healAmt = finalDamage * (stats.lifesteal / 100);
+        let baseLifesteal = stats.lifesteal || 0;
+        
+        let totalLifesteal = baseLifesteal + dynamicBuffs.lifesteal;
+
+        if (totalLifesteal > 0 && this.playerHealth < this.maxHealth) {
+            let healAmt = finalDamage * (totalLifesteal / 100);
             this.playerHealth = Math.min(this.maxHealth, this.playerHealth + healAmt);
             this.updateHealthBarWidth(this.playerHealth);
             
-            // Text hút máu nhỏ màu xanh lá
             let lsText = this.add.text(this.player.x, this.player.y - 20, `+${Math.round(healAmt)}`, { 
                 fontSize: '14px', fill: '#00ff00', stroke: '#000', strokeThickness: 2 
             }).setOrigin(0.5).setDepth(8000);
@@ -1523,20 +1576,23 @@ export class CampaignScene extends Phaser.Scene {
         if (this.isGameOver) return;
 
         // ==========================================
-        // KIỂM TRA TỈ LỆ NÉ TRÁNH (DODGE)
+        // KIỂM TRA TỈ LỆ NÉ TRÁNH (DODGE) KẾT HỢP BUFF PET
         // ==========================================
-        let dodgeChance = window.playerStats ? window.playerStats.dodge : 5;
+        let baseDodge = window.playerStats ? window.playerStats.dodge : 5;
+        let dynamicBuffs = { dodge: 0 };
+        if (window.equippedPet) {
+            dynamicBuffs = getPetDynamicBuffs(this, window.equippedPet.pet.pet_code, window.equippedPet.level);
+        }
+        let totalDodge = baseDodge + dynamicBuffs.dodge;
         
-        // Quay xổ số ngẫu nhiên từ 0 đến 100. Nếu số quay được nhỏ hơn tỉ lệ né thì thành công!
-        if (Math.random() * 100 < dodgeChance) {
-            // Hiện chữ NÉ cực ngầu
+        // Quay xổ số ngẫu nhiên từ 0 đến 100.
+        if (Math.random() * 100 < totalDodge) {
             let missText = this.add.text(this.player.x, this.player.y - 40, 'NÉ TRÁNH!', { 
                 fontSize: '24px', fill: '#00ffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 
             }).setOrigin(0.5).setDepth(8000);
-            
             this.tweens.add({ targets: missText, y: this.player.y - 90, alpha: 0, duration: 800, onComplete: () => missText.destroy() });
             
-            return; // Lệnh return này sẽ THOÁT NGAY LẬP TỨC khỏi hàm trừ máu
+            return; // THOÁT NGAY LẬP TỨC khỏi hàm trừ máu
         }
         
         if (this.player.shieldCount && this.player.shieldCount > 0) {
@@ -1620,8 +1676,8 @@ export class CampaignScene extends Phaser.Scene {
                 this.input.enabled = false; 
             });
         this.btnSetting = this.add.text(cx, cy + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', (p,x,y,e) => { if(e) e.stopPropagation(); document.getElementById('settings-modal').style.display = 'flex'; this.input.enabled = false; });
-        this.btnChangeMap = this.add.text(cx, cy + 180, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#ff8800', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0, loot: []}); });
-        this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.input.enabled = false; this.setPauseMenuVisible(false); this.physics.resume(); this.tweens.resumeAll(); if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
+        this.btnChangeMap = this.add.text(cx, cy + 180, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#ff8800', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.physics.resume(); this.tweens.resumeAll(); this.time.paused = false; if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0, loot: []}); });
+        this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.input.enabled = false; this.setPauseMenuVisible(false); this.physics.resume(); this.tweens.resumeAll(); this.time.paused = false; if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
         this.setPauseMenuVisible(false);
     }
 
@@ -1630,7 +1686,23 @@ export class CampaignScene extends Phaser.Scene {
         if (v) this.pauseOverlay.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.cameras.main.width, this.cameras.main.height), Phaser.Geom.Rectangle.Contains); else this.pauseOverlay.disableInteractive();
         this.txtPause.setVisible(v); this.btnResume.setVisible(v); this.btnInventory.setVisible(v); this.btnSetting.setVisible(v); this.btnChangeMap.setVisible(v); this.btnHome.setVisible(v); 
     }
-    togglePause() { if (this.isGameOver) return; this.isPaused = !this.isPaused; if (this.isPaused) { this.physics.pause(); this.tweens.pauseAll(); this.setPauseMenuVisible(true); } else { this.physics.resume(); this.tweens.resumeAll(); this.setPauseMenuVisible(false); } }
+    togglePause() { 
+        if (this.isGameOver) return; 
+        this.isPaused = !this.isPaused; 
+        if (this.isPaused) { 
+            this.physics.pause(); 
+            this.tweens.pauseAll(); 
+            this.time.paused = true; 
+            
+            this.setPauseMenuVisible(true); 
+        } else { 
+            this.physics.resume(); 
+            this.tweens.resumeAll();             
+            this.time.paused = false; 
+            
+            this.setPauseMenuVisible(false); 
+        } 
+    }
 
     createSkillUI() {
         let cx = this.cameras.main.width / 2 - 300, cy = this.cameras.main.height - 60, i = 0;
