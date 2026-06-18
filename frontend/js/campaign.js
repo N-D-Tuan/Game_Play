@@ -1379,7 +1379,7 @@ export class CampaignScene extends Phaser.Scene {
             mon.updateAI(this.player);
 
             if (mon.isSlowed && !mon.isDead) {
-                mon.body.velocity.x *= 0.4;
+                mon.body.velocity.x *= 0.4; //Giảm 60% tốc độ di chuyển
                 mon.body.velocity.y *= 0.4;
                 mon.setTint(0x00ffff);
             } else if (mon.isBurning && !mon.isDead) {

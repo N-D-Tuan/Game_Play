@@ -18,11 +18,11 @@ export const PET_SKILL_DATA = {
     },
     'phuong_hoang_bang': {
         1: { name: 'Hơi Thở Băng Giá', type: 'passive', desc: 'Đòn đánh có 50% làm chậm địch.\n(Tăng thành 80% ở map Tuyết).' },
-        50: { name: 'Hàn Băng Lĩnh Vực', type: 'active', cd: 50000, desc: 'Tạo vùng băng gây sát thương và làm chậm.' },
+        50: { name: 'Hàn Băng Lĩnh Vực', type: 'active', cd: 50000, desc: 'Tạo vùng băng gây sát thương 30% ATK và làm chậm 60%.' },
         100: { name: 'Kỹ Năng Cấp 100', type: 'active', cd: 100000, desc: '(Chưa mở khóa hiệu ứng).' }
     },
     'rong_lua': {
-        1: { name: 'Long Hỏa', type: 'passive', desc: 'Đòn đánh gây thiêu đốt\nliên tục trong 2 giây.' },
+        1: { name: 'Long Hỏa', type: 'passive', desc: 'Đòn đánh gây thiêu đốt 10% ATK \nliên tục trong 2 giây.' },
         50: { name: 'Chân Long Nộ Khí', type: 'active', cd: 50000, desc: 'Triệu hồi Rồng gây 300% ATK toàn bản đồ\n(Gây 500% nếu chỉ có 1 quái).' },
         100: { name: 'Kỹ Năng Cấp 100', type: 'active', cd: 100000, desc: '(Chưa mở khóa hiệu ứng).' }
     },
@@ -161,15 +161,20 @@ export function executePetActiveSkill(scene, petCode, skillLevel) {
             repeat: 9,
             callback: () => {
                 if (!scene.player || !scene.monsters) return;
+
+                let baseAtk = window.playerStats ? window.playerStats.atk : 50;
+                let dynamicBuffs = getPetDynamicBuffs(scene, window.equippedPet.pet.pet_code, window.equippedPet.level);
+                let totalAtk = baseAtk * (1 + (dynamicBuffs.atkPercent || 0) / 100);
+                let tickDamage = totalAtk * 0.30;
                 
                 scene.monsters.getChildren().forEach(mon => {
                     if (!mon.isDead && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, mon.x, mon.y) <= 300) {
                         // Sát thương mạnh diện rộng (Không kích hoạt bạo kích/hút máu)
-                        if (typeof mon.takeDamage === 'function') mon.takeDamage(500, false); 
+                        if (typeof mon.takeDamage === 'function') mon.takeDamage(tickDamage, false); 
                         
                         // Áp dụng trạng thái Đóng Băng
                         mon.isSlowed = true;
-                        mon.setTint(0xaaffff); // Phủ màu tuyết trắng xanh
+                        mon.setTint(0xaaffff);
                         
                         if (mon.slowTimer) mon.slowTimer.remove(); // Reset thời gian chậm
                         mon.slowTimer = scene.time.delayedCall(2000, () => {
