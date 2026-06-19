@@ -70,9 +70,12 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('icon_boss', '../assets/icon_boss.png');
 
         this.load.atlas('boss', '../assets/boss_spritesheet.png', '../assets/boss_spritesheet.json');
-        this.load.atlas('rong_lua_atlas', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.png', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.json');
+        this.load.atlas('rong_lua_idle', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.png', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.json');
         this.load.atlas('kien_xanh_atlas', '../assets/pets/kien_xanh/spritesheet_kien_xanh.png', '../assets/pets/kien_xanh/spritesheet_kien_xanh.json');
         this.load.atlas('kien_do_atlas', '../assets/pets/kien_do/spritesheet_kien_do.png', '../assets/pets/kien_do/spritesheet_kien_do.json');
+        this.load.atlas('ngoc_long_atlas', '../assets/pets/ngoc_long/spritesheet_ngoc_long.png', '../assets/pets/ngoc_long/spritesheet_ngoc_long.json');
+        this.load.atlas('phuong_hoang_bang_atlas', '../assets/pets/phuong_hoang_bang/spritesheet_phuong_hoang_bang.png', '../assets/pets/phuong_hoang_bang/spritesheet_phuong_hoang_bang.json');
+        this.load.atlas('rong_lua_atlas', '../assets/pets/rong_lua/spritesheet_rong_lua.png', '../assets/pets/rong_lua/spritesheet_rong_lua.json');
 
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
@@ -81,6 +84,11 @@ export class CampaignScene extends Phaser.Scene {
         this.load.audio('desert_bgm', '../assets/desert.mp3');
         this.load.audio('thunder', '../assets/thunder.mp3');
         this.load.audio('rong_ngam', '../assets/pets/rong_lua/rong_ngam.mp3');
+        this.load.audio('rong_thet', '../assets/pets/rong_lua/rong_thet.mp3');
+
+        this.load.image('fire1', '../assets/pets/rong_lua/fire1.png');
+        this.load.image('fire2', '../assets/pets/rong_lua/fire2.png');
+        this.load.image('fire3', '../assets/pets/rong_lua/fire3.png');
 
         this.load.spritesheet('player_anim', '../assets/player_spritesheet.png', { frameWidth: 60, frameHeight: 89 });
         this.load.spritesheet('monster1', '../assets/monster1_spritesheet.png', { frameWidth: 126, frameHeight: 37, margin: 2, spacing: 2 });
@@ -411,7 +419,7 @@ export class CampaignScene extends Phaser.Scene {
 
         this.anims.create({
             key: 'rong_lua_anim',
-            frames: this.anims.generateFrameNames('rong_lua_atlas', { prefix: 'rong_lua_idle_', start: 1, end: 4, suffix: '.png' }),
+            frames: this.anims.generateFrameNames('rong_lua_idle', { prefix: 'rong_lua_idle_', start: 1, end: 4, suffix: '.png' }),
             frameRate: 8,
             repeat: -1
         });
@@ -441,6 +449,55 @@ export class CampaignScene extends Phaser.Scene {
             key: 'kien_do_attack_anim',
             frames: this.anims.generateFrameNames('kien_do_atlas', { prefix: 'kien_do_attack_', start: 1, end: 4, suffix: '.png' }),
             frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'ngoc_long_fly_anim',
+            frames: this.anims.generateFrameNames('ngoc_long_atlas', { prefix: 'ngoc_long_fly_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'phuong_hoang_up_anim',
+            frames: this.anims.generateFrameNames('phuong_hoang_bang_atlas', { prefix: 'phuong_hoang_bang_up_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 8,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'phuong_hoang_down_start_anim',
+            frames: this.anims.generateFrameNames('phuong_hoang_bang_atlas', { prefix: 'phuong_hoang_bang_down_', start: 1, end: 2, suffix: '.png' }),
+            frameRate: 8,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'phuong_hoang_down_fly_anim',
+            frames: [{ key: 'phuong_hoang_bang_atlas', frame: 'phuong_hoang_bang_down_3.png' }],
+            frameRate: 1,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'phuong_hoang_down_crash_anim',
+            frames: [{ key: 'phuong_hoang_bang_atlas', frame: 'phuong_hoang_bang_down_4.png' }],
+            frameRate: 1,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'rong_lua_fly_anim',
+            frames: this.anims.generateFrameNames('rong_lua_atlas', { prefix: 'rong_lua_fly_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 8,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'rong_lua_dash_anim',
+            frames: this.anims.generateFrameNames('rong_lua_atlas', { prefix: 'rong_lua_dash_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 12,
             repeat: -1
         });
 
@@ -1422,12 +1479,16 @@ export class CampaignScene extends Phaser.Scene {
         this.monsters.getChildren().forEach(mon => {
             mon.updateAI(this.player);
 
-            if (mon.isSlowed && !mon.isDead) {
-                mon.body.velocity.x *= 0.4; //Giảm 60% tốc độ di chuyển
-                mon.body.velocity.y *= 0.4;
-                mon.setTint(0x00ffff);
+            if (mon.isFrozen && !mon.isDead) {
+                mon.body.velocity.x = 0; // Ép tốc độ về 0 tuyệt đối
+                mon.body.velocity.y = 0;
+                mon.setTint(0x0055ff); // Màu xanh dương đậm
+            } else if (mon.isSlowed && !mon.isDead) {
+                mon.body.velocity.x *= 0.2; // Giảm 80% tốc độ
+                mon.body.velocity.y *= 0.2;
+                mon.setTint(0x00ffff); // Màu trắng xanh băng giá
             } else if (mon.isBurning && !mon.isDead) {
-                mon.setTint(0xff5500);
+                mon.setTint(0xff5500); // Màu đỏ lửa
             }
         });
 
@@ -1627,6 +1688,14 @@ export class CampaignScene extends Phaser.Scene {
 
     takeDamage(amount) {
         if (this.isGameOver) return;
+
+        // ==========================================
+        // GIẢM SÁT THƯƠNG TỪ BUFF CỦA PET
+        // ==========================================
+        if (this.player && this.player.petActiveBuffs && this.player.petActiveBuffs.damageReduction) {
+            let reduction = this.player.petActiveBuffs.damageReduction;
+            amount = amount * (1 - (reduction / 100));
+        }
 
         // ==========================================
         // KIỂM TRA TỈ LỆ NÉ TRÁNH (DODGE) KẾT HỢP BUFF PET
