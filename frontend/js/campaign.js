@@ -94,6 +94,8 @@ export class CampaignScene extends Phaser.Scene {
         this.load.image('crack', '../assets/pets/egg/crack.png');
         this.load.image('egg_piece', '../assets/pets/egg/egg_piece.png');
 
+        this.load.image('lock', '../assets/lock.png');
+
         if (window.equippedPet) {
             let pInfo = window.equippedPet.pet;
             let lvl = window.equippedPet.level;            
@@ -226,7 +228,7 @@ export class CampaignScene extends Phaser.Scene {
                 for (let pKey in this.petCampaignSkills) {
                     if (key === window.PET_SKILL_HOTKEYS[pKey]) {
                         let sk = this.petCampaignSkills[pKey];
-                        if (sk.currentCd <= 0) {
+                        if (sk.isUnlocked && sk.currentCd <= 0) {
                             
                             // GỌI HÀM TUNG CHIÊU TỪ PET_SKILLS.JS
                             executePetActiveSkill(this, window.equippedPet.pet.pet_code, sk.reqLvl);
@@ -514,37 +516,49 @@ export class CampaignScene extends Phaser.Scene {
         ];
         
         skillConfigs.forEach(conf => {
-            if (lvl >= conf.req) {
-                let skX = cx + conf.offsetX; let skY = cy + conf.offsetY;
-                let skData = pSkills[conf.req];
-                
-                // Nền
-                let bgCircle = this.add.circle(skX, skY, 36, 0x000000, 0.7).setDepth(14000).setScrollFactor(0).setStrokeStyle(2, 0xffcc00);
-                
-                // Chọn đúng hình ảnh theo cấp độ yêu cầu của Kỹ năng
-                let skillStageNum = conf.req === 100 ? 3 : (conf.req === 50 ? 2 : 1);
-                let skillIconKey = `pet_ui_${pInfo.pet_code}_${skillStageNum}`;
-                if (!this.textures.exists(skillIconKey)) skillIconKey = this.currentPetUiKey;
+            // Kiểm tra xem kỹ năng đã được mở khóa chưa
+            let isUnlocked = lvl >= conf.req;
+            
+            let skX = cx + conf.offsetX; let skY = cy + conf.offsetY;
+            let skData = pSkills[conf.req];
+            
+            // Nền (Vàng nếu mở khóa, Xám nếu đang khóa)
+            let borderStyle = isUnlocked ? 0xffcc00 : 0x444444;
+            let bgCircle = this.add.circle(skX, skY, 36, 0x000000, 0.7).setDepth(14000).setScrollFactor(0).setStrokeStyle(2, borderStyle);
+            
+            // Chọn đúng hình ảnh theo cấp độ yêu cầu của Kỹ năng
+            let skillStageNum = conf.req === 100 ? 3 : (conf.req === 50 ? 2 : 1);
+            let skillIconKey = `pet_ui_${pInfo.pet_code}_${skillStageNum}`;
+            if (!this.textures.exists(skillIconKey)) skillIconKey = this.currentPetUiKey;
 
-                // Vẽ Icon kỹ năng
-                let ico = this.add.image(skX, skY, skillIconKey).setDepth(14001).setScrollFactor(0);
-                ico.setScale(45 / Math.max(ico.width, ico.height));
+            // Vẽ Icon kỹ năng
+            let ico = this.add.image(skX, skY, skillIconKey).setDepth(14001).setScrollFactor(0);
+            ico.setScale(45 / Math.max(ico.width, ico.height));
 
-                // Chữ Phím tắt (O, P)
-                let hkTxt = this.add.text(skX + 36, skY + 36, window.PET_SKILL_HOTKEYS[conf.key], { 
+            // Các biến chứa UI phụ
+            let hkTxt = null, overlay = null, cdTxt = null, glow = null, lockImg = null;
+
+            if (!isUnlocked) {
+                // NẾU KHÓA: Làm tối ảnh và đắp ổ khóa lên
+                ico.setTint(0x444444); 
+                lockImg = this.add.image(skX, skY, 'lock').setDepth(14005).setScrollFactor(0);
+                lockImg.setScale(26 / Math.max(lockImg.width, lockImg.height));
+            } else {
+                // NẾU MỞ: Mới vẽ chữ Phím tắt và Hiệu ứng hồi chiêu
+                hkTxt = this.add.text(skX + 36, skY + 36, window.PET_SKILL_HOTKEYS[conf.key], { 
                     fontSize: '14px', fill: '#00ffcc', fontStyle: 'bold', stroke: '#000', strokeThickness: 2 
                 }).setOrigin(0.5).setDepth(14005).setScrollFactor(0);
                 
-                // Hiệu ứng Cooldown
-                let overlay = this.add.graphics().setDepth(14003).setScrollFactor(0);
-                let cdTxt = this.add.text(skX, skY, '', { fontSize: '20px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(14004).setScrollFactor(0).setVisible(false);
-                let glow = this.add.graphics().setDepth(14002).setScrollFactor(0).lineStyle(3, 0xffcc00, 1).strokeCircle(skX, skY, 37);
-                
-                this.petCampaignSkills[conf.key] = {
-                    data: skData, reqLvl: conf.req, x: skX, y: skY, currentCd: 0, cd: skData.cd,
-                    ui: { bgCircle: bgCircle, icon: ico, overlay: overlay, text: cdTxt, glow: glow, hkTxt: hkTxt }
-                };
+                overlay = this.add.graphics().setDepth(14003).setScrollFactor(0);
+                cdTxt = this.add.text(skX, skY, '', { fontSize: '20px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(14004).setScrollFactor(0).setVisible(false);
+                glow = this.add.graphics().setDepth(14002).setScrollFactor(0).lineStyle(3, 0xffcc00, 1).strokeCircle(skX, skY, 37);
             }
+
+            // Lưu dữ liệu vào hệ thống (gắn thêm cờ isUnlocked)
+            this.petCampaignSkills[conf.key] = {
+                data: skData, reqLvl: conf.req, x: skX, y: skY, currentCd: 0, cd: skData ? skData.cd : 99999, isUnlocked: isUnlocked,
+                ui: { bgCircle: bgCircle, icon: ico, overlay: overlay, text: cdTxt, glow: glow, hkTxt: hkTxt, lockImg: lockImg }
+            };
         });
     }
 
@@ -1409,11 +1423,20 @@ export class CampaignScene extends Phaser.Scene {
         if (this.petCampaignSkills) {
             for (let key in this.petCampaignSkills) {
                 let sk = this.petCampaignSkills[key];
+
+                if (!sk.isUnlocked) {
+                    if (sk.ui.glow) sk.ui.glow.setVisible(false);
+                    if (sk.ui.lockImg) sk.ui.lockImg.setVisible(true);
+                    continue;
+                }
+
                 if (sk.currentCd > 0) {
                     if (delta) sk.currentCd -= delta;
                     if (sk.currentCd <= 0) {
                         sk.currentCd = 0;
-                        sk.ui.overlay.clear(); sk.ui.text.setVisible(false); sk.ui.glow.setVisible(true);
+                        sk.ui.overlay.clear(); 
+                        sk.ui.text.setVisible(false); 
+                        sk.ui.glow.setVisible(true);
                     } else {
                         let progress = sk.currentCd / sk.cd;
                         let startAngle = Phaser.Math.DegToRad(-90);
