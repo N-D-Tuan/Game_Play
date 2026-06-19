@@ -173,13 +173,15 @@ export function executePetActiveSkill(scene, petCode, skillLevel) {
                         if (typeof mon.takeDamage === 'function') mon.takeDamage(tickDamage, false); 
                         
                         // Áp dụng trạng thái Đóng Băng
-                        mon.isSlowed = true;
-                        mon.setTint(0xaaffff);
-                        
-                        if (mon.slowTimer) mon.slowTimer.remove(); // Reset thời gian chậm
-                        mon.slowTimer = scene.time.delayedCall(2000, () => {
-                            if (mon && !mon.isDead) { mon.isSlowed = false; mon.clearTint(); }
-                        });
+                        if (mon.active && !mon.isDead) {
+                            mon.isSlowed = true;
+                            mon.setTint(0xaaffff);
+                            
+                            if (mon.slowTimer) mon.slowTimer.remove(); 
+                            mon.slowTimer = scene.time.delayedCall(2000, () => {
+                                if (mon && mon.active && !mon.isDead) { mon.isSlowed = false; mon.clearTint(); }
+                            });
+                        }
                     }
                 });
             }
@@ -230,10 +232,13 @@ export function executePetActiveSkill(scene, petCode, skillLevel) {
 
             aliveMonsters.forEach(mon => {
                 if (typeof mon.takeDamage === 'function') {
+                    let mx = mon.x;
+                    let my = mon.y;
+
                     mon.takeDamage(finalDamage, false); // Gây sát thương
                     
                     // Nổ 1 cục lửa to ngay dưới chân mỗi con quái
-                    let explosion = scene.add.circle(mon.x, mon.y, 40, 0xff4400, 0.7).setDepth(mon.y + 1);
+                    let explosion = scene.add.circle(mx, my, 40, 0xff4400, 0.7).setDepth(my + 1);
                     scene.tweens.add({ targets: explosion, scale: 2, alpha: 0, duration: 400, onComplete: () => explosion.destroy() });
                 }
             });
@@ -324,7 +329,9 @@ export function triggerPetPassiveOnHit(scene, petCode, petLevel, monster) {
                     burnTicks++;
                     if (burnTicks >= 4) {
                         monster.isBurning = false;
-                        monster.clearTint();
+                        if (monster.active && !monster.isDead) {
+                            monster.clearTint();
+                        }
                     }
                 }
             }
