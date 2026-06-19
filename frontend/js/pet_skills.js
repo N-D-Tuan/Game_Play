@@ -4,12 +4,12 @@ export const PET_SKILL_DATA = {
     'kien_xanh': {
         1: { name: 'Bản Năng Sinh Tồn', type: 'passive', desc: 'Khi HP dưới 50%,\ntăng 20% Hút máu và +50 Hồi máu/s.' },
         50: { name: 'Cường Hóa Sinh Mệnh', type: 'active', cd: 50000, desc: 'Tăng thêm 50% Hút máu và +200 Hồi máu/s trong 5 giây.' },
-        100: { name: 'Kỹ Năng Cấp 100', type: 'active', cd: 100000, desc: '(Chưa mở khóa hiệu ứng).' }
+        100: { name: 'Địa Hành Kiến Chúa', type: 'active', cd: 100000, desc: 'Triệu hồi 5 Kiến Chúa tấn công AoE,\ngây 150% ATK mỗi kiến và hút máu.' }
     },
     'kien_do': {
         1: { name: 'Sát Khí', type: 'passive', desc: 'Khi đánh chí mạng,\ntăng 20% Né tránh trong 3 giây.' },
         50: { name: 'Cuồng Nộ', type: 'active', cd: 50000, desc: 'Tăng 50% Tấn công và 30% Tỉ lệ CM trong 5 giây.' },
-        100: { name: 'Kỹ Năng Cấp 100', type: 'active', cd: 100000, desc: '(Chưa mở khóa hiệu ứng).' }
+        100: { name: 'Huyết Kiến Truy Sát', type: 'active', cd: 100000, desc: 'Triệu hồi 5 Huyết Kiến truy đuổi quái\ntrong 10s. Gây 150% ATK liên tục.' }
     },
     'ngoc_long': {
         1: { name: 'Long Khí', type: 'passive', desc: 'Hồi phục định kỳ lượng HP\ntương đương 10% Máu tối đa mỗi 10s.' },
@@ -246,6 +246,284 @@ export function executePetActiveSkill(scene, petCode, skillLevel) {
             // Giật màn hình cực mạnh tạo cảm giác "Clear map"
             scene.cameras.main.shake(500, 0.03);
         });
+    }
+
+    // ==========================================
+    // KỸ NĂNG CẤP 100: ĐỊA HÀNH KIẾN CHÚA (KIẾN XANH)
+    // ==========================================
+    else if (petCode === 'kien_xanh' && skillLevel === 100) {
+        let cx = scene.player.x;
+        let cy = scene.player.y;
+        let ants = [];
+
+        // 1. Triệu hồi 5 con kiến quanh người chơi và bắt đầu đào đất
+        for(let i = 0; i < 5; i++) {
+            let angle = (i / 5) * Math.PI * 2;
+            let ax = cx + Math.cos(angle) * 60;
+            let ay = cy + Math.sin(angle) * 60;
+            let ant = scene.add.sprite(ax, ay, 'kien_xanh_atlas').setDepth(ay);
+            ant.setScale(1);
+            ant.play('kien_xanh_down_anim');
+            ants.push(ant);
+        }
+
+        let txt = scene.add.text(cx, cy - 80, 'ĐỊA HÀNH KIẾN CHÚA!', { fontSize: '24px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(8000);
+        scene.tweens.add({ targets: txt, y: cy - 130, alpha: 0, duration: 1500, onComplete: () => txt.destroy() });
+
+        // 2. ĐỢI 1,35 GIÂY CHO KIẾN ĐÀO XUỐNG XONG
+        scene.time.delayedCall(1350, () => {
+            ants.forEach(ant => ant.setVisible(false)); // Tàng hình kiến để di chuyển ngầm
+
+            // Tìm và Sắp xếp quái vật theo Khoảng cách từ người chơi
+            let aliveMonsters = scene.monsters.getChildren().filter(m => m.active && !m.isDead);
+            aliveMonsters.sort((a, b) => {
+                return Phaser.Math.Distance.Between(cx, cy, a.x, a.y) - Phaser.Math.Distance.Between(cx, cy, b.x, b.y);
+            });
+
+            let targets = [];
+            if (aliveMonsters.length > 0) {
+                // Chỉ nhắm vào tối đa 5 con quái gần nhất
+                let closestMonsters = aliveMonsters.slice(0, 5);
+                
+                // Thuật toán CHIA ĐỀU (Modulo): Nếu có 2 quái -> quái 1 nhận 3 kiến, quái 2 nhận 2 kiến.
+                for (let i = 0; i < 5; i++) {
+                    targets.push(closestMonsters[i % closestMonsters.length]);
+                }
+            } else {
+                // Nếu map sạch quái thì trồi lên lại xung quanh người chơi
+                for (let i = 0; i < 5; i++) targets.push(scene.player);
+            }
+
+            // Dịch chuyển kiến đến ngay dưới chân mục tiêu và bắt đầu trồi lên
+            ants.forEach((ant, index) => {
+                let target = targets[index];
+                
+                // Lệch vị trí 1 chút để nếu nhiều kiến chui 1 chỗ thì không bị đè cứng lên nhau
+                let offsetX = Phaser.Math.Between(-30, 30); 
+                let offsetY = Phaser.Math.Between(-30, 30);
+                
+                ant.setVisible(true);
+                ant.play('kien_xanh_up_anim');
+
+                let trackTarget = () => {
+                    // Nếu kiến bị hủy thì gỡ hàm bám dính để giải phóng bộ nhớ
+                    if (!ant.active) {
+                        scene.events.off('update', trackTarget);
+                        return;
+                    }
+                    if (!target || !target.active || target.isDead) {
+                        return; 
+                    }
+                    ant.setPosition(target.x + offsetX, target.y + offsetY);
+                    ant.setDepth(target.y + offsetY + 1);
+                };
+
+                scene.events.on('update', trackTarget);
+                ant.trackEvent = trackTarget;
+            });
+
+            // 3. ĐỢI TIẾP 1,35 GIÂY (TRỒI LÊN XONG) RỒI GÂY SÁT THƯƠNG
+            scene.time.delayedCall(1350, () => {
+                let baseAtk = window.playerStats ? window.playerStats.atk : 50;
+                let dynamicBuffs = getPetDynamicBuffs(scene, window.equippedPet.pet.pet_code, window.equippedPet.level);
+                let totalAtk = baseAtk * (1 + (dynamicBuffs.atkPercent || 0) / 100);
+                
+                // MỖI kiến gây 200% ATK (Nếu 5 kiến tụ vào 1 boss = 1000% ATK)
+                let antDamage = totalAtk * 2; 
+                let totalDamageInflicted = 0; // Biến gom tổng dame lại để tính Hút máu
+
+                ants.forEach(ant => {
+                    if (ant.trackEvent) scene.events.off('update', ant.trackEvent);
+
+                    let ax = ant.x;
+                    let ay = ant.y;
+                    
+                    // Hiệu ứng nổ bùn đất tại chỗ trồi lên
+                    let explosion = scene.add.circle(ax, ay, 100, 0x8b4513, 0.4).setDepth(ay + 1);
+                    scene.tweens.add({ targets: explosion, scale: 1.5, alpha: 0, duration: 400, onComplete: () => explosion.destroy() });
+
+                    // Gây sát thương AoE 100px quanh con kiến
+                    if (scene.monsters) {
+                        scene.monsters.getChildren().forEach(mon => {
+                            if (mon.active && !mon.isDead) {
+                                if (Phaser.Math.Distance.Between(ax, ay, mon.x, mon.y) <= 100) {
+                                    if (typeof mon.takeDamage === 'function') {
+                                        mon.takeDamage(antDamage, false);
+                                        totalDamageInflicted += antDamage;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    ant.destroy();
+                });
+                
+                // Rung màn hình báo hiệu nổ đồng loạt
+                scene.cameras.main.shake(300, 0.02);
+
+                // ==========================================
+                // BƠM MÁU DỰA TRÊN TỔNG DAME GÂY RA TỪ 5 CON KIẾN
+                // ==========================================
+                let baseLifesteal = window.playerStats ? window.playerStats.lifesteal : 0;
+                let totalLifesteal = baseLifesteal + dynamicBuffs.lifesteal;
+
+                if (totalLifesteal > 0 && totalDamageInflicted > 0 && scene.playerHealth < scene.maxHealth) {
+                    let totalHeal = totalDamageInflicted * (totalLifesteal / 100);
+                    scene.playerHealth = Math.min(scene.maxHealth, scene.playerHealth + totalHeal);
+                    scene.updateHealthBarWidth(scene.playerHealth);
+                    
+                    let lsText = scene.add.text(scene.player.x, scene.player.y - 30, `+${Math.round(totalHeal)}`, { 
+                        fontSize: '20px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
+                    }).setOrigin(0.5).setDepth(8000);
+                    scene.tweens.add({ targets: lsText, y: scene.player.y - 80, alpha: 0, duration: 1200, onComplete: () => lsText.destroy() });
+                }
+            });
+        });
+    }
+
+    // ==========================================
+    // KỸ NĂNG CẤP 100: HUYẾT KIẾN TRUY SÁT (KIẾN ĐỎ)
+    // ==========================================
+    else if (petCode === 'kien_do' && skillLevel === 100) {
+        let cx = scene.player.x;
+        let cy = scene.player.y;
+
+        let txt = scene.add.text(cx, cy - 80, 'HUYẾT KIẾN TRUY SÁT!', { fontSize: '24px', fill: '#ff0000', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(8000);
+        scene.tweens.add({ targets: txt, y: cy - 130, alpha: 0, duration: 1500, onComplete: () => txt.destroy() });
+
+        // 1. Phân bổ mục tiêu ban đầu
+        let aliveMonsters = scene.monsters.getChildren().filter(m => m.active && !m.isDead);
+        aliveMonsters.sort((a, b) => Phaser.Math.Distance.Between(cx, cy, a.x, a.y) - Phaser.Math.Distance.Between(cx, cy, b.x, b.y));
+        
+        let initialTargets = [];
+        if (aliveMonsters.length > 0) {
+            let closest = aliveMonsters.slice(0, 5);
+            for (let i = 0; i < 5; i++) initialTargets.push(closest[i % closest.length]);
+        }
+
+        // 2. Sinh ra 5 con kiến đỏ xung quanh
+        let ants = [];
+        for (let i = 0; i < 5; i++) {
+            let angle = (i / 5) * Math.PI * 2;
+            let ax = cx + Math.cos(angle) * 40;
+            let ay = cy + Math.sin(angle) * 40;
+            
+            let ant = scene.add.sprite(ax, ay, 'kien_do_atlas').setDepth(ay);
+            ant.setScale(1);
+            ant.play('kien_do_run_anim');
+            
+            ant.target = initialTargets[i] || null;
+            ant.state = 'CHASING';
+            ant.lastAttackTime = 0;
+            
+            ants.push(ant);
+        }
+
+        let duration = 10000; // Kiến tồn tại 10 giây
+        let timeElapsed = 0;
+        let speed = 200;
+        let attackRange = 50; // Khoảng cách để bắt đầu cắn
+
+        // 3. Vòng lặp AI cập nhật mỗi khung hình
+        let updateRedAnts = (time, delta) => {
+            timeElapsed += delta;
+            
+            // Xóa sổ bầy kiến sau 10 giây hoặc nếu nhân vật chết
+            if (timeElapsed >= duration || !scene.player) {
+                scene.events.off('update', updateRedAnts);
+                ants.forEach(a => {
+                    if (a.active) {
+                        let poof = scene.add.circle(a.x, a.y, 25, 0xff0000, 0.6).setDepth(a.y);
+                        scene.tweens.add({targets: poof, scale: 1.5, alpha: 0, duration: 400, onComplete: () => poof.destroy()});
+                        a.destroy();
+                    }
+                });
+                return;
+            }
+
+            // Tính toán ATK
+            let baseAtk = window.playerStats ? window.playerStats.atk : 50;
+            let dynamicBuffs = getPetDynamicBuffs(scene, window.equippedPet.pet.pet_code, window.equippedPet.level);
+            let totalAtk = baseAtk * (1 + (dynamicBuffs.atkPercent || 0) / 100);
+            let antDamage = totalAtk * 1.5;
+
+            // Xử lý hành vi cho TỪNG con kiến
+            ants.forEach(ant => {
+                if (!ant.active) return;
+
+                // [BẢO VỆ CHỐNG CRASH]: Nếu mục tiêu cũ đã chết/biến mất -> Quét lại map tìm con gần nhất
+                if (!ant.target || !ant.target.active || ant.target.isDead) {
+                    let mons = scene.monsters.getChildren().filter(m => m.active && !m.isDead);
+                    if (mons.length > 0) {
+                        mons.sort((a, b) => Phaser.Math.Distance.Between(ant.x, ant.y, a.x, a.y) - Phaser.Math.Distance.Between(ant.x, ant.y, b.x, b.y));
+                        ant.target = mons[0];
+                    } else {
+                        ant.target = null;
+                    }
+                }
+
+                if (ant.target) {
+                    let dist = Phaser.Math.Distance.Between(ant.x, ant.y, ant.target.x, ant.target.y);
+
+                    // [QUAY HƯỚNG MẶT]: Sprite gốc quay trái -> Lật (FlipX) nếu mục tiêu nằm bên phải
+                    ant.setFlipX(ant.target.x > ant.x);
+
+                    if (dist > attackRange) {
+                        // TRẠNG THÁI: RƯỢT ĐUỔI
+                        if (ant.state !== 'CHASING') {
+                            ant.state = 'CHASING';
+                            ant.play('kien_do_run_anim');
+                        }
+                        
+                        // Di chuyển (Toán học Vector)
+                        let angle = Phaser.Math.Angle.Between(ant.x, ant.y, ant.target.x, ant.target.y);
+                        ant.x += Math.cos(angle) * speed * (delta / 1000);
+                        ant.y += Math.sin(angle) * speed * (delta / 1000);
+                        ant.setDepth(ant.y); 
+
+                    } else {
+                        // TRẠNG THÁI: CẮN XÉ
+                        if (ant.state !== 'ATTACKING') {
+                            ant.state = 'ATTACKING';
+                            ant.play('kien_do_attack_anim');
+                        }
+                        ant.setDepth(ant.y);
+
+                        // Cứ 0.5s sẽ nhảy sát thương 1 lần
+                        if (time - ant.lastAttackTime > 500) {
+                            ant.lastAttackTime = time;
+                            if (typeof ant.target.takeDamage === 'function') {
+                                ant.target.takeDamage(antDamage, false);
+                                
+                                // Bắn vài tia máu ra cho bạo lực
+                                let blood = scene.add.circle(ant.target.x, ant.target.y, 8, 0xff0000, 0.8).setDepth(ant.target.y + 1);
+                                scene.tweens.add({
+                                    targets: blood, y: ant.target.y - 30, alpha: 0, scale: 2, duration: 400, onComplete: () => blood.destroy()
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    // MAP SẠCH QUÁI -> CHẠY THEO CHỦ NHÂN CHỜ THỜI CƠ
+                    let distToPlayer = Phaser.Math.Distance.Between(ant.x, ant.y, scene.player.x, scene.player.y);
+                    ant.setFlipX(scene.player.x > ant.x); // Quay mặt theo chủ
+
+                    if (distToPlayer > 80) {
+                        if (ant.state !== 'CHASING') { ant.state = 'CHASING'; ant.play('kien_do_run_anim'); }
+                        let angle = Phaser.Math.Angle.Between(ant.x, ant.y, scene.player.x, scene.player.y);
+                        ant.x += Math.cos(angle) * speed * (delta / 1000);
+                        ant.y += Math.sin(angle) * speed * (delta / 1000);
+                        ant.setDepth(ant.y);
+                    } else {
+                        // Về gần chủ thì đứng im
+                        if (ant.state !== 'IDLE') { ant.state = 'IDLE'; ant.play('kien_do_run_anim'); ant.stop(); } 
+                    }
+                }
+            });
+        };
+
+        // Kích hoạt bộ máy AI chạy mỗi mili-giây
+        scene.events.on('update', updateRedAnts);
     }
 
     else if (skillLevel === 100) {

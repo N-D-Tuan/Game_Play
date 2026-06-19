@@ -71,6 +71,8 @@ export class CampaignScene extends Phaser.Scene {
 
         this.load.atlas('boss', '../assets/boss_spritesheet.png', '../assets/boss_spritesheet.json');
         this.load.atlas('rong_lua_atlas', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.png', '../assets/pets/rong_lua/spritesheet_rong_lua_idle.json');
+        this.load.atlas('kien_xanh_atlas', '../assets/pets/kien_xanh/spritesheet_kien_xanh.png', '../assets/pets/kien_xanh/spritesheet_kien_xanh.json');
+        this.load.atlas('kien_do_atlas', '../assets/pets/kien_do/spritesheet_kien_do.png', '../assets/pets/kien_do/spritesheet_kien_do.json');
 
         this.load.audio('step_water', '../assets/step_water.mp3');
         this.load.audio('normal_bgm', '../assets/normal.mp3');
@@ -414,6 +416,34 @@ export class CampaignScene extends Phaser.Scene {
             repeat: -1
         });
         
+        this.anims.create({
+            key: 'kien_xanh_down_anim',
+            frames: this.anims.generateFrameNames('kien_xanh_atlas', { prefix: 'kien_xanh_down_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 3,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'kien_xanh_up_anim',
+            frames: this.anims.generateFrameNames('kien_xanh_atlas', { prefix: 'kien_xanh_up_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 3,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'kien_do_run_anim',
+            frames: this.anims.generateFrameNames('kien_do_atlas', { prefix: 'kien_do_run_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'kien_do_attack_anim',
+            frames: this.anims.generateFrameNames('kien_do_atlas', { prefix: 'kien_do_attack_', start: 1, end: 4, suffix: '.png' }),
+            frameRate: 10,
+            repeat: -1
+        });
+
         this.anims.create({
             key: 'gateway-idle',
             frames: this.anims.generateFrameNumbers('gateway', { start: 0, end: 3 }),
