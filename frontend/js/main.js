@@ -1099,9 +1099,14 @@ document.addEventListener("DOMContentLoaded", () => {
         let pInfo = currentSelectedPet.pet;
         let lvl = currentSelectedPet.level;
         let stageStr = lvl >= 100 ? "[Trưởng Thành]" : (lvl >= 50 ? "[Thiếu Niên]" : "[Cấp Non]");
-        let iconKey = lvl >= 100 ? pInfo.icon_truong_thanh : (lvl >= 50 ? pInfo.icon_thieu_nien : pInfo.icon_non);
-
-        document.getElementById('pet-preview').innerHTML = `<img src="../assets/pets/${pInfo.pet_code}/${iconKey}" style="width: 80%; height: 80%; object-fit: contain;">`;
+        // 1. Xác định thời kỳ: 1 (Non), 2 (Thiếu niên), 3 (Trưởng thành)
+        let stageNum = lvl >= 100 ? 3 : (lvl >= 50 ? 2 : 1);
+        
+        // 2. Tự động nối chuỗi thành tên file gif. VD: spritesheet_kien_do_1_idle.gif
+        let gifFileName = `spritesheet_${pInfo.pet_code}_${stageNum}_idle.gif`;
+        
+        // 3. Đưa vào thẻ img (Đổi width/height lên 100% để hiển thị animation to rõ hơn)
+        document.getElementById('pet-preview').innerHTML = `<img src="../assets/pets/${pInfo.pet_code}/${gifFileName}" style="width: 100%; height: 100%; object-fit: contain;">`;
         document.getElementById('pet-name').innerText = pInfo.name;
         document.getElementById('pet-stage').innerText = `Cấp ${lvl} ${stageStr}`;
         
