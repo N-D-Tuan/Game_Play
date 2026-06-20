@@ -157,8 +157,35 @@ document.addEventListener("DOMContentLoaded", () => {
         return '#000000';
     }
 
+    function returnAllForgeItemsToBalo() {
+        let hasChanged = false;
+        
+        // 1. Trả đồ từ bảng Ghép đồ
+        if (typeof forgeItems !== 'undefined' && forgeItems.length > 0) {
+            myInventory.push(...forgeItems);
+            forgeItems = [];
+            renderForge();
+            hasChanged = true;
+        }
+        
+        // 2. Trả đồ từ bảng Cường hóa
+        if (typeof upgradeItem !== 'undefined' && upgradeItem !== null) {
+            myInventory.push(upgradeItem);
+            upgradeItem = null;
+            renderUpgradeUI();
+            hasChanged = true;
+        }
+        
+        // 3. Render lại balo nếu có đồ trả về
+        if (hasChanged) {
+            renderInventory();
+        }
+    }
+
     if (tabPetBtn) {
         tabPetBtn.addEventListener('click', () => {
+            returnAllForgeItemsToBalo();
+            
             currentTab = 'pet';
             tabEquipBtn.classList.remove('active');
             tabForgeBtn.classList.remove('active');
@@ -182,13 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
         viewForge.style.display = 'none';
         viewPet.style.display = 'none';
 
-        // KHI CHUYỂN VỀ TAB TRANG BỊ, TRẢ HẾT ĐỒ TRONG LÒ VỀ BALO
-        if (forgeItems.length > 0) {
-            myInventory.push(...forgeItems);
-        }
-        forgeItems = [];
-        renderForge();    
-        renderInventory();
+        returnAllForgeItemsToBalo();
     });
 
     tabForgeBtn.addEventListener('click', () => {
@@ -376,15 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
     closeInventory.addEventListener('click', () => { 
         inventoryModal.style.display = 'none'; 
 
-        // KIỂM TRA VÀ TRẢ LẠI ĐỒ TRONG LÒ RÈN VỀ BALO
-        if (typeof forgeItems !== 'undefined') {
-            if (forgeItems.length > 0) {
-                myInventory.push(...forgeItems); 
-            }
-            forgeItems = [];       
-            renderForge();       
-            renderInventory();     
-        }
+        returnAllForgeItemsToBalo();
         
         // Bật lại tương tác cho TẤT CẢ các scene đang chạy (Tránh lỗi liệt phím)
         if (typeof window.game !== 'undefined') {
@@ -1869,6 +1882,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const contentUpgrade = document.getElementById('forge-upgrade-content');
 
     subtabMerge.addEventListener('click', () => {
+        returnAllForgeItemsToBalo();
         currentForgeMode = 'merge';
         subtabMerge.style.background = 'linear-gradient(90deg, transparent, #8b0000, transparent)';
         subtabMerge.style.borderColor = '#ff0000'; subtabMerge.style.color = '#fff'; subtabMerge.style.boxShadow = '0 0 10px #ff0000';
@@ -1877,6 +1891,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     subtabUpgrade.addEventListener('click', () => {
+        returnAllForgeItemsToBalo();
         currentForgeMode = 'upgrade';
         subtabUpgrade.style.background = 'linear-gradient(90deg, transparent, #0055aa, transparent)';
         subtabUpgrade.style.borderColor = '#00aaff'; subtabUpgrade.style.color = '#fff'; subtabUpgrade.style.boxShadow = '0 0 10px #00aaff';
