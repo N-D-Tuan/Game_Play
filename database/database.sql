@@ -1,4 +1,15 @@
 -- ==========================================
+-- BẢNG 0: THÔNG TIN NGƯỜI CHƠI (PLAYERS)
+-- ==========================================
+CREATE TABLE players (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL DEFAULT 'Player 1',
+    gold INT NOT NULL DEFAULT 0, -- Cột lưu trữ Vàng
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO players (id, username, gold) VALUES (1, 'Player 1', 50000);
+
+-- ==========================================
 -- BẢNG 1: DANH MỤC TRANG BỊ GỐC (MASTER DATA)
 -- ==========================================
 CREATE TABLE items (
@@ -63,7 +74,11 @@ INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon)
 VALUES 
 (212, 'Mảnh Trứng Thú Cưng', 'material', 'S', 0, 0, 0, 0, 'egg_piece.png'),
 (213, 'Trứng Thú Cưng', 'material', 'S', 0, 0, 0, 0, 'egg.png');
-
+INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
+VALUES
+(214, 'Huyết Thạch', 'material', 'B', 0, 0, 0, 0, 'bloodstone.png'),
+(215, 'Hộ Thể Phù', 'material', 'A', 0, 0, 0, 0, 'charm_normal.png'),
+(216, 'Thánh Hộ Phù', 'material', 'S', 0, 0, 0, 0, 'charm_holy.png');
 -- ==========================================
 -- BẢNG 2: TÚI ĐỒ CỦA NGƯỜI CHƠI (INVENTORY)
 -- ==========================================
@@ -76,7 +91,7 @@ CREATE TABLE player_items (
     
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 );
-
+ALTER TABLE player_items ADD COLUMN upgrade_level INT NOT NULL DEFAULT 0;
 -- ==========================================
 -- BẢNG 3: PET
 -- ==========================================
@@ -574,6 +589,7 @@ INSERT INTO player_items (id, player_id, item_id, is_equipped) VALUES
 (222,1,133,0), (223,1,133,0), (224,1,133,0), (225,1,133,0), (226,1,133,0), (227,1,133,0), (228,1,133,0),
 (229,1,133,0), (230,1,133,0), (231,1,133,0);
 
+-- Mảnh trứng
 INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
 (1, 212, 0),
 (1, 212, 0),
@@ -585,5 +601,55 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 212, 0),
 (1, 212, 0),
 (1, 212, 0);
--- 1 Trứng thú cưng (ID: 213)
-INSERT INTO player_items (player_id, item_id, is_equipped) VALUES (1, 213, 0);
+
+-- Trứng thú cưng
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0),
+(1, 213, 0);
+
+-- Huyết thạch
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0),
+(1, 214, 0);
+
+-- Hộ thể phù
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0),
+(1, 215, 0);
+
+-- Thánh hộ phù
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0),
+(1, 216, 0);

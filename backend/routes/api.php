@@ -4,11 +4,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\PetController;
+use App\Http\Controllers\Api\PlayerController;
+
+Route::get('/players/{id}', [PlayerController::class, 'show']);
 
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
 Route::post('/equipment/toggle', [InventoryController::class, 'toggleEquip']);
 Route::post('/forge/merge', [InventoryController::class, 'forge']);
 Route::post('/campaign/save-loot', [InventoryController::class, 'saveLoot']);
+Route::post('/forge/upgrade', [InventoryController::class, 'upgradeItem']);
 
 Route::prefix('pets')->group(function () {
     Route::get('/{playerId}', [PetController::class, 'getPlayerPets']);

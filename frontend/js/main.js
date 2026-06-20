@@ -13,6 +13,59 @@ window.PET_SKILL_DATA = PET_SKILL_DATA;
 document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem('playerId', '1');
 
+    // ==========================================
+    // QUẢN LÝ TIỀN TỆ (VÀNG)
+    // ==========================================
+    window.currentGold = 0;
+    const goldText = document.getElementById('player-gold');
+
+    // Hàm tạo hiệu ứng nhảy số (Chạy từ số cũ lên số mới)
+    window.animateGoldValue = function(start, end, duration = 800) {
+        let startTime = null;
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // Hàm easeOutQuad để số chạy chậm dần về cuối
+            const easeProgress = progress * (2 - progress); 
+            const currentVal = Math.floor(start + (end - start) * easeProgress);
+            
+            // Format số có dấu phẩy (VD: 50,000)
+            goldText.innerText = currentVal.toLocaleString('en-US');
+            
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            } else {
+                goldText.innerText = end.toLocaleString('en-US');
+            }
+        };
+        window.requestAnimationFrame(step);
+    };
+
+    // Hàm gọi API lấy thông tin người chơi (Bao gồm Vàng)
+    window.fetchPlayerData = async function() {
+        let playerId = localStorage.getItem('playerId');
+        if (!playerId) return;
+
+        try {
+            // Giả sử Backend của bạn có API này để trả về thông tin player
+            const response = await fetch(`http://127.0.0.1:8000/api/players/${playerId}`);
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                let newGold = data.player.gold;
+                // Gọi hiệu ứng nhảy số từ số vàng hiện tại lên số Vàng mới
+                window.animateGoldValue(window.currentGold, newGold);
+                window.currentGold = newGold; // Cập nhật lại biến lưu trữ
+            }
+        } catch (error) {
+            console.error("Lỗi khi tải thông tin người chơi:", error);
+        }
+    };
+
+    // Gọi hàm fetch ngay khi load xong game
+    window.fetchPlayerData();
+    // ==========================================
+
     const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
     const btnPractice = document.getElementById('btn-practice');
@@ -63,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const invGrid = document.getElementById('inventory-grid');
     const invSearch = document.getElementById('inv-search');
     const invSort = document.getElementById('inv-sort');
+    const invFilter = document.getElementById('inv-filter');
     
     // Nút phân trang
     const btnPrevPage = document.getElementById('btn-prev-page');
@@ -84,6 +138,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let currentTab = 'equip';
     let forgeItems = [];
+
+    let currentForgeMode = 'merge'; // 'merge' hoặc 'upgrade'
+    let upgradeItem = null;
+
+    // Dữ liệu cường hóa
+    const UPGRADE_RATES = [100, 95, 90, 80, 60, 40, 30, 20, 10, 5];
+    const UPGRADE_COSTS = [
+        { gold: 1000, blood: 1 }, { gold: 2500, blood: 2 }, { gold: 5000, blood: 3 },
+        { gold: 10000, blood: 5 }, { gold: 20000, blood: 8 }, { gold: 35000, blood: 12 },
+        { gold: 55000, blood: 15 }, { gold: 100000, blood: 20 }, { gold: 250000, blood: 30 }, { gold: 500000, blood: 50 }
+    ];
+
+    function getUpgradeColor(level) {
+        if (level >= 8) return '#ffd700'; // Vàng
+        if (level >= 5) return '#c0c0c0'; // Bạc
+        if (level >= 1) return '#cd7f32'; // Đồng
+        return '#000000';
+    }
 
     if (tabPetBtn) {
         tabPetBtn.addEventListener('click', () => {
@@ -182,9 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     slot.removeAttribute('data-tooltip');
                 });
 
-                // Mảng tạm chứa tất cả các mảnh trứng
-                let eggs = [];
-                let eggPieces = [];
+                let materialsMap = {};
                 let otherItems = [];
 
                 // Phân loại đồ Backend trả về
@@ -194,50 +264,98 @@ document.addEventListener("DOMContentLoaded", () => {
                         id: item.id, // ID của player_items (độc nhất)
                         item_id: item.item_id, // ID gốc
                         name: item.name,
-                        slot: item.slot,
+                        slot: item.slot || item.type,
                         rarity: item.rarity,
                         stats: item.stats,
-                        icon: item.icon
+                        icon: item.icon,
+                        upgrade_level: item.upgrade_level || 0
                     };
+
+                    if (frontendItem.upgrade_level > 0) {
+                        const STAT_MULTIPLIERS = {
+                            1: 1.1,   // Cấp +1
+                            2: 1.2,   // Cấp +2
+                            3: 1.3,   // Cấp +3
+                            4: 1.4,   // Cấp +4
+                            5: 1.6,   // Cấp +5
+                            6: 1.7,   // Cấp +6
+                            7: 1.9,   // Cấp +7
+                            8: 2.2,   // Cấp +8
+                            9: 2.5,   // Cấp +9 
+                            10: 3     // Cấp +10
+                        };
+
+                        let statMultiplier = STAT_MULTIPLIERS[frontendItem.upgrade_level] || 1;
+                        
+                        for (let statKey in frontendItem.stats) {
+                            let baseValue = frontendItem.stats[statKey];
+                            frontendItem.stats[statKey] = Math.round(baseValue * statMultiplier);
+                        }
+                    }
 
                     if (item.is_equipped == 1) {
                         equippedItems[frontendItem.slot] = frontendItem;
                         
-                        // Vẽ trực tiếp lên nhân vật
-                        let slotDiv = document.getElementById(`slot-${frontendItem.slot}`);
-                        let textShadow = frontendItem.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
                         // Đổi sang dùng thẻ img
                         let imagePath = `../assets/items/${frontendItem.icon}`;
-                        if (frontendItem.item_id === 212 || frontendItem.item_id === 213) {
-                            imagePath = `../assets/pets/egg/${frontendItem.icon}`;
-                        }
+
+                        // Vẽ trực tiếp lên nhân vật
+                        let slotDiv = document.getElementById(`slot-${frontendItem.slot}`);
+                        let itemColor = RARITY_CONFIG[item.rarity].color;
+                        let rankTextColor = itemColor;
+                        let textShadow = '';
+                        let plusText = '';
+
+                        // Chỉ đổi màu con số +X, giữ nguyên màu viền trắng cho bậc S
+                        if (item.rarity === 'S') {
+                            let lvl = item.upgrade_level || 0;
+                            let textColor = getUpgradeColor(lvl); // Gọi màu cho riêng chữ
+                            
+                            if (lvl > 0) {
+                                plusText = `<span style="position: absolute; bottom: 15px; right: 4px; font-size: 13px; color:${textColor}; font-weight:bold; text-shadow: 1px 1px 2px #000;">+${lvl}</span>`;
+                            }
+                            
+                            textShadow = 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;';
+                            itemColor = '#ffffff';
+                            rankTextColor = '#000000';
+                        }                                              
 
                         slotDiv.innerHTML = `<img src="${imagePath}" alt="${frontendItem.name}" style="width: 40px; height: 40px; object-fit: contain;">
-                                            <span class="item-rank" style="color: ${RARITY_CONFIG[frontendItem.rarity].color}; ${textShadow}">${frontendItem.rarity}</span>`;
-                        slotDiv.style.borderColor = RARITY_CONFIG[frontendItem.rarity].color;
+                                            <span class="item-rank" style="color: ${rankTextColor}; ${textShadow}">${frontendItem.rarity}</span>
+                                            ${plusText}`;
+                        slotDiv.style.borderColor = itemColor;
                         slotDiv.setAttribute('data-tooltip', buildTooltip(frontendItem));
                         if(frontendItem.rarity === 'S') slotDiv.style.boxShadow = `0 0 10px #ffffff`;
                     } else {
-                        // Tách thành 3 nhóm riêng biệt
-                        if (frontendItem.item_id === 213) {
-                            eggs.push(frontendItem);
-                        } else if (frontendItem.item_id === 212) {
-                            eggPieces.push(frontendItem);
+                        // ==========================================
+                        // TÁCH NGUYÊN LIỆU VÀ TRANG BỊ
+                        // ==========================================
+                        if (frontendItem.slot === 'material') {
+                            if (!materialsMap[frontendItem.item_id]) materialsMap[frontendItem.item_id] = [];
+                            materialsMap[frontendItem.item_id].push(frontendItem);
                         } else {
                             otherItems.push(frontendItem); 
                         }
                     }
                 });
 
-                // GOM NHÓM MẢNH TRỨNG THÀNH TỪNG Ô TỐI ĐA 50 MẢNH
-                while (eggPieces.length > 0) {
-                    let chunk = eggPieces.splice(0, 50); // Cắt 50 phần tử đầu tiên
-                    let stackItem = { ...chunk[0] };     // Lấy thông tin của 1 mảnh làm đại diện
-                    stackItem.quantity = chunk.length;   // Gắn thêm thuộc tính số lượng (Từ 1 đến 50)
-                    eggs.push(stackItem);      // Nhét lên đầu balo cho dễ nhìn
+                let groupedMaterials = [];
+
+                for (let itemId in materialsMap) {
+                    let itemsOfThisType = materialsMap[itemId];
+                    while (itemsOfThisType.length > 0) {
+                        let chunk = itemsOfThisType.splice(0, 50); // Cắt 50 phần tử
+                        let stackItem = { ...chunk[0] };     // Lấy 1 món làm đại diện hiển thị
+                        stackItem.quantity = chunk.length;   // Gắn số lượng (1 đến 50)
+                        
+                        // Lưu mảng ID gốc để sau này API trừ vật phẩm có thể trừ chính xác
+                        stackItem.stacked_ids = chunk.map(i => i.id); 
+                        
+                        groupedMaterials.push(stackItem);
+                    }
                 }
 
-                myInventory = [...eggs, ...eggPieces, ...otherItems];
+                myInventory = [...groupedMaterials, ...otherItems];
 
                 // Cập nhật lại UI
                 updateStatsUI();
@@ -372,6 +490,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // TẠO TOOLTIP THỐNG NHẤT
     function buildTooltip(item) {
+        let upgradeText = (item.upgrade_level && item.upgrade_level > 0) ? ` +${item.upgrade_level}` : '';
+        
+        let html = `[Bậc ${item.rarity}] ${item.name.toUpperCase()}${upgradeText}\n`;
+
         let tooltip = `[${RARITY_CONFIG[item.rarity].name}] ${item.name.toUpperCase()}\nPhẩm chất: Bậc ${item.rarity}\n-------------------\n`;
         for(let stat in item.stats) {
             if(STAT_NAMES[stat]) {
@@ -400,7 +522,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // DOUBLE CLICK ĐỂ THÁO TRANG BỊ
     document.querySelectorAll('.equip-slot').forEach(slotDiv => {
-        slotDiv.addEventListener('dblclick', async () => {
+        slotDiv.addEventListener('click', async () => {
             let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
             if (isCampaignActive) {
                 showDarkFantasyAlert("Không thể tháo trang bị khi đang Vượt Ải!");
@@ -420,8 +542,20 @@ document.addEventListener("DOMContentLoaded", () => {
         invGrid.innerHTML = ''; 
         let keyword = invSearch.value.toLowerCase();
         let sortMode = invSort.value;
+        let filterMode = invFilter ? invFilter.value : 'all';
 
-        let filteredItems = myInventory.filter(item => item.name.toLowerCase().includes(keyword));
+        let filteredItems = myInventory.filter(item => {
+            let matchSearch = item.name.toLowerCase().includes(keyword);
+            let matchFilter = true;
+            
+            if (filterMode === 'equip') {
+                matchFilter = item.slot !== 'material'; // Bỏ qua nguyên liệu
+            } else if (filterMode === 'material') {
+                matchFilter = item.slot === 'material'; // Chỉ lấy nguyên liệu
+            }
+
+            return matchSearch && matchFilter;
+        });
 
         filteredItems.sort((a, b) => {
             if (sortMode === 'name') return a.name.localeCompare(b.name);
@@ -445,13 +579,27 @@ document.addEventListener("DOMContentLoaded", () => {
             div.className = 'inv-item';
 
             // Tạo hiệu ứng viền trắng phát sáng độc quyền cho bậc S
-            let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+            let itemColor = RARITY_CONFIG[item.rarity].color;
+            let rankTextColor = itemColor;
+            let textShadow = '';
+            let plusText = '';
+
+            // Chỉ đổi màu con số +X, giữ nguyên màu viền trắng cho bậc S
+            if (item.rarity === 'S') {
+                let lvl = item.upgrade_level || 0;
+                let textColor = getUpgradeColor(lvl); // Gọi màu cho riêng chữ
+                
+                if (lvl > 0) {
+                    plusText = `<span style="position: absolute; bottom: 15px; right: 4px; font-size: 13px; color:${textColor}; font-weight:bold; text-shadow: 1px 1px 2px #000;">+${lvl}</span>`;
+                }
+                
+                textShadow = 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;';
+                itemColor = '#ffffff';
+                rankTextColor = '#000000';
+            }
             
             // Đổi sang dùng thẻ img
             let imagePath = `../assets/items/${item.icon}`;
-            if (item.item_id === 212 || item.item_id === 213) {
-                imagePath = `../assets/pets/egg/${item.icon}`;
-            }
 
             // ==========================================
             // THÊM LOGIC HIỂN THỊ NHÃN SỐ LƯỢNG
@@ -463,11 +611,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             div.innerHTML = `${qtyHtml}
                             <img src="${imagePath}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: contain;">
-                            <span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
+                            <span class="item-rank" style="color: ${rankTextColor}; ${textShadow}">${item.rarity}</span>
+                            ${plusText}`;
             
             div.setAttribute('data-tooltip', buildTooltip(item));
-            div.style.borderColor = rankInfo.color;
-            if(item.rarity === 'S') { div.style.boxShadow = `0 0 10px #ffffff`; div.style.borderColor = '#ffffff'; }
+            div.style.borderColor = itemColor;
+            if(item.rarity === 'S') { div.style.boxShadow = `0 0 10px #ffffff`; }
 
             // SỰ KIỆN CLICK ĐỘNG (Dựa theo Tab hiện tại)
             div.addEventListener('click', () => {
@@ -504,7 +653,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (currentTab === 'equip') {
                     equipItem(item);
                 } else if (currentTab === 'forge') {
-                    addToForge(item);
+                    if (currentForgeMode === 'merge') {
+                        addToForge(item);
+                    } else if (currentForgeMode === 'upgrade') {
+                        // Logic bỏ vào đe cường hóa
+                        if (item.rarity !== 'S' || item.slot === 'material') {
+                            return showDarkFantasyAlert("Chỉ trang bị Bậc S mới có thể Cường Hóa!");
+                        }
+                        if (window.game && window.game.scene.isActive('CampaignScene')) {
+                            return showDarkFantasyAlert("Không thể cường hóa khi đang vượt ải!");
+                        }
+                        if ((item.upgrade_level || 0) >= 10) {
+                            return showDarkFantasyAlert("Trang bị đã đạt cấp tối thượng (+10)!");
+                        }
+                        
+                        // Đẩy đồ cũ (nếu có) về túi, đưa đồ mới lên
+                        if (upgradeItem) myInventory.push(upgradeItem);
+                        upgradeItem = item;
+                        myInventory = myInventory.filter(i => i.id !== item.id);
+                        
+                        renderUpgradeUI();
+                        renderInventory();
+                    }
                 }
             });
 
@@ -518,7 +688,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     // Không cho ăn mảnh trứng (212) hoặc trứng (213)
-                    if (item.item_id === 212 || item.item_id === 213) return; 
+                    if (item.slot === 'material' || item.type === 'material' || item.item_id === 212 || item.item_id === 213){
+                        showDarkFantasyAlert("Không thể cho thú cưng ăn vật phẩm này!");
+                        return;
+                    }
 
                     if (!currentSelectedPet) {
                         showDarkFantasyAlert("Vui lòng chọn Thú cưng trước!");
@@ -559,7 +732,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     invSearch.addEventListener('input', () => { currentPage = 1; renderInventory(); });
     invSort.addEventListener('change', () => { currentPage = 1; renderInventory(); });
-    
+    if(invFilter) invFilter.addEventListener('change', () => { currentPage = 1; renderInventory(); });
+
     // Nút điều khiển Lật trang
     btnPrevPage.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderInventory(); } });
     btnNextPage.addEventListener('click', () => { currentPage++; renderInventory(); });
@@ -625,13 +799,31 @@ document.addEventListener("DOMContentLoaded", () => {
             if (item) {
                 // Có đồ trong ô này
                 let rankInfo = RARITY_CONFIG[item.rarity];
-                let textShadow = item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
+                let itemColor = RARITY_CONFIG[item.rarity].color;
+                let rankTextColor = itemColor;
+                let textShadow = '';
+                let plusText = '';
+
+                // Chỉ đổi màu con số +X, giữ nguyên màu viền trắng cho bậc S
+                if (item.rarity === 'S') {
+                    let lvl = item.upgrade_level || 0;
+                    let textColor = getUpgradeColor(lvl); // Gọi màu cho riêng chữ
+                    
+                    if (lvl > 0) {
+                        plusText = `<span style="position: absolute; bottom: 15px; right: 4px; font-size: 13px; color:${textColor}; font-weight:bold; text-shadow: 1px 1px 2px #000;">+${lvl}</span>`;
+                    }
+                    
+                    textShadow = 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;';
+                    itemColor = '#ffffff';
+                    rankTextColor = '#000000';
+                }
                 
                 // Đổi sang dùng thẻ img
                 let imagePath = `../assets/items/${item.icon}`;
                 slot.innerHTML = `<img src="${imagePath}" alt="${item.name}" style="width: 40px; height: 40px; object-fit: contain;">
-                                <span class="item-rank" style="color: ${rankInfo.color}; ${textShadow}">${item.rarity}</span>`;
-                slot.style.borderColor = rankInfo.color;
+                                <span class="item-rank" style="color: ${rankTextColor}; ${textShadow}">${item.rarity}</span>
+                                ${plusText}`;
+                slot.style.borderColor = itemColor;
                 slot.setAttribute('data-tooltip', buildTooltip(item));
                 if(item.rarity === 'S') slot.style.boxShadow = `0 0 10px #ffffff`; else slot.style.boxShadow = 'none';
 
@@ -653,6 +845,105 @@ document.addEventListener("DOMContentLoaded", () => {
             resultSlot.style.borderColor = '#ffcc00';
             resultSlot.style.boxShadow = 'none';
             resultSlot.removeAttribute('data-tooltip');
+        }
+    }
+
+    function renderUpgradeUI() {
+        const slot = document.getElementById('upgrade-slot');
+        
+        let bloodstones = myInventory.filter(i => i.item_id === 214).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        let normalCharms = myInventory.filter(i => i.item_id === 215).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        let holyCharms = myInventory.filter(i => i.item_id === 216).reduce((sum, item) => sum + (item.quantity || 1), 0);
+
+        document.getElementById('count-normal-charm').innerText = normalCharms;
+        document.getElementById('count-holy-charm').innerText = holyCharms;
+
+        const normalCharmContainer = document.getElementById('charm-normal-container');
+        const holyCharmContainer = document.getElementById('charm-holy-container');
+
+        if (upgradeItem) {
+            let lvl = upgradeItem.upgrade_level || 0;
+            let color = getUpgradeColor(lvl);
+            
+            // Chỉ hiển thị cái Tag cấp độ khi nó > 0
+            let levelBadge = '';
+            if (lvl > 0) {
+                levelBadge = `<span style="position: absolute; bottom: -10px; right: -5px; background:#000; padding:2px 5px; border-radius:4px; font-size:12px; color:${color}; font-weight:bold; border:1px solid ${color}; box-shadow: 0 0 5px ${color};">+${lvl}</span>`;
+            }
+
+            slot.innerHTML = `
+                <img src="../assets/items/${upgradeItem.icon}" style="width: 60px; height: 60px; object-fit: contain;">
+                ${levelBadge}
+            `;
+            // Viền của đồ để trên Đe cũng phải là màu trắng phát sáng
+            slot.style.borderColor = '#ffffff';
+            slot.style.boxShadow = `0 0 15px #ffffff`;
+
+            let warnTxt = document.getElementById('upgrade-warning');
+
+            if (lvl >= 10) {
+                document.getElementById('upgrade-rate-text').innerText = 'MAX';
+                document.getElementById('upgrade-rate-text').style.color = '#ffd700';
+                document.getElementById('upgrade-cost-gold').innerText = '0';
+                document.getElementById('upgrade-cost-blood').innerText = `${bloodstones} / 0`;
+                document.getElementById('upgrade-cost-blood').style.color = '#00ff00';
+                
+                warnTxt.innerText = "Trang bị đã đạt Cấp Tối Thượng!";
+                warnTxt.style.color = "#ffcc00";
+
+                // Ẩn tất cả các loại Bùa
+                normalCharmContainer.style.display = 'none';
+                holyCharmContainer.style.display = 'none';
+                document.getElementById('use-normal-charm').checked = false;
+                document.getElementById('use-holy-charm').checked = false;
+            } 
+            else {
+                let req = UPGRADE_COSTS[lvl];
+                document.getElementById('upgrade-rate-text').innerText = UPGRADE_RATES[lvl] + '%';
+                document.getElementById('upgrade-rate-text').style.color = UPGRADE_RATES[lvl] >= 80 ? '#00ff00' : (UPGRADE_RATES[lvl] >= 40 ? '#ffaa00' : '#ff0000');
+                
+                document.getElementById('upgrade-cost-gold').innerText = req.gold.toLocaleString();
+                document.getElementById('upgrade-cost-blood').innerText = `${bloodstones} / ${req.blood}`;
+                document.getElementById('upgrade-cost-blood').style.color = bloodstones >= req.blood ? '#00ff00' : '#ff3333';
+
+                warnTxt.style.color = "#ff5555";
+                if (lvl >= 7) warnTxt.innerText = "CẢNH BÁO: Thất bại sẽ bị tụt về +0!";
+                else if (lvl >= 5) warnTxt.innerText = "CẢNH BÁO: Thất bại sẽ bị tụt 1 cấp!";
+                else warnTxt.innerText = "An toàn: Thất bại không bị tụt cấp.";
+
+                if (lvl < 7) {
+                    normalCharmContainer.style.display = 'flex';
+                    holyCharmContainer.style.display = 'none';
+                    document.getElementById('use-holy-charm').checked = false;
+                } else {
+                    normalCharmContainer.style.display = 'none';
+                    holyCharmContainer.style.display = 'flex';
+                    document.getElementById('use-normal-charm').checked = false;
+                }
+            }
+
+            slot.onclick = () => {
+                myInventory.push(upgradeItem);
+                upgradeItem = null;
+                renderUpgradeUI();
+                renderInventory();
+            };
+        } else {
+            slot.innerHTML = '<span class="slot-label" style="opacity: 0.5;">Trống</span>';
+            slot.style.borderColor = '#555';
+            slot.style.boxShadow = 'none';
+            slot.onclick = null;
+
+            document.getElementById('upgrade-rate-text').innerText = '0%';
+            document.getElementById('upgrade-cost-gold').innerText = '0';
+            document.getElementById('upgrade-cost-blood').innerText = `${bloodstones} / 0`;
+            document.getElementById('upgrade-warning').innerText = "";
+            
+            // Ẩn toàn bộ Bùa khi không có đồ trên Đe
+            normalCharmContainer.style.display = 'none';
+            holyCharmContainer.style.display = 'none';
+            document.getElementById('use-normal-charm').checked = false;
+            document.getElementById('use-holy-charm').checked = false;
         }
     }
 
@@ -1260,11 +1551,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     needsLoading = true;
                 }
                 if (!activeScene.textures.exists('egg')) {
-                    activeScene.load.image('egg', '../assets/pets/egg/egg.png');
+                    activeScene.load.image('egg', '../assets/items/egg.png');
                     needsLoading = true;
                 }
                 if (!activeScene.textures.exists('crack')) {
-                    activeScene.load.image('crack', '../assets/pets/egg/crack.png');
+                    activeScene.load.image('crack', '../assets/items/crack.png');
                     needsLoading = true;
                 }
 
@@ -1406,7 +1697,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 1. Quét Balo lấy ra các trang bị Bậc F và E (Không tính đồ đang mặc, không tính trứng)
         let trashItems = myInventory.filter(item => 
-            (item.rarity === 'F' || item.rarity === 'E') &&  
+            (item.rarity === 'F' || item.rarity === 'E') &&
+            item.slot !== 'material' && 
+            item.type !== 'material' &&
             item.item_id !== 212 && item.item_id !== 213
         );
 
@@ -1493,6 +1786,161 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // NHỚ KHỞI ĐỘNG LOAD PET CÙNG VỚI INVENTORY KHI MỞ GAME
+    const subtabMerge = document.getElementById('subtab-merge');
+    const subtabUpgrade = document.getElementById('subtab-upgrade');
+    const contentMerge = document.getElementById('forge-merge-content');
+    const contentUpgrade = document.getElementById('forge-upgrade-content');
+
+    subtabMerge.addEventListener('click', () => {
+        currentForgeMode = 'merge';
+        subtabMerge.style.background = 'linear-gradient(90deg, transparent, #8b0000, transparent)';
+        subtabMerge.style.borderColor = '#ff0000'; subtabMerge.style.color = '#fff'; subtabMerge.style.boxShadow = '0 0 10px #ff0000';
+        subtabUpgrade.style.background = 'transparent'; subtabUpgrade.style.borderColor = '#555'; subtabUpgrade.style.color = '#888'; subtabUpgrade.style.boxShadow = 'none';
+        contentMerge.style.display = 'flex'; contentUpgrade.style.display = 'none';
+    });
+
+    subtabUpgrade.addEventListener('click', () => {
+        currentForgeMode = 'upgrade';
+        subtabUpgrade.style.background = 'linear-gradient(90deg, transparent, #0055aa, transparent)';
+        subtabUpgrade.style.borderColor = '#00aaff'; subtabUpgrade.style.color = '#fff'; subtabUpgrade.style.boxShadow = '0 0 10px #00aaff';
+        subtabMerge.style.background = 'transparent'; subtabMerge.style.borderColor = '#555'; subtabMerge.style.color = '#888'; subtabMerge.style.boxShadow = 'none';
+        contentMerge.style.display = 'none'; contentUpgrade.style.display = 'flex';
+        renderUpgradeUI();
+    });
+
+    // ==========================================
+    // HÀM TẠO HIỆU ỨNG KHI CƯỜNG HÓA THÀNH CÔNG
+    // ==========================================
+    function playUpgradeEffect(newLevel) {
+        const slot = document.getElementById('upgrade-slot');
+        if (!slot) return;
+
+        // Tạo 1 lớp Flash sáng lóa chớp lên màn hình
+        const flash = document.createElement('div');
+        flash.style.position = 'fixed';
+        flash.style.top = '0'; flash.style.left = '0';
+        flash.style.width = '100vw'; flash.style.height = '100vh';
+        flash.style.pointerEvents = 'none';
+        flash.style.zIndex = '9999999';
+        document.body.appendChild(flash);
+
+        // Tạo CSS rung lắc (nếu chưa có)
+        if (!document.getElementById('upgrade-keyframes')) {
+            const style = document.createElement('style');
+            style.id = 'upgrade-keyframes';
+            style.innerHTML = `
+                @keyframes shake-light { 0% { transform: translate(1px, 1px) } 50% { transform: translate(-1px, -1px) } 100% { transform: translate(1px, -1px) } }
+                @keyframes shake-heavy { 0% { transform: translate(3px, 2px) } 25% { transform: translate(-3px, -2px) } 50% { transform: translate(0px, 4px) } 75% { transform: translate(-4px, 1px) } 100% { transform: translate(3px, -3px) } }
+                @keyframes shake-extreme { 0% { transform: translate(6px, 4px) } 20% { transform: translate(-6px, -4px) } 40% { transform: translate(-2px, 8px) } 60% { transform: translate(-8px, 2px) } 80% { transform: translate(6px, -6px) } 100% { transform: translate(-4px, 4px) } }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const invContainer = document.querySelector('.inventory-container');
+
+        // PHÂN LOẠI HIỆU ỨNG THEO CẤP
+        if (newLevel >= 5 && newLevel <= 7) {
+            // 1. MỐC BẠC (+5, +6, +7): Chớp sáng ánh Bạc, rung nhẹ ô trang bị
+            flash.style.background = 'radial-gradient(circle, rgba(200,200,200,0.8) 0%, transparent 50%)';
+            flash.style.transition = 'opacity 0.5s ease-out';
+            slot.style.animation = 'shake-light 0.1s infinite';
+            
+            setTimeout(() => { flash.style.opacity = '0'; }, 50);
+            setTimeout(() => { flash.remove(); slot.style.animation = ''; }, 500);
+        } 
+        else if (newLevel >= 8 && newLevel <= 9) {
+            // 2. MỐC VÀNG (+8, +9): Chớp sáng Vàng rực, rung mạnh toàn bộ Bảng Kho Đồ
+            flash.style.background = 'radial-gradient(circle, rgba(255,215,0,0.9) 0%, transparent 60%)';
+            flash.style.transition = 'opacity 0.8s ease-out';
+            if (invContainer) invContainer.style.animation = 'shake-heavy 0.1s infinite';
+            
+            setTimeout(() => { flash.style.opacity = '0'; }, 50);
+            setTimeout(() => { flash.remove(); if(invContainer) invContainer.style.animation = ''; }, 800);
+        } 
+        else if (newLevel === 10) {
+            // 3. MỐC TỐI THƯỢNG (+10): Sáng lóa trắng xóa, rồi chuyển sang Đỏ rực, rung giật toàn Màn Hình
+            flash.style.background = 'rgba(255, 255, 255, 1)'; // Chớp trắng
+            flash.style.transition = 'background 0.3s ease, opacity 1.5s ease-out';
+            document.body.style.animation = 'shake-extreme 0.05s infinite'; // Rung cả trình duyệt
+            
+            setTimeout(() => { 
+                // Chuyển sang hào quang Huyết - Vàng
+                flash.style.background = 'radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,215,0,0.6) 40%, transparent 100%)'; 
+                flash.style.opacity = '0'; 
+            }, 200);
+            setTimeout(() => { flash.remove(); document.body.style.animation = ''; }, 1500);
+        }
+    }
+
+    // ----------------------------------------------------
+    // SỰ KIỆN: BẤM NÚT CƯỜNG HÓA TRANG BỊ
+    // ----------------------------------------------------
+    const btnUpgradeSubmit = document.getElementById('btn-upgrade-submit');
+    if (btnUpgradeSubmit) {
+        btnUpgradeSubmit.addEventListener('click', async () => {
+            if (!upgradeItem) {
+                return showDarkFantasyAlert("Vui lòng kéo trang bị Bậc S vào Lò rèn!");
+            }
+
+            let playerId = localStorage.getItem('playerId') || 1;
+            let useNormal = document.getElementById('use-normal-charm').checked;
+            let useHoly = document.getElementById('use-holy-charm').checked;
+
+            btnUpgradeSubmit.disabled = true;
+            btnUpgradeSubmit.innerText = "ĐANG ĐẬP...";
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/forge/upgrade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        player_id: playerId,
+                        player_item_id: upgradeItem.id, // Chú ý: Gửi id (duy nhất) chứ ko phải item_id
+                        use_normal_charm: useNormal,
+                        use_holy_charm: useHoly
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Hiển thị kết quả Lên/Xuống cấp
+                showDarkFantasyAlert(data.message);
+                
+                if (data.status !== 'error') {
+                    let oldLevel = upgradeItem.upgrade_level || 0;
+                    let isSuccess = data.status === 'success';
+                    let newLevel = oldLevel + 1;
+
+                    if (isSuccess && newLevel >= 5) {
+                        playUpgradeEffect(newLevel);
+                        
+                        upgradeItem.upgrade_level = newLevel;
+                        renderUpgradeUI();
+
+                        setTimeout(() => {
+                            upgradeItem = null;
+                            renderUpgradeUI();
+                            if (typeof window.fetchPlayerData === 'function') window.fetchPlayerData();
+                            loadInventoryFromServer();
+                        }, 1200);
+                    } 
+                    else {
+                        upgradeItem = null;
+                        renderUpgradeUI();
+                        if (typeof window.fetchPlayerData === 'function') window.fetchPlayerData();
+                        loadInventoryFromServer();
+                    }
+                }
+            } catch (error) {
+                console.error("Lỗi:", error);
+                showDarkFantasyAlert("Lỗi hệ thống khi Cường hóa!");
+            } finally {
+                // Mở khóa nút trở lại
+                btnUpgradeSubmit.disabled = false;
+                btnUpgradeSubmit.innerText = "CƯỜNG HÓA";
+            }
+        });
+    }
+
     loadPetsFromServer();
 });
