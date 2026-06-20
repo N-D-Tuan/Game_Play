@@ -348,7 +348,7 @@ body, html {
 #char-preview-sprite {
     width: 60px; height: 89px;
     background: url('../assets/player_spritesheet.png') no-repeat;
-    background-position: 0px 0px; 
+    background-position: 5px 0px; 
     transform: scale(2); 
     image-rendering: pixelated; 
 }
@@ -671,4 +671,10 @@ body, html {
 #view-pet .equip-slot[data-tooltip]:hover::after {
     top: auto;
     bottom: 120%;
+}
+
+@keyframes s-tier-breathing {
+    0%   { box-shadow: 0 0 5px #ffffff; border-color: #aaaaaa; }
+    50%  { box-shadow: 0 0 20px #ffffff, inset 0 0 10px #ffffff; border-color: #ffffff; }
+    100% { box-shadow: 0 0 5px #ffffff; border-color: #aaaaaa; }
 }
