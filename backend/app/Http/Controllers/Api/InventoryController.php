@@ -45,7 +45,8 @@ class InventoryController extends Controller
                 'rarity' => $base->rarity,
                 'stats' => $stats,
                 'icon' => $base->icon,
-                'is_equipped' => $playerItem->is_equipped
+                'is_equipped' => $playerItem->is_equipped,
+                'upgrade_level' => $playerItem->upgrade_level
             ];
         })->filter();
 
@@ -270,5 +271,130 @@ class InventoryController extends Controller
             'message' => "Đã chuyển thành công {$savedItemsCount} chiến lợi phẩm vào Kho đồ!",
             'items'   => $savedItemsList
         ]);
+    }
+
+    public function upgradeItem(Request $request)
+    {
+        $playerId = $request->player_id;
+        $playerItemId = $request->player_item_id;
+        $useNormalCharm = $request->use_normal_charm;
+        $useHolyCharm = $request->use_holy_charm;
+
+        $UPGRADE_RATES = [100, 95, 90, 80, 60, 40, 30, 20, 10, 5];
+        $UPGRADE_COSTS = [
+            ['gold' => 1000, 'blood' => 1],     // Lên +1
+            ['gold' => 2500, 'blood' => 2],     // Lên +2
+            ['gold' => 5000, 'blood' => 3],     // Lên +3
+            ['gold' => 10000, 'blood' => 5],    // Lên +4
+            ['gold' => 20000, 'blood' => 8],    // Lên +5 (Rủi ro -1)
+            ['gold' => 35000, 'blood' => 12],   // Lên +6 (Rủi ro -1)
+            ['gold' => 55000, 'blood' => 15],   // Lên +7 (Rủi ro -1)
+            ['gold' => 100000, 'blood' => 20],  // Lên +8 (Tụt về 0)
+            ['gold' => 250000, 'blood' => 30],  // Lên +9 (Tụt về 0)
+            ['gold' => 500000, 'blood' => 50]   // Lên +10 (Tụt về 0)
+        ];
+
+        try {
+            // Khởi tạo Transaction (Bảo vệ dữ liệu)
+            DB::beginTransaction();
+
+            // 1. Kiểm tra Người chơi
+            $player = DB::table('players')->where('id', $playerId)->first();
+            if (!$player) return response()->json(['status' => 'error', 'message' => 'Người chơi không tồn tại!']);
+
+            // 2. Kiểm tra Trang bị
+            $playerItem = PlayerItem::with('item')->where('id', $playerItemId)->where('player_id', $playerId)->first();
+            if (!$playerItem || !$playerItem->item || $playerItem->item->rarity !== 'S') {
+                 return response()->json(['status' => 'error', 'message' => 'Trang bị không hợp lệ hoặc không phải Bậc S!']);
+            }
+
+            $currentLevel = $playerItem->upgrade_level ?? 0;
+            if ($currentLevel >= 10) {
+                 return response()->json(['status' => 'error', 'message' => 'Trang bị đã đạt Cấp Tối Thượng (+10)!']);
+            }
+
+            $cost = $UPGRADE_COSTS[$currentLevel];
+            
+            // 3. Kiểm tra Vàng
+            if ($player->gold < $cost['gold']) {
+                 return response()->json(['status' => 'error', 'message' => 'Không đủ Vàng để cường hóa!']);
+            }
+
+            // 4. Kiểm tra Huyết Thạch
+            $bloodstoneIds = PlayerItem::where('player_id', $playerId)->where('item_id', 214)->limit($cost['blood'])->pluck('id');
+            if (count($bloodstoneIds) < $cost['blood']) {
+                return response()->json(['status' => 'error', 'message' => 'Không đủ Huyết Thạch!']);
+            }
+
+            // 5. Kiểm tra logic Bùa
+            if ($useNormalCharm && $currentLevel >= 7) return response()->json(['status' => 'error', 'message' => 'Hộ Thể Phù chỉ dùng cho trang bị dưới +7!']);
+            if ($useHolyCharm && $currentLevel < 7) return response()->json(['status' => 'error', 'message' => 'Thánh Hộ Phù chỉ dùng cho trang bị từ +7 trở lên!']);
+
+            $normalCharmId = null;
+            if ($useNormalCharm) {
+                $normalCharmId = PlayerItem::where('player_id', $playerId)->where('item_id', 215)->value('id');
+                if (!$normalCharmId) return response()->json(['status' => 'error', 'message' => 'Không có Hộ Thể Phù trong túi!']);
+            }
+
+            $holyCharmId = null;
+            if ($useHolyCharm) {
+                $holyCharmId = PlayerItem::where('player_id', $playerId)->where('item_id', 216)->value('id');
+                if (!$holyCharmId) return response()->json(['status' => 'error', 'message' => 'Không có Thánh Hộ Phù trong túi!']);
+            }
+
+            // ==========================================
+            // BƯỚC THU PHÍ (TRỪ NGUYÊN LIỆU TRƯỚC KHI QUAY SỐ)
+            // ==========================================
+            DB::table('players')->where('id', $playerId)->decrement('gold', $cost['gold']); // Trừ vàng
+            PlayerItem::whereIn('id', $bloodstoneIds)->delete(); // Trừ Huyết Thạch
+            
+            if ($normalCharmId) PlayerItem::where('id', $normalCharmId)->delete(); // Trừ Bùa
+            if ($holyCharmId) PlayerItem::where('id', $holyCharmId)->delete(); // Trừ Thánh bùa
+
+            // ==========================================
+            // VẬN MỆNH CƯỜNG HÓA (RNG)
+            // ==========================================
+            $rate = $UPGRADE_RATES[$currentLevel];
+            $rand = rand(1, 100);
+            $success = $rand <= $rate;
+
+            $message = "";
+            $statusStr = "success";
+
+            if ($success) {
+                $playerItem->upgrade_level = $currentLevel + 1;
+                $playerItem->save();
+                $message = "Tuyệt vời! Cường hóa THÀNH CÔNG lên +" . ($currentLevel + 1) . "!";
+            } else {
+                $statusStr = "failed"; 
+                if ($useNormalCharm || $useHolyCharm) {
+                    $message = "Cường hóa thất bại! Nhờ có Bùa bảo hộ, trang bị không bị rớt cấp.";
+                } else {
+                    if ($currentLevel >= 7) {
+                        $playerItem->upgrade_level = 0;
+                        $playerItem->save();
+                        $message = "Thảm họa! Cường hóa XỊT. Trang bị đã TỤT THẲNG VỀ +0!";
+                    } elseif ($currentLevel >= 5) {
+                        $playerItem->upgrade_level = $currentLevel - 1;
+                        $playerItem->save();
+                        $message = "Cường hóa thất bại! Trang bị đã bị TỤT 1 CẤP xuống +" . ($currentLevel - 1) . "!";
+                    } else {
+                        $message = "Cường hóa thất bại! May mắn đây là vùng an toàn nên không rớt cấp.";
+                    }
+                }
+            }
+
+            // Lưu toàn bộ thay đổi vào Database
+            DB::commit();
+
+            return response()->json([
+                'status' => $statusStr,
+                'message' => $message
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => 'Lỗi máy chủ: ' . $e->getMessage()]);
+        }
     }
 }

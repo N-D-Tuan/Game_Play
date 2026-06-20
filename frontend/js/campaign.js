@@ -100,9 +100,9 @@ export class CampaignScene extends Phaser.Scene {
 
         this.load.image('random', '../assets/items/random.png');
 
-        this.load.image('egg', '../assets/pets/egg/egg.png');
-        this.load.image('crack', '../assets/pets/egg/crack.png');
-        this.load.image('egg_piece', '../assets/pets/egg/egg_piece.png');
+        this.load.image('egg', '../assets/items/egg.png');
+        this.load.image('crack', '../assets/items/crack.png');
+        this.load.image('egg_piece', '../assets/items/egg_piece.png');
 
         this.load.image('lock', '../assets/lock.png');
 

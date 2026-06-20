@@ -10,6 +10,11 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
+    <div id="gold-container" style="position: fixed; top: 15px; right: 20px; background: rgba(15, 15, 15, 0.85); border: 2px solid #ffd700; border-radius: 8px; padding: 5px 15px; display: flex; align-items: center; gap: 8px; z-index: 100000 !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);">
+        <img src="../assets/gold.png" alt="Gold" style="width: 30px; height: 30px; object-fit: contain;">
+        <span id="player-gold" style="color: #ffd700; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px #000; font-family: monospace;">0</span>
+    </div>
+
     <div id="home-screen">
         <div class="overlay-dark"></div>
         <h1 class="game-title">DARK FANTASY</h1>
@@ -84,7 +89,7 @@
                 <!-- 1. THANH TABS CHUYỂN ĐỔI -->
                 <div class="panel-tabs">
                     <button id="tab-equip-btn" class="panel-tab-btn active">Trang Bị</button>
-                    <button id="tab-forge-btn" class="panel-tab-btn">Ghép Đồ</button>
+                    <button id="tab-forge-btn" class="panel-tab-btn">Lò Rèn</button>
                     <button id="tab-pet-btn" class="panel-tab-btn">Thú Cưng</button>
                 </div>
 
@@ -137,33 +142,81 @@
                     </div>
                 </div>
                 
-                <!-- 3. VIEW: LÒ RÈN (GHÉP ĐỒ) -->
+                <!-- 3. VIEW: LÒ RÈN -->
                 <div id="view-forge" class="panel-view">
-                    <div class="char-header">
-                        <h3 style="color: #ff3333; text-shadow: 0 0 10px #ff0000;">LÒ RÈN HUYẾT THẠCH</h3>
-                    </div>
-                    
-                    <div class="forge-container">
-                        <!-- Vòng tròn ma thuật xoay bên dưới -->
-                        <div class="magic-circle"></div>
-                        
-                        <!-- Ô Trung tâm (Sản phẩm thành công) -->
-                        <div class="forge-center-slot" id="forge-result">?</div>
-                        
-                        <!-- 10 Ô nguyên liệu xếp vòng tròn nhờ CSS (Biến --i) -->
-                        <div class="forge-slot" style="--i:0;"></div>
-                        <div class="forge-slot" style="--i:1;"></div>
-                        <div class="forge-slot" style="--i:2;"></div>
-                        <div class="forge-slot" style="--i:3;"></div>
-                        <div class="forge-slot" style="--i:4;"></div>
-                        <div class="forge-slot" style="--i:5;"></div>
-                        <div class="forge-slot" style="--i:6;"></div>
-                        <div class="forge-slot" style="--i:7;"></div>
-                        <div class="forge-slot" style="--i:8;"></div>
-                        <div class="forge-slot" style="--i:9;"></div>
+
+                    <!-- Nút Gạt Chuyển Đổi -->
+                    <div style="display: flex; justify-content: center; gap: 10px; margin: 15px 0;">
+                        <button id="subtab-merge" class="forge-action-btn" style="width: auto; margin: 0; padding: 8px 20px; font-size: 16px; box-shadow: 0 0 10px #ff0000; border-color: #ff0000; color: #fff;">GHÉP ĐỒ</button>
+                        <button id="subtab-upgrade" class="forge-action-btn" style="width: auto; margin: 0; padding: 8px 20px; font-size: 16px; background: transparent; border-color: #555; color: #888; box-shadow: none;">CƯỜNG HÓA</button>
                     </div>
 
-                    <button id="btn-forge-submit" class="forge-action-btn">TIẾN HÀNH HIẾN TẾ</button>
+                    <!-- GIAO DIỆN GHÉP ĐỒ -->
+                    <div id="forge-merge-content" style="display: flex; flex-direction: column; flex-grow: 1;">
+                        <div class="forge-container">
+                            <!-- Vòng tròn ma thuật xoay bên dưới -->
+                            <div class="magic-circle"></div>
+                            
+                            <!-- Ô Trung tâm (Sản phẩm thành công) -->
+                            <div class="forge-center-slot" id="forge-result">?</div>
+                            
+                            <!-- 10 Ô nguyên liệu xếp vòng tròn nhờ CSS (Biến --i) -->
+                            <div class="forge-slot" style="--i:0;"></div>
+                            <div class="forge-slot" style="--i:1;"></div>
+                            <div class="forge-slot" style="--i:2;"></div>
+                            <div class="forge-slot" style="--i:3;"></div>
+                            <div class="forge-slot" style="--i:4;"></div>
+                            <div class="forge-slot" style="--i:5;"></div>
+                            <div class="forge-slot" style="--i:6;"></div>
+                            <div class="forge-slot" style="--i:7;"></div>
+                            <div class="forge-slot" style="--i:8;"></div>
+                            <div class="forge-slot" style="--i:9;"></div>
+                        </div>
+                        <button id="btn-forge-submit" class="forge-action-btn">TIẾN HÀNH HIẾN TẾ</button>
+                    </div>
+                    
+                    <!-- GIAO DIỆN CƯỜNG HÓA -->
+                    <div id="forge-upgrade-content" style="display: none; flex-direction: column; align-items: center; flex-grow: 1;">
+                        
+                        <!-- Ô đặt vũ khí -->
+                        <div style="position: relative; margin-top: 20px;">
+                            <div id="upgrade-slot" class="equip-slot" style="width: 80px; height: 80px; border-radius: 12px; border: 2px solid #555;">
+                                <span class="slot-label" style="opacity: 0.5;">Trống</span>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin tỉ lệ và chi phí -->
+                        <div style="background: transparent; border: none; border-radius: 8px; padding: 15px; width: 80%; margin-top: 20px; text-align: center;">
+                            <h3 style="margin: 0 0 10px 0; color: #00ffcc;">TỈ LỆ THÀNH CÔNG: <span id="upgrade-rate-text" style="color: #fff;">0%</span></h3>
+                            
+                            <div style="display: flex; justify-content: center; gap: 30px; font-size: 16px; white-space: nowrap;">
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <img src="../assets/gold.png" alt="Gold" style="width: 30px; height: 30px; object-fit: contain;"> 
+                                    <span id="upgrade-cost-gold" style="color: #ffd700;">0</span> Vàng
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <img src="../assets/items/bloodstone.png" alt="BloodStone" style="width: 30px; height: 30px; object-fit: contain;"> 
+                                    <span id="upgrade-cost-blood" style="color: #ff3333;">0 / 0</span> Huyết Thạch
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-around; width: 80%; margin-top: 20px; background: transparent; border: none; padding: 10px; border-radius: 8px;">
+                            <label id="charm-normal-container" style="cursor: pointer; display: none; align-items: center; gap: 8px; color: #aaa;">
+                                <input type="checkbox" id="use-normal-charm"> 
+                                <img src="../assets/items/charm_normal.png" style="width: 20px;"> Hộ Thể Phù (<span id="count-normal-charm">0</span>)
+                            </label>
+                            
+                            <label id="charm-holy-container" style="cursor: pointer; display: none; align-items: center; gap: 8px; color: #aaa;">
+                                <input type="checkbox" id="use-holy-charm"> 
+                                <img src="../assets/items/charm_holy.png" style="width: 20px;"> Thánh Hộ Phù (<span id="count-holy-charm">0</span>)
+                            </label>
+                        </div>
+
+                        <p id="upgrade-warning" style="color: #ff5555; font-size: 12px; font-style: italic; margin-top: 10px; text-align: center; height: 15px;"></p>
+
+                        <button id="btn-upgrade-submit" class="forge-action-btn" style="margin-top: 10px; background: linear-gradient(90deg, transparent, #0055aa, transparent); border-color: #00aaff;">CƯỜNG HÓA</button>
+                    </div>
                 </div>
                 
                 <!-- 4. VIEW: PET -->
@@ -215,6 +268,13 @@
                     <h3>BALO VẬT PHẨM</h3>
                     <div class="backpack-controls">
                         <input type="text" id="inv-search" placeholder="Tìm kiếm...">
+
+                        <select id="inv-filter">
+                            <option value="all">Tất cả</option>
+                            <option value="equip">Trang bị</option>
+                            <option value="material">Nguyên liệu</option>
+                        </select>
+
                         <select id="inv-sort">
                             <option value="rarity">Sắp xếp: Độ hiếm</option>
                             <option value="name">Sắp xếp: Tên (A-Z)</option>
