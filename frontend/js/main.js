@@ -251,6 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     slot.innerHTML = `<span class="slot-label" style="opacity: 0.5">${slotLabels[slotName]}</span>`;
                     slot.style.borderColor = '#555';
                     slot.style.boxShadow = 'none';
+                    slot.style.animation = 'none';
                     slot.removeAttribute('data-tooltip');
                 });
 
@@ -325,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                             ${plusText}`;
                         slotDiv.style.borderColor = itemColor;
                         slotDiv.setAttribute('data-tooltip', buildTooltip(frontendItem));
-                        if(frontendItem.rarity === 'S') slotDiv.style.boxShadow = `0 0 10px #ffffff`;
+                        if(frontendItem.rarity === 'S') slotDiv.style.animation = 's-tier-breathing 2s ease-in-out infinite';
                     } else {
                         // ==========================================
                         // TÁCH NGUYÊN LIỆU VÀ TRANG BỊ
@@ -359,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Cập nhật lại UI
                 updateStatsUI();
+                updateCharacterAura();
                 renderInventory();
             }
         } catch (error) {
@@ -419,9 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (data.status === 'success') {
-                // Sau khi server xử lý xong, tải lại kho đồ để cập nhật UI
                 await loadInventoryFromServer();
-                console.log("Cập nhật trang bị thành công!");
             } else {
                 showDarkFantasyAlert("Không thể thao tác trang bị!");
             }
@@ -487,6 +487,76 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     updateStatsUI();
+
+    // ==========================================
+    // HIỆU ỨNG VÒNG HÀO QUANG SAU LƯNG
+    // ==========================================
+    function updateCharacterAura() {
+        // 1. Lọc ra các cấp độ cường hóa của đồ Bậc S đang mặc
+        let upgradedLevels = [];
+        for (let slot in equippedItems) {
+            let item = equippedItems[slot];
+            if (item && item.rarity === 'S' && item.upgrade_level > 0) {
+                upgradedLevels.push(item.upgrade_level);
+            }
+        }
+
+        // 2. Sắp xếp giảm dần và lấy tối đa 3 cấp cao nhất
+        upgradedLevels.sort((a, b) => b - a);
+        let top3Levels = upgradedLevels.slice(0, 3);
+
+        top3Levels.sort((a, b) => a - b);
+
+        // 3. Tìm hoặc tạo container chứa Hào quang (Nằm dưới nhân vật)
+        const previewContainer = document.querySelector('.char-preview-container');
+        let auraContainer = document.getElementById('char-aura-container');
+        
+        if (!auraContainer) {
+            auraContainer = document.createElement('div');
+            auraContainer.id = 'char-aura-container';
+            auraContainer.style.position = 'absolute';
+            auraContainer.style.top = '40%'; 
+            auraContainer.style.left = '50%';
+            auraContainer.style.transform = 'translate(-50%, -50%)';
+            auraContainer.style.zIndex = '0'; 
+            
+            const charSprite = document.getElementById('char-preview-sprite');
+            charSprite.style.position = 'relative';
+            charSprite.style.zIndex = '1';
+            
+            previewContainer.insertBefore(auraContainer, charSprite);
+        }
+
+        auraContainer.innerHTML = '';
+
+        // 4. Cấu hình độ to, tốc độ, chiều quay cho tối đa 3 vòng
+        const sizes = [140, 170, 200]; // Đường kính tăng dần từ trong ra ngoài
+        const speeds = [10, 15, 20];   
+        const directions = ['normal', 'reverse', 'normal']; 
+
+        // 5. Vẽ vòng tròn
+        top3Levels.forEach((lvl, index) => {
+            let color = getUpgradeColor(lvl); 
+            let circle = document.createElement('div');
+            
+            circle.style.position = 'absolute';
+            circle.style.top = '50%';
+            circle.style.left = '50%';
+            circle.style.width = `${sizes[index]}px`;
+            circle.style.height = `${sizes[index]}px`;
+            circle.style.marginTop = `-${sizes[index] / 2}px`;
+            circle.style.marginLeft = `-${sizes[index] / 2}px`;
+            
+            circle.style.borderRadius = '50%';
+            circle.style.border = `3px dashed ${color}`;
+            circle.style.boxShadow = `0 0 15px ${color}, inset 0 0 15px ${color}`;
+            circle.style.opacity = '0.8';
+            
+            circle.style.animation = `spin ${speeds[index]}s linear infinite ${directions[index]}`;
+
+            auraContainer.appendChild(circle);
+        });
+    }
 
     // TẠO TOOLTIP THỐNG NHẤT
     function buildTooltip(item) {
@@ -616,7 +686,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             div.setAttribute('data-tooltip', buildTooltip(item));
             div.style.borderColor = itemColor;
-            if(item.rarity === 'S') { div.style.boxShadow = `0 0 10px #ffffff`; }
+            if(item.rarity === 'S') { div.style.animation = 's-tier-breathing 2s ease-in-out infinite'; }
 
             // SỰ KIỆN CLICK ĐỘNG (Dựa theo Tab hiện tại)
             div.addEventListener('click', () => {
@@ -825,7 +895,12 @@ document.addEventListener("DOMContentLoaded", () => {
                                 ${plusText}`;
                 slot.style.borderColor = itemColor;
                 slot.setAttribute('data-tooltip', buildTooltip(item));
-                if(item.rarity === 'S') slot.style.boxShadow = `0 0 10px #ffffff`; else slot.style.boxShadow = 'none';
+                if(item.rarity === 'S') {
+                    slot.style.animation = 's-tier-breathing 2s ease-in-out infinite';
+                } else {
+                    slot.style.boxShadow = 'none';
+                    slot.style.animation = 'none';
+                }
 
                 // Click vào ô trong lò để rút đồ ra
                 slot.onclick = () => removeFromForge(index);
@@ -834,6 +909,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 slot.innerHTML = '';
                 slot.style.borderColor = '#555';
                 slot.style.boxShadow = 'none';
+                slot.style.animation = 'none';
                 slot.removeAttribute('data-tooltip');
                 slot.onclick = null;
             }
@@ -877,7 +953,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
             // Viền của đồ để trên Đe cũng phải là màu trắng phát sáng
             slot.style.borderColor = '#ffffff';
-            slot.style.boxShadow = `0 0 15px #ffffff`;
+            slot.style.animation = 's-tier-breathing 2s ease-in-out infinite';
 
             let warnTxt = document.getElementById('upgrade-warning');
 
@@ -932,6 +1008,7 @@ document.addEventListener("DOMContentLoaded", () => {
             slot.innerHTML = '<span class="slot-label" style="opacity: 0.5;">Trống</span>';
             slot.style.borderColor = '#555';
             slot.style.boxShadow = 'none';
+            slot.style.animation = 'none';
             slot.onclick = null;
 
             document.getElementById('upgrade-rate-text').innerText = '0%';
