@@ -79,6 +79,15 @@ VALUES
 (214, 'Huyết Thạch', 'material', 'B', 0, 0, 0, 0, 'bloodstone.png'),
 (215, 'Hộ Thể Phù', 'material', 'A', 0, 0, 0, 0, 'charm_normal.png'),
 (216, 'Thánh Hộ Phù', 'material', 'S', 0, 0, 0, 0, 'charm_holy.png');
+
+ALTER TABLE items 
+MODIFY COLUMN type ENUM('head', 'chest', 'legs', 'weapon', 'accessory', 'shoes', 'material', 'food') NOT NULL;
+
+INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, icon) 
+VALUES 
+(217, 'Trái Cấm Địa Đàn', 'food', 'B', 0, 0, 0, 0, 'food1.png'),
+(218, 'Miếng Cắn Vực Thẳm', 'food', 'A', 0, 0, 0, 0, 'food2.png'),
+(219, 'Tàn Tích Thần Trí', 'food', 'S', 0, 0, 0, 0, 'food3.png');
 -- ==========================================
 -- BẢNG 2: TÚI ĐỒ CỦA NGƯỜI CHƠI (INVENTORY)
 -- ==========================================
@@ -653,3 +662,42 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 216, 0),
 (1, 216, 0),
 (1, 216, 0);
+
+-- Food 1
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0),
+(1, 217, 0);
+
+-- Food 2
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0),
+(1, 218, 0);
+
+-- Food 3
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0),
+(1, 219, 0);

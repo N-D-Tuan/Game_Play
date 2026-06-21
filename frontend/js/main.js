@@ -186,6 +186,11 @@ document.addEventListener("DOMContentLoaded", () => {
         tabPetBtn.addEventListener('click', () => {
             returnAllForgeItemsToBalo();
             
+            if (invFilter) {
+                invFilter.value = 'food';
+                renderInventory();
+            }
+
             currentTab = 'pet';
             tabEquipBtn.classList.remove('active');
             tabForgeBtn.classList.remove('active');
@@ -200,6 +205,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     tabEquipBtn.addEventListener('click', () => {
+        if (invFilter) {
+            invFilter.value = 'all';
+            renderInventory();
+        }
+
         currentTab = 'equip';
         tabEquipBtn.classList.add('active');
         tabForgeBtn.classList.remove('active');
@@ -213,6 +223,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     tabForgeBtn.addEventListener('click', () => {
+        if (invFilter) {
+            invFilter.value = 'all';
+            renderInventory();
+        }
+
         currentTab = 'forge';
         tabForgeBtn.classList.add('active');
         tabEquipBtn.classList.remove('active');
@@ -352,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         // ==========================================
                         // TÁCH NGUYÊN LIỆU VÀ TRANG BỊ
                         // ==========================================
-                        if (frontendItem.slot === 'material') {
+                        if (frontendItem.slot === 'material' || frontendItem.slot === 'food') {
                             if (!materialsMap[frontendItem.item_id]) materialsMap[frontendItem.item_id] = [];
                             materialsMap[frontendItem.item_id].push(frontendItem);
                         } else {
@@ -574,23 +589,62 @@ document.addEventListener("DOMContentLoaded", () => {
     // TẠO TOOLTIP THỐNG NHẤT
     function buildTooltip(item) {
         let upgradeText = (item.upgrade_level && item.upgrade_level > 0) ? ` +${item.upgrade_level}` : '';
-        
-        let html = `[Bậc ${item.rarity}] ${item.name.toUpperCase()}${upgradeText}\n`;
+        let tooltip = `[${RARITY_CONFIG[item.rarity].name}] ${item.name.toUpperCase()}${upgradeText}\n`;
+        tooltip += `Phẩm chất: Bậc ${item.rarity}\n-------------------\n`;
 
-        let tooltip = `[${RARITY_CONFIG[item.rarity].name}] ${item.name.toUpperCase()}\nPhẩm chất: Bậc ${item.rarity}\n-------------------\n`;
+        // 1. Nếu là THỨC ĂN (food)
+        if (item.slot === 'food' || item.type === 'food') {
+            let expRates = { 'B': 500, 'A': 2000, 'S': 15000 };
+            let exp = expRates[item.rarity] || 0;
+            tooltip += `Thức ăn cho Thú Cưng.\n`;
+            tooltip += `Kinh nghiệm: +${exp.toLocaleString()}\n`;
+            return tooltip.trim();
+        }
+
+        // 2. Nếu là NGUYÊN LIỆU ĐẶC BIỆT (Bùa, Huyết thạch, Trứng)
+        if (item.item_id === 215) { // Hộ Thể Phù
+            tooltip += `Bảo vệ trang bị khi Cường hóa thất bại.\n`;
+            tooltip += `Dùng cho trang bị từ Cấp +1 đến +6.\n`;
+            tooltip += `Ngăn ngừa việc bị tụt cấp.\n`;
+            return tooltip.trim();
+        }
+        if (item.item_id === 216) { // Thánh Hộ Phù
+            tooltip += `Bảo vệ Tuyệt đối.\n`;
+            tooltip += `Dùng cho trang bị từ Cấp +7 đến +9.\n`;
+            tooltip += `Ngăn ngừa việc vỡ đồ (tụt về +0) khi thất bại.\n`;
+            return tooltip.trim();
+        }
+        if (item.item_id === 214) { // Huyết Thạch
+            tooltip += `Đá máu dùng để tế lễ trong Lò rèn.\n`;
+            tooltip += `Nguyên liệu bắt buộc để Cường hóa trang bị.\n`;
+            return tooltip.trim();
+        }
+        if (item.item_id === 213) { // Trứng thú cưng
+            tooltip += `Vật phẩm bí ẩn chứa sinh linh cổ đại.\n`;
+            tooltip += `Bấm vào để tiến hành Ấp Trứng.\n`;
+            return tooltip.trim();
+        }
+        if (item.item_id === 212) { // Mảnh Trứng
+            tooltip += `Thu thập từ việc đi ải hoặc mua từ thương nhân.\n`;
+            tooltip += `Thu thập đủ 10 mảnh để Dung hợp thành 1 quả Trứng hoàn chỉnh.\n`;
+            return tooltip.trim();
+        }
+
+        // 3. Nếu là TRANG BỊ BÌNH THƯỜNG (Có chỉ số Máu, ATK...)
         for(let stat in item.stats) {
-            if(STAT_NAMES[stat]) {
-                let suffix = (stat === 'dodge') ? '%' : '';
+            if(STAT_NAMES[stat] && item.stats[stat] > 0) {
+                let suffix = (['dodge', 'critRate', 'critDamage', 'lifesteal'].includes(stat)) ? '%' : '';
                 tooltip += `${STAT_NAMES[stat]}: ${item.stats[stat]}${suffix}\n`;
             }
         }
+
         return tooltip.trim();
     }
 
     // CLICK ĐỂ MẶC TRANG BỊ
     async function equipItem(item) {
-        if (item.slot === 'material') {
-            showDarkFantasyAlert("Không thể mặc nguyên liệu lên người!");
+        if (item.slot === 'material' || item.slot === 'food') {
+            showDarkFantasyAlert("Không thể mặc nguyên liệu hoặc thức ăn lên người!");
             return;
         }
         
@@ -632,9 +686,11 @@ document.addEventListener("DOMContentLoaded", () => {
             let matchFilter = true;
             
             if (filterMode === 'equip') {
-                matchFilter = item.slot !== 'material'; // Bỏ qua nguyên liệu
+                matchFilter = item.slot !== 'material' && item.slot !== 'food';
             } else if (filterMode === 'material') {
-                matchFilter = item.slot === 'material'; // Chỉ lấy nguyên liệu
+                matchFilter = item.slot === 'material';
+            } else if (filterMode === 'food') {
+                matchFilter = item.slot === 'food';
             }
 
             return matchSearch && matchFilter;
@@ -740,7 +796,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         addToForge(item);
                     } else if (currentForgeMode === 'upgrade') {
                         // Logic bỏ vào đe cường hóa
-                        if (item.rarity !== 'S' || item.slot === 'material') {
+                        if (item.rarity !== 'S' || item.slot === 'material' || item.slot === 'food') {
                             return showDarkFantasyAlert("Chỉ trang bị Bậc S mới có thể Cường Hóa!");
                         }
                         if (window.game && window.game.scene.isActive('CampaignScene')) {
@@ -770,9 +826,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         return;
                     }
 
-                    // Không cho ăn mảnh trứng (212) hoặc trứng (213)
-                    if (item.slot === 'material' || item.type === 'material' || item.item_id === 212 || item.item_id === 213){
-                        showDarkFantasyAlert("Không thể cho thú cưng ăn vật phẩm này!");
+                    if (item.slot !== 'food'){
+                        showDarkFantasyAlert("Vật phẩm này không phải là Thức ăn Thú cưng!");
                         return;
                     }
 
@@ -784,7 +839,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Bật Popup xác nhận cho ăn
                     document.getElementById('feed-modal').style.display = 'flex';
                     document.getElementById('feed-pet-name').innerText = currentSelectedPet.pet.name;
-                    // Xử lý hiệu ứng chữ tỏa sáng cho Bậc S
+                    
                     let feedNameEl = document.getElementById('feed-item-name');
                     feedNameEl.innerText = `[Bậc ${item.rarity}] ${item.name}`;
                     feedNameEl.style.color = rankInfo.color;
@@ -792,13 +847,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (item.rarity === 'S') {
                         feedNameEl.style.textShadow = '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 10px #ffffff';
                     } else {
-                        feedNameEl.style.textShadow = 'none'; // Reset lại bóng nếu là các bậc khác
+                        feedNameEl.style.textShadow = 'none'; 
                     }
                     
-                    let expRates = { 'F': 10, 'E': 30, 'D': 100, 'C': 500, 'B': 2000, 'A': 10000, 'S': 30000 };
-                    document.getElementById('feed-exp-amount').innerText = expRates[item.rarity] || 0;
+                    // Tính EXP cho 1 cái duy nhất
+                    let expRates = { 'B': 500, 'A': 2000, 'S': 15000 };
+                    let expPerItem = expRates[item.rarity] || 0;
                     
-                    window.pendingFeedItemIds = [item.id]; // Lưu lại ID để nạp vào API
+                    document.getElementById('feed-exp-amount').innerText = expPerItem.toLocaleString();
+                    
+                    // Lấy index 0 (ID đầu tiên) trong mảng stacked_ids để API chỉ trừ 1 cái
+                    window.pendingFeedItemIds = item.stacked_ids ? [item.stacked_ids[0]] : [item.id];
                 }
             });
             invGrid.appendChild(div);
@@ -825,7 +884,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // LOGIC LÒ RÈN (BỎ VÀO LÒ & RÚT RA)
     // ==========================================
     function addToForge(item) {
-        if (item.slot === 'material') {
+        if (item.slot === 'material'|| item.slot === 'food') {
             showDarkFantasyAlert("Không thể đưa nguyên liệu này vào Lò rèn!");
             return;
         }
@@ -1785,28 +1844,35 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!currentSelectedPet) return showDarkFantasyAlert("Vui lòng chọn Thú cưng!");
         if (currentSelectedPet.level >= 100) return showDarkFantasyAlert("Thú cưng đã đạt cấp độ tối đa (MAX LEVEL)!");
 
-        // 1. Quét Balo lấy ra các trang bị Bậc F và E (Không tính đồ đang mặc, không tính trứng)
-        let trashItems = myInventory.filter(item => 
-            (item.rarity === 'F' || item.rarity === 'E') &&
-            item.slot !== 'material' && 
-            item.type !== 'material' &&
-            item.item_id !== 212 && item.item_id !== 213
-        );
+        // 1. Quét Balo và gom TẤT CẢ các Thức ăn (food)
+        let foodItems = myInventory.filter(item => item.slot === 'food');
 
-        if (trashItems.length === 0) {
-            return showDarkFantasyAlert("Không tìm thấy trang bị Bậc F hoặc E nào trong Balo!");
+        if (foodItems.length === 0) {
+            return showDarkFantasyAlert("Không tìm thấy Thức ăn nào trong Balo!");
         }
 
-        // 2. Tính toán EXP
-        let expRates = { 'F': 10, 'E': 30 };
-        let totalExp = trashItems.reduce((sum, item) => sum + (expRates[item.rarity] || 0), 0);
+        // 2. Tính toán tổng EXP và gom mảng ID
+        let expRates = { 'B': 500, 'A': 2000, 'S': 15000 };
+        let totalExp = 0;
+        let totalFoodQuantity = 0;
+        window.pendingFeedItemIds = [];
 
-        // 3. Đưa ID các trang bị rác vào biến lưu trữ để API sử dụng
-        window.pendingFeedItemIds = trashItems.map(item => item.id);
+        foodItems.forEach(item => {
+            let qty = item.quantity || 1;
+            totalFoodQuantity += qty;
+            totalExp += (expRates[item.rarity] || 0) * qty;
+            
+            // Lấy ID của từng món đã bị gộp (stack)
+            if (item.stacked_ids) {
+                window.pendingFeedItemIds.push(...item.stacked_ids);
+            } else {
+                window.pendingFeedItemIds.push(item.id);
+            }
+        });
 
-        // 4. Hiển thị thông số lên Modal và mở Modal
-        document.getElementById('fast-feed-count').innerText = trashItems.length;
-        document.getElementById('fast-feed-total-exp').innerText = totalExp;
+        // 3. Hiển thị thông số lên Modal và mở Modal
+        document.getElementById('fast-feed-count').innerText = totalFoodQuantity;
+        document.getElementById('fast-feed-total-exp').innerText = totalExp.toLocaleString();
         document.getElementById('fast-feed-modal').style.display = 'flex';
     });
 

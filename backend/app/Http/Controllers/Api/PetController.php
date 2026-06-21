@@ -76,12 +76,12 @@ class PetController extends Controller
     {
         $playerId = $request->player_id;
         $petId = $request->pet_id;
-        $materialIds = $request->material_ids; // Mảng các ID trang bị trong Balo (player_items.id)
+        $materialIds = $request->material_ids;
 
-        // Bảng quy đổi EXP theo phẩm chất rác
         $expRates = [
-            'F' => 10, 'E' => 30, 'D' => 100, 
-            'C' => 500, 'B' => 2000, 'A' => 10000, 'S' => 30000
+            'B' => 500,
+            'A' => 2000,
+            'S' => 15000
         ];
 
         return DB::transaction(function () use ($playerId, $petId, $materialIds, $expRates) {
@@ -91,22 +91,20 @@ class PetController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Thú cưng đã đạt cấp độ tối đa!'], 400);
             }
 
-            // Lấy các trang bị được chọn
             $materials = PlayerItem::with('item')
                 ->where('player_id', $playerId)
                 ->whereIn('id', $materialIds)
                 ->get();
 
             if ($materials->isEmpty()) {
-                return response()->json(['status' => 'error', 'message' => 'Không tìm thấy trang bị nguyên liệu!'], 400);
+                return response()->json(['status' => 'error', 'message' => 'Không tìm thấy vật phẩm!'], 400);
             }
 
             // Tính tổng EXP nhận được
             $totalExpGained = 0;
             foreach ($materials as $mat) {
-                // Không cho ăn trang bị đang mặc hoặc Nguyên liệu (Mảnh trứng)
-                if ($mat->is_equipped == 1 || $mat->item->type === 'material') {
-                    return response()->json(['status' => 'error', 'message' => 'Không thể cho ăn trang bị đang mặc hoặc nguyên liệu!'], 400);
+                if ($mat->item->type !== 'food') {
+                    return response()->json(['status' => 'error', 'message' => 'Thú cưng chỉ ăn Thức ăn chuyên dụng!'], 400);
                 }
                 $totalExpGained += $expRates[$mat->item->rarity] ?? 0;
             }
