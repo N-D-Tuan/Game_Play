@@ -9,6 +9,18 @@ CREATE TABLE players (
 );
 INSERT INTO players (id, username, gold) VALUES (1, 'Player 1', 50000);
 
+ALTER TABLE players
+ADD COLUMN talent_points INT DEFAULT 0,
+ADD COLUMN unlocked_nodes JSON,
+ADD COLUMN equipped_skills JSON;
+
+-- Cập nhật dữ liệu mặc định ban đầu cho Player 1 (Tránh lỗi Null JSON)
+UPDATE players 
+SET talent_points = 50,
+	unlocked_nodes = '{}', 
+    equipped_skills = '[]' 
+WHERE id = 1;
+
 -- ==========================================
 -- BẢNG 1: DANH MỤC TRANG BỊ GỐC (MASTER DATA)
 -- ==========================================

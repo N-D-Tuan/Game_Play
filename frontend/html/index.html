@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
-    <div id="gold-container" style="position: fixed; top: 15px; right: 20px; background: rgba(15, 15, 15, 0.85); border: 2px solid #ffd700; border-radius: 8px; padding: 5px 15px; display: flex; align-items: center; gap: 8px; z-index: 100000 !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);">
+    <div id="gold-container" style="position: fixed; top: 10px; right: 20px; background: rgba(15, 15, 15, 0.85); border: 2px solid #ffd700; border-radius: 8px; padding: 5px 15px; display: flex; align-items: center; gap: 8px; z-index: 100000 !important; box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);">
         <img src="../assets/gold.png" alt="Gold" style="width: 30px; height: 30px; object-fit: contain;">
         <span id="player-gold" style="color: #ffd700; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px #000; font-family: monospace;">0</span>
     </div>
@@ -23,7 +23,75 @@
             <button class="menu-btn" id="btn-practice">Tập luyện</button>
             <button class="menu-btn" id="btn-campaign">Vượt ải</button>
             <button class="menu-btn" id="btn-inventory">Kho đồ</button>
+            <button class="menu-btn" id="btn-talent">Thiên Phú</button>
             <button class="menu-btn" id="btn-settings">Cài đặt</button>
+        </div>
+    </div>
+
+    <div id="talent-screen" style="display: none; opacity: 0; transition: opacity 0.5s;">
+        <div class="overlay-dark" style="background: rgba(10, 5, 15, 0.75);"></div>
+        
+        <div class="talent-container">
+            <button id="btn-close-talent" class="close-btn" style="position: absolute; top: 20px; left: 20px; margin: 0; font-size: 18px; padding: 10px 30px;">◀ TRỞ VỀ</button>
+            
+            <div class="talent-header">         
+                <div style="font-size: 20px; color: #fff; font-family: 'MedievalSharp', cursive;">
+                    ĐIỂM HIỆN CÓ: <span id="talent-points-text" style="color: #ffcc00; font-size: 28px; text-shadow: 0 0 10px #ffcc00;">0</span>
+                </div>
+                <p style="color: #aaa; font-family: Arial, sans-serif; font-size: 13px; margin-top: 5px;">Mở khóa kỹ năng và trang bị chúng để mang vào Vượt Ải</p>
+            </div>
+
+            <div class="talent-branches-wrapper">
+                
+                <div class="talent-branch" style="border-color: #ff0000; box-shadow: inset 0 0 50px rgba(255,0,0,0.1);">
+                    <h3 style="color: #ff5555; border-bottom: 1px solid #ff0000;">KẺ HỦY DIỆT<br><span style="font-size: 12px; color: #aaa;">(Sát thương AoE)</span></h3>
+                    
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="earth" style="background-image: url('../assets/earth2.png');"></div></div>
+                    <div class="t-line"></div>
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="meteor" style="background-image: url('../assets/fireball.png');"></div></div>
+                    <div class="t-line"></div>
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="lightning" style="background-image: url('../assets/lightning1.png');"></div></div>
+                </div>
+
+                <div class="talent-branch" style="border-color: #9b59b6; box-shadow: inset 0 0 50px rgba(155,89,182,0.1);">
+                    <h3 style="color: #9b59b6; border-bottom: 1px solid #9b59b6;">BÓNG ĐÊM<br><span style="font-size: 12px; color: #aaa;">(Linh hoạt & Cấu rỉa)</span></h3>
+                    
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="arrows" style="background-image: url('../assets/arrows.png');"></div></div>
+                    <div class="t-line"></div>
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="doll" style="background-image: url('../assets/doll.png');"></div></div>
+                    <div class="t-line"></div>
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="swords" style="background-image: url('../assets/sword.png');"></div></div>
+                </div>
+
+                <div class="talent-branch" style="border-color: #00ff00; box-shadow: inset 0 0 50px rgba(0,255,0,0.1);">
+                    <h3 style="color: #00ff00; border-bottom: 1px solid #00ff00;">BẤT TỬ<br><span style="font-size: 12px; color: #aaa;">(Sinh tồn & Phòng thủ)</span></h3>
+                    
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="heal" style="background-image: url('../assets/heal.png');"></div></div>
+                    <div class="t-line"></div>
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="shield" style="background-image: url('../assets/shield.png');"></div></div>
+                    <div class="t-line"></div>
+                    <div class="t-node-wrap"><div class="t-node skill" data-node="anchor" style="background-image: url('../assets/anchor.png');"></div></div>
+                </div>
+
+            </div>
+
+            <div class="equipped-skills-bar">
+                <h3 style="color: #ffcc00; margin: 0 0 10px 0; font-family: 'MedievalSharp', cursive; letter-spacing: 2px;">KỸ NĂNG XUẤT CHIẾN</h3>
+                <div style="display: flex; gap: 40px;">
+                    <div class="equip-skill-box">
+                        <div id="equip-slot-1" class="e-slot">Trống</div>
+                        <div class="e-key">Phím 1</div>
+                    </div>
+                    <div class="equip-skill-box">
+                        <div id="equip-slot-2" class="e-slot">Trống</div>
+                        <div class="e-key">Phím 2</div>
+                    </div>
+                    <div class="equip-skill-box">
+                        <div id="equip-slot-3" class="e-slot">Trống</div>
+                        <div class="e-key">Phím 3</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
