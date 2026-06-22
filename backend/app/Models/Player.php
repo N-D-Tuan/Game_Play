@@ -13,6 +13,14 @@ class Player extends Model
     protected $fillable = [
         'username',
         'gold',
+        'talent_points',
+        'unlocked_nodes',
+        'equipped_skills',
+    ];
+
+    protected $casts = [
+        'unlocked_nodes' => 'array',
+        'equipped_skills' => 'array',
     ];
 
     // Vì bảng players của bạn chỉ có cột created_at chứ không có updated_at

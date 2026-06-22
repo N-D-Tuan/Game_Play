@@ -8,6 +8,12 @@ use App\Http\Controllers\Api\PlayerController;
 
 Route::get('/players/{id}', [PlayerController::class, 'show']);
 
+Route::prefix('talents')->group(function () {
+    Route::get('/{playerId}', [PlayerController::class, 'getTalents']);
+    Route::post('/unlock', [PlayerController::class, 'unlockTalent']);
+    Route::post('/equip', [PlayerController::class, 'equipSkills']);
+});
+
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
 Route::post('/equipment/toggle', [InventoryController::class, 'toggleEquip']);
 Route::post('/forge/merge', [InventoryController::class, 'forge']);

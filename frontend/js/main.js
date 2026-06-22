@@ -107,6 +107,247 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 1000);
     });
 
+    const btnTalent = document.getElementById('btn-talent');
+    const talentScreen = document.getElementById('talent-screen');
+    const btnCloseTalent = document.getElementById('btn-close-talent');
+
+    async function fetchTalentData() {
+        let playerId = localStorage.getItem('playerId') || '1';
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/talents/${playerId}`);
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                talentPoints = data.talent_points;
+                // Parse JSON từ DB, nếu rỗng thì mảng rỗng
+                unlockedNodes = typeof data.unlocked_nodes === 'string' ? JSON.parse(data.unlocked_nodes || '[]') : (data.unlocked_nodes || []);
+                
+                let parsedSkills = typeof data.equipped_skills === 'string' ? JSON.parse(data.equipped_skills || '[null, null, null]') : (data.equipped_skills || [null, null, null]);
+                if (!Array.isArray(parsedSkills)) parsedSkills = [null, null, null];
+                
+                equippedSkills = [
+                    parsedSkills[0] || null,
+                    parsedSkills[1] || null,
+                    parsedSkills[2] || null
+                ];
+                
+                renderTalentTree();
+            }
+        } catch (error) {
+            console.error("Lỗi khi tải dữ liệu Thiên Phú:", error);
+        }
+    }
+
+    // Mở màn hình Thiên Phú
+    btnTalent.addEventListener('click', () => {
+        fetchTalentData();
+        homeScreen.style.opacity = '0';
+        setTimeout(() => {
+            homeScreen.style.display = 'none';
+            talentScreen.style.display = 'flex';
+            setTimeout(() => { talentScreen.style.opacity = '1'; }, 50);
+        }, 500);
+    });
+
+    // Đóng màn hình Thiên Phú, quay lại Home
+    btnCloseTalent.addEventListener('click', () => {
+        talentScreen.style.opacity = '0';
+        setTimeout(() => {
+            talentScreen.style.display = 'none';
+            homeScreen.style.display = 'flex';
+            setTimeout(() => { homeScreen.style.opacity = '1'; }, 50);
+        }, 500);
+    });
+
+    // ==========================================
+    // HỆ THỐNG THIÊN PHÚ (TALENT SYSTEM)
+    // ==========================================
+    let talentPoints = 0;
+    let unlockedNodes = [];
+    let equippedSkills = [null, null, null];
+
+    // Cây điều kiện: Key là kỹ năng muốn mở, Value là kỹ năng yêu cầu phải mở trước
+    const TALENT_DEPENDENCIES = {
+        'earth': null,    'meteor': 'earth',   'lightning': 'meteor',
+        'arrows': null,   'doll': 'arrows',    'swords': 'doll',
+        'heal': null,     'shield': 'heal',    'anchor': 'shield'
+    };
+
+    const TALENT_INFO = {
+        'earth': { name: 'Thổ Độn', cost: 1 },
+        'meteor': { name: 'Thiên Thạch', cost: 2 },
+        'lightning': { name: 'Sấm Sét', cost: 5 },
+        'arrows': { name: 'Vạn Tiễn', cost: 1 },
+        'doll': { name: 'Hình Nhân', cost: 2 },
+        'swords': { name: 'Phi Kiếm', cost: 5 },
+        'heal': { name: 'Hồi Máu', cost: 1 },
+        'shield': { name: 'Lá Chắn', cost: 2 },
+        'anchor': { name: 'Tàu Chiến', cost: 5 }
+    };
+
+    // Ánh xạ hình ảnh để render vào ô xuất chiến
+    const NODE_IMAGES = {
+        'earth': '../assets/earth2.png', 'meteor': '../assets/fireball.png', 'lightning': '../assets/lightning1.png',
+        'arrows': '../assets/arrows.png', 'doll': '../assets/doll.png', 'swords': '../assets/sword.png',
+        'heal': '../assets/heal.png', 'shield': '../assets/shield.png', 'anchor': '../assets/anchor.png'
+    };
+
+    const talentPointsText = document.getElementById('talent-points-text');
+    const talentNodes = document.querySelectorAll('.t-node');
+    const equipSlots = [
+        document.getElementById('equip-slot-1'),
+        document.getElementById('equip-slot-2'),
+        document.getElementById('equip-slot-3')
+    ];
+
+    // Hàm vẽ lại toàn bộ Giao diện Thiên Phú
+    function renderTalentTree() {
+        talentPointsText.innerText = talentPoints;
+
+        // 1. Cập nhật các Node trên cây
+        talentNodes.forEach(node => {
+            let skillName = node.getAttribute('data-node');
+            let info = TALENT_INFO[skillName];
+            let reqSkill = TALENT_DEPENDENCIES[skillName];
+            let reqName = reqSkill ? TALENT_INFO[reqSkill].name : 'Không';
+            
+            // TẠO TOOLTIP THÔNG TIN
+            let tooltipText = `[Kỹ năng] ${info.name.toUpperCase()}\nĐiểm yêu cầu: ${info.cost}`;
+            if (reqSkill) {
+                tooltipText += `\nĐiều kiện: Cần mở [${reqName}] trước`;
+            }
+            node.setAttribute('data-tooltip', tooltipText);
+
+            if (unlockedNodes.includes(skillName)) {
+                // Đã mở khóa: Xóa filter xám, đổi viền vàng, Xóa hình ổ khóa
+                node.style.filter = 'grayscale(0%)';
+                node.style.borderColor = '#ffcc00';
+                node.style.boxShadow = '0 0 10px rgba(255, 204, 0, 0.5)';
+                node.innerHTML = ''; 
+            } else {
+                // Chưa mở khóa: Filter xám, chèn thẻ <img> ổ khóa vào giữa
+                node.style.filter = 'grayscale(100%)';
+                node.style.borderColor = '#555';
+                node.style.boxShadow = 'none';
+                node.style.position = 'relative'; // Bắt buộc để căn giữa ổ khóa
+                
+                // Chỉ chèn thêm ổ khóa nếu bên trong nó chưa có
+                if (!node.querySelector('.lock-icon')) {
+                    node.innerHTML = `<img class="lock-icon" src="../assets/lock.png" style="width: 20px; height: 20px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; opacity: 0.9;">`;
+                }
+            }
+        });
+
+        // 2. Cập nhật 3 Ô Kỹ năng Xuất chiến
+        equipSlots.forEach((slot, index) => {
+            let skill = equippedSkills[index];
+            if (skill) {
+                slot.style.backgroundImage = `url('${NODE_IMAGES[skill]}')`;
+                slot.innerHTML = '';
+                slot.style.borderColor = '#00ffcc';
+            } else {
+                slot.style.backgroundImage = 'none';
+                slot.innerHTML = 'Trống';
+                slot.style.borderColor = '#888';
+            }
+        });
+    }
+
+    talentNodes.forEach(node => {
+        node.addEventListener('click', async () => {
+            let skillName = node.getAttribute('data-node');
+
+            // TRƯỜNG HỢP 1: NẾU ĐÃ MỞ KHÓA -> TIẾN HÀNH TRANG BỊ
+            if (unlockedNodes.includes(skillName)) {
+                // Kiểm tra xem đã trang bị chưa
+                if (equippedSkills.includes(skillName)) {
+                    showDarkFantasyAlert("Kỹ năng này đã được xuất chiến!");
+                    return;
+                }
+
+                // Tìm ô trống đầu tiên để nhét vào
+                let emptyIndex = equippedSkills.findIndex(s => !s);
+                if (emptyIndex !== -1) {
+                    equippedSkills[emptyIndex] = skillName;
+                } else {
+                    // Nếu đầy, đẩy kỹ năng ở ô đầu tiên ra và thay thế
+                    equippedSkills[0] = skillName; 
+                }
+
+                renderTalentTree();
+                saveEquippedSkillsAPI(); // Gọi API lưu mảng equippedSkills
+                return;
+            }
+
+            // TRƯỜNG HỢP 2: CHƯA MỞ KHÓA -> KIỂM TRA ĐIỀU KIỆN ĐỂ MỞ
+            let requiredSkill = TALENT_DEPENDENCIES[skillName];
+            if (requiredSkill !== null && !unlockedNodes.includes(requiredSkill)) {
+                showDarkFantasyAlert("Cần mở khóa Kỹ năng nhánh trước!");
+                return;
+            }
+
+            let cost = TALENT_INFO[skillName].cost;
+            if (talentPoints < cost) {
+                showDarkFantasyAlert(`Không đủ điểm! Cần ${cost} điểm Thiên Phú.`);
+                return;
+            }
+
+            // Tiến hành mở khóa qua API
+            await unlockTalentAPI(skillName);
+        });
+    });
+
+    // Xử lý Click vào Ô Xuất Chiến để THÁO kỹ năng ra
+    equipSlots.forEach((slot, index) => {
+        slot.addEventListener('click', () => {
+            if (equippedSkills[index] !== null) {
+                equippedSkills[index] = null; // Tháo kỹ năng
+                renderTalentTree();
+                saveEquippedSkillsAPI(); // Lưu lại ngay
+            }
+        });
+    });
+
+    // ==========================================
+    // CÁC HÀM GỌI API CHO THIÊN PHÚ
+    // ==========================================
+    async function unlockTalentAPI(skillName) {
+        let playerId = localStorage.getItem('playerId') || '1';
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/talents/unlock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: playerId, node: skillName })
+            });
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                talentPoints = data.talent_points; // Cập nhật lại điểm từ Server trả về
+                unlockedNodes.push(skillName);
+                showDarkFantasyAlert("Mở khóa kỹ năng thành công!");
+                renderTalentTree();
+            } else {
+                showDarkFantasyAlert(data.message);
+            }
+        } catch (error) {
+            console.error("Lỗi khi mở khóa:", error);
+            showDarkFantasyAlert("Lỗi hệ thống khi mở khóa!");
+        }
+    }
+
+    async function saveEquippedSkillsAPI() {
+        let playerId = localStorage.getItem('playerId') || '1';
+        try {
+            await fetch('http://127.0.0.1:8000/api/talents/equip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: playerId, equipped_skills: equippedSkills })
+            });
+        } catch (error) {
+            console.error("Lỗi khi lưu kỹ năng xuất chiến:", error);
+        }
+    }
+
     // ==========================================
     // HỆ THỐNG KHO ĐỒ (INVENTORY SYSTEM) - ĐÃ CẬP NHẬT
     // ==========================================
