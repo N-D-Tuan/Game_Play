@@ -90,7 +90,7 @@ export class Monster2 extends BaseMonster {
                             targets: this, x: lungeX, y: lungeY, duration: 150, ease: 'Expo.easeIn', // 2. Phóng vọt tới
                             onComplete: () => {
                                 // 3. Trừ máu ngay khoảnh khắc cắn trúng
-                                if (target === player && Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= 130) {
+                                if (!this.isDead && target === player && Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) <= 130) {
                                     this.scene.takeDamage(this.damage); 
                                 }
                                 

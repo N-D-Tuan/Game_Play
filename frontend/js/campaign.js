@@ -211,7 +211,7 @@ export class CampaignScene extends Phaser.Scene {
         this.cameraPanSpeed = 1;    // Độ nhạy camera (pixels/ms)
 
         this.input.keyboard.on('keydown', (event) => {
-            if (this.isPaused || this.isGameOver) return;
+            if (this.isPaused || this.isGameOver || this.isCutscene) return;
             let key = event.key === ' ' ? 'SPACE' : event.key.toUpperCase();
 
             // Phím tắt đánh thường
@@ -221,12 +221,9 @@ export class CampaignScene extends Phaser.Scene {
             }
 
             // Phím tắt tung chiêu
-            for (let skKey in SKILL_CAMPAIGN_CONFIG) {
-                if (SKILL_CAMPAIGN_CONFIG[skKey].hotkey === key) {
-                    this.checkAndCastSkill(skKey);
-                    return;
-                }
-            }
+            if (key === window.SKILL_SLOT_HOTKEYS.slot1 && window.equippedSkills[0]) { this.checkAndCastSkill(window.equippedSkills[0]); return; }
+            if (key === window.SKILL_SLOT_HOTKEYS.slot2 && window.equippedSkills[1]) { this.checkAndCastSkill(window.equippedSkills[1]); return; }
+            if (key === window.SKILL_SLOT_HOTKEYS.slot3 && window.equippedSkills[2]) { this.checkAndCastSkill(window.equippedSkills[2]); return; }
 
             // Phím di chuyển
             if (key === window.MOVE_CONFIG.up) this.moveState.up = true;
@@ -507,40 +504,7 @@ export class CampaignScene extends Phaser.Scene {
             frameRate: 10, repeat: -1
         });
 
-        // ==========================================
-        // HỆ THỐNG HỒI MÁU THEO GIÂY (HP REGEN)
-        // ==========================================
-        this.time.addEvent({
-            delay: 1000, // Cứ 1 giây (1000ms) chạy 1 lần
-            callback: () => {
-                // Không hồi máu nếu đang chết hoặc đang tạm dừng
-                if (this.isGameOver || this.isPaused || this.playerHealth <= 0) return;
-
-                // Lấy chỉ số Hồi máu từ Balo
-                let baseRegen = window.playerStats ? window.playerStats.hpRegen : 5;
-                
-                // LẤY BUFF ĐỘNG TỪ PET
-                let dynamicBuffs = { hpRegen: 0 };
-                if (window.equippedPet) {
-                    dynamicBuffs = getPetDynamicBuffs(this, window.equippedPet.pet.pet_code, window.equippedPet.level);
-                }
-                
-                let regenAmount = baseRegen + dynamicBuffs.hpRegen;
-                
-                if (regenAmount > 0 && this.playerHealth < this.maxHealth) {
-                    this.playerHealth = Math.min(this.maxHealth, this.playerHealth + regenAmount);
-                    this.updateHealthBarWidth(this.playerHealth);
-                    
-                    // Hiện số máu hồi màu xanh lá nhảy lên đầu nhân vật
-                    let healText = this.add.text(this.player.x, this.player.y - 30, `+${regenAmount}`, { 
-                        fontSize: '18px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
-                    }).setOrigin(0.5).setDepth(8000);
-                    this.tweens.add({ targets: healText, y: this.player.y - 70, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
-                }
-            },
-            callbackScope: this,
-            loop: true
-        });
+        this.startHpRegenTimer();
 
         // ==========================================
         // KHỞI TẠO QUÁI THEO TỪNG ẢI
@@ -764,6 +728,21 @@ export class CampaignScene extends Phaser.Scene {
                 sk.ui.hotkeyText.setVisible(isVisible);
             }
         }
+
+        if (this.petCampaignSkills) {
+            for (let pKey in this.petCampaignSkills) {
+                let pSk = this.petCampaignSkills[pKey];
+                if (pSk.ui) {
+                    if (pSk.ui.bgCircle) pSk.ui.bgCircle.setVisible(isVisible);
+                    if (pSk.ui.icon) pSk.ui.icon.setVisible(isVisible);
+                    if (pSk.ui.overlay) pSk.ui.overlay.setVisible(isVisible);
+                    if (pSk.ui.text) pSk.ui.text.setVisible(isVisible && pSk.currentCd > 0);
+                    if (pSk.ui.glow && pSk.isUnlocked) pSk.ui.glow.setVisible(isVisible);
+                    if (pSk.ui.hkTxt && pSk.isUnlocked) pSk.ui.hkTxt.setVisible(isVisible);
+                    if (pSk.ui.lockImg && !pSk.isUnlocked) pSk.ui.lockImg.setVisible(isVisible);
+                }
+            }
+        }
     }
 
     createClickMarker(x, y) {
@@ -924,6 +903,8 @@ export class CampaignScene extends Phaser.Scene {
     }
 
     onBossIntroComplete(bossInstance) {
+        this.isCutscene = false;
+
         this.setUiVisibility(true); // Bật lại UI
         
         // Hiện thanh máu của Boss lên
@@ -953,18 +934,22 @@ export class CampaignScene extends Phaser.Scene {
             this.player.shieldGroup.destroy();
             this.player.shieldGroup = null;
         }
+
+        if (this.player.shieldTween) {
+            this.player.shieldTween.stop();
+            this.player.shieldTween = null;
+        }
+
         this.player.shieldCount = 0;
         this.player.shieldLevel = 0;
+        
+        // Gán undefined để dọn rác, KHÔNG dùng .remove()
+        this.player.shieldTimer = undefined; 
 
-        // Xóa hiệu ứng buff tốc độ / hào quang
-        if (this.player.buffTimer) {
-            this.player.buffTimer.remove();
-            this.player.buffTimer = null;
-        }
-        if (this.player.anchorBuffTimer) {
-            this.player.anchorBuffTimer.remove();
-            this.player.anchorBuffTimer = null;
-        }
+        // Xóa hiệu ứng buff tốc độ / hào quang (KHÔNG dùng .remove() nữa)
+        this.player.buffTimer = undefined;
+        this.player.anchorBuffTimer = undefined;
+
         if (this.player.buffAura) {
             this.tweens.killTweensOf(this.player.buffAura);
             this.player.buffAura.destroy();
@@ -977,7 +962,26 @@ export class CampaignScene extends Phaser.Scene {
         }
         this.player.speedMultiplier = 1;
 
-        // Xóa tint tạm nếu còn còn dính
+        // Hủy timer chuẩn bị mọc núi
+        if (this.earthStartTimer) {
+            this.earthStartTimer.remove();
+            this.earthStartTimer = null;
+        }
+
+        // Hủy timer kết thúc kỹ năng
+        if (this.earthEndTimer) {
+            this.earthEndTimer.remove();
+            this.earthEndTimer = null;
+        }
+
+        // Xóa vết nứt
+        if (this.activeEarthCracks) {
+            this.tweens.killTweensOf(this.activeEarthCracks);
+            this.activeEarthCracks.destroy();
+            this.activeEarthCracks = null;
+        }
+
+        // Xóa tint tạm nếu còn dính
         this.player.clearTint();
     }
 
@@ -1043,9 +1047,15 @@ export class CampaignScene extends Phaser.Scene {
                             equip.beamAura = beamAura; 
                             equip.beamCore = beamCore;
                             
+                            let textStrokeColor = (itemData.rarity === 'S') ? '#ffffff' : '#000000';
+
                             // Chữ Rarity nổi lên
                             let rarityTxt = this.add.text(destX, destY - 30, itemData.rarity, { 
-                                fontSize: '24px', fill: itemData.color, fontStyle: 'bold', stroke: '#000', strokeThickness: 4 
+                                fontSize: '24px', 
+                                fill: itemData.color, 
+                                fontStyle: 'bold', 
+                                stroke: textStrokeColor,
+                                strokeThickness: 5
                             }).setOrigin(0.5).setDepth(destY + 1);
                             
                             this.tweens.add({ targets: rarityTxt, y: destY - 50, duration: 1000, yoyo: true, repeat: -1 });
@@ -1079,7 +1089,7 @@ export class CampaignScene extends Phaser.Scene {
                 if (i === 0) { rarity = 'A'; color = '#ff0000'; } // Món đầu tiên chắc chắn bậc A
                 else if (roll < 2) { rarity = 'S'; color = '#000000'; }
                 else if (roll < 8) { rarity = 'A'; color = '#ff0000'; }
-                else if (roll < 40) { rarity = 'B'; color = '#ffd700'; }
+                else if (roll < 40) { rarity = 'B'; color = '#ffd700'; }               
                 else { rarity = 'C'; color = '#a335ee'; }
             }
 
@@ -1398,34 +1408,151 @@ export class CampaignScene extends Phaser.Scene {
             // KHÓA CHÂN NHÂN VẬT NGAY LẬP TỨC TẠI ẢI 3
             // ==========================================
             if (this.currentStage === 3) {
-                this.input.keyboard.enabled = false; // Khóa không cho bấm phím mới
-                this.input.enabled = false; // Khóa click chuột
-                this.moveState = { up: false, down: false, left: false, right: false }; // Xóa bộ nhớ các phím đang giữ
+                this.isCutscene = true; // [BẬT CỜ]: Khóa phím kỹ năng
+                this.input.keyboard.enabled = false; 
+                this.input.enabled = false; 
+                this.moveState = { up: false, down: false, left: false, right: false }; 
                 if (this.clickMarker) {
                     this.clickMarker.destroy();
                     this.clickMarker = null;
                 }
                 this.clickDestination = null;
+
+                if (this.basicAttacks) this.basicAttacks.clear(true, true);
+                
+                this.time.removeAllEvents();
+                this.startHpRegenTimer();
+
+                this.isDoll = false;
+                
+                if (this.player) {
+                    this.player.setVisible(true);
+                    this.player.clearTint();
+                    
+                    this.player.shieldCount = 0; 
+                    if (this.player.shieldGroup) {
+
+                        this.tweens.killTweensOf(this.player.shieldGroup);
+
+                        this.player.shieldGroup.iterate(child => {
+                            if (child) child.destroy();
+                        });
+
+                        this.player.shieldGroup.destroy();
+
+                        this.player.shieldGroup = null;
+                    }
+                    
+                    this.player.shieldTimer = undefined; 
+                    this.player.buffTimer = undefined;
+                    this.player.anchorBuffTimer = undefined;
+                }
+
+                this.activeShields = 0;
+                if (this.shieldSprites) {
+                    this.shieldSprites.forEach(s => { if (s) s.destroy(); });
+                    this.shieldSprites = [];
+                }
+                
+                this.cameras.main.resetFX();
+                this.cameras.main.setAlpha(1);
+
+                let objectsToDestroy = [];
+                this.children.list.forEach(t => {
+                    if (!t) return;
+                    
+                    // 1. Xóa mảng đỏ màn hình của Rồng (Rectangle)
+                    if (t.type === 'Rectangle') {
+                        objectsToDestroy.push(t);
+                    }
+                    
+                    // 2. Xóa các hạt hiệu ứng kỹ năng (Bỏ qua thời tiết)
+                    if (t.type === 'ParticleEmitterManager' || t.type === 'ParticleEmitter') {
+                        let key = t.texture ? t.texture.key : '';
+                        if (!key.includes('rain') && !key.includes('snow') && !key.includes('sand')) {
+                            objectsToDestroy.push(t);
+                        }
+                    }
+                    
+                    // 3. Xóa đạn, rồng, phi kiếm... NHƯNG TUYỆT ĐỐI BỎ QUA QUÁI VẬT VÀ BOSS
+                    if (t.type === 'Image' || t.type === 'Sprite') {
+                        let key = t.texture ? t.texture.key : '';
+                        
+                        // CHỐNG CRASH: Bỏ qua quái vật để tránh lỗi mất scene (Undefined reading 'tweens')
+                        if (key.includes('monster') || key.includes('boss')) return;
+
+                        let isSkillUI = false;
+                        for (let skKey in SKILL_CAMPAIGN_CONFIG) {
+                            let sk = SKILL_CAMPAIGN_CONFIG[skKey];
+                            if (sk.ui && (sk.ui.icon === t || sk.ui.bgCircle === t || sk.ui.glow === t || sk.ui.overlay === t)) {
+                                isSkillUI = true; break;
+                            }
+                        }
+                        if (this.petCampaignSkills) {
+                            for (let pKey in this.petCampaignSkills) {
+                                let pSk = this.petCampaignSkills[pKey];
+                                if (pSk.ui && (pSk.ui.icon === t || pSk.ui.lockImg === t || pSk.ui.bgCircle === t || pSk.ui.glow === t || pSk.ui.overlay === t)) {
+                                    isSkillUI = true; break;
+                                }
+                            }
+                        }
+                        if (isSkillUI) return;
+                        
+                        let safe = ['player', 'player_spritesheet', 'player_anim', 'chest', 'gateway', 'icon_boss', 'hp_frame', 'lock', 'random', 'bg', 'aa'];
+                        if (t !== this.player && t !== this.bossRadarIcon && t !== this.petAvatarImg && 
+                            !safe.includes(key) && !key.includes('decor') && !key.includes('tree') && 
+                            !key.includes('rock') && !key.includes('grass') && !key.includes('puddle') && 
+                            !key.includes('snow') && !key.includes('rain') && !key.includes('pet_ui_')) {
+                            objectsToDestroy.push(t);
+                        }
+                    }
+
+                    if (t.type === 'Text' && t.text === '❤️') {
+                        objectsToDestroy.push(t);
+                    }
+                });
+
+                objectsToDestroy.forEach(obj => {
+                    if (obj.active) {
+                        this.tweens.killTweensOf(obj);
+                        obj.destroy();
+                    }
+                });
+
+                // ==========================================
+                // HỒI TOÀN BỘ KỸ NĂNG VÀ MÁU NGAY LẬP TỨC (PLAYER & PET)
+                // ==========================================
+                for (let key in SKILL_CAMPAIGN_CONFIG) {
+                    let skill = SKILL_CAMPAIGN_CONFIG[key];
+                    skill.currentCd = 0;
+                    if (skill.ui) {
+                        skill.ui.overlay.clear(); 
+                        skill.ui.text.setVisible(false);
+                        skill.ui.glow.setVisible(true);
+                    }
+                }
+
+                if (this.petCampaignSkills) {
+                    for (let pKey in this.petCampaignSkills) {
+                        let pSkill = this.petCampaignSkills[pKey];
+                        if (pSkill.isUnlocked) {
+                            pSkill.currentCd = 0;
+                            if (pSkill.ui) {
+                                pSkill.ui.overlay.clear();
+                                pSkill.ui.text.setVisible(false);
+                                pSkill.ui.glow.setVisible(true);
+                            }
+                        }
+                    }
+                }
+
+                // Bơm đầy máu cho người chơi
+                this.playerHealth = this.maxHealth;
+                this.updateHealthBarWidth(this.playerHealth);
             }
 
             this.time.delayedCall(1000, () => {
                 if (this.currentStage === 3) {
-                    // ==========================================
-                    // HỒI TOÀN BỘ KỸ NĂNG & MÁU TRƯỚC KHI ĐÁNH BOSS
-                    // ==========================================
-                    for (let key in SKILL_CAMPAIGN_CONFIG) {
-                        let skill = SKILL_CAMPAIGN_CONFIG[key];
-                        skill.currentCd = 0; // Trả thời gian hồi chiêu về 0
-                        if (skill.ui) {
-                            skill.ui.overlay.clear(); 
-                            skill.ui.text.setVisible(false);
-                            skill.ui.glow.setVisible(true); // Sáng viền lên báo hiệu đã sẵn sàng
-                        }
-                    }
-                    // Tiện tay bơm đầy máu cho người chơi để trận chiến công bằng nhất
-                    this.playerHealth = this.maxHealth;
-                    this.updateHealthBarWidth(this.playerHealth);
-
                     // ==========================================
                     // SPAWN BOSS CÁCH XA NỬA BẢN ĐỒ (~800px)
                     // ==========================================
@@ -1439,13 +1566,11 @@ export class CampaignScene extends Phaser.Scene {
                     this.bossEntity = new Boss(this, bossX, bossY);
                     this.monsters.add(this.bossEntity); // Cho Boss vào chung nhóm quái để ăn đạn
                 } else {
-                    // Spawn Rương cho Màn 1 và 2 (Logic cũ giữ nguyên)
+                    // Spawn Rương cho Màn 1 và 2
                     if (!this.chestSpawned) {
-                        // Sinh rương ở bãi trống cách người chơi 300-450px thay vì trên xác quái
                         let angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
                         let distance = Phaser.Math.Between(300, 450);
                         
-                        // Clamp để rương không bị văng ra ngoài ranh giới bản đồ
                         let dropX = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * distance, 150, 3850);
                         let dropY = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * distance, 150, 3850);
 
@@ -1598,6 +1723,34 @@ export class CampaignScene extends Phaser.Scene {
         }
     }
 
+    startHpRegenTimer() {
+        this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                if (this.isGameOver || this.isPaused || this.isCutscene || this.playerHealth <= 0) return;
+
+                let baseRegen = window.playerStats ? window.playerStats.hpRegen : 5;
+                let dynamicBuffs = { hpRegen: 0 };
+                if (window.equippedPet) {
+                    dynamicBuffs = getPetDynamicBuffs(this, window.equippedPet.pet.pet_code, window.equippedPet.level);
+                }
+                
+                let regenAmount = baseRegen + dynamicBuffs.hpRegen;
+                if (regenAmount > 0 && this.playerHealth < this.maxHealth) {
+                    this.playerHealth = Math.min(this.maxHealth, this.playerHealth + regenAmount);
+                    this.updateHealthBarWidth(this.playerHealth);
+                    
+                    let healText = this.add.text(this.player.x, this.player.y - 30, `+${regenAmount}`, { 
+                        fontSize: '18px', fill: '#00ff00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
+                    }).setOrigin(0.5).setDepth(8000);
+                    this.tweens.add({ targets: healText, y: this.player.y - 70, alpha: 0, duration: 1000, onComplete: () => healText.destroy() });
+                }
+            },
+            callbackScope: this,
+            loop: true
+        });
+    }
+
     drawHealthBar() {
         const BX=219, BY=63, BW=307, BH=55, SL=39; 
         this.hpFrame = this.add.image(100, 20, 'hp_frame').setOrigin(0, 0).setScale(0.35).setDepth(10002).setScrollFactor(0);
@@ -1687,7 +1840,7 @@ export class CampaignScene extends Phaser.Scene {
     }
 
     takeDamage(amount) {
-        if (this.isGameOver) return;
+        if (this.isGameOver || this.isCutscene) return;
 
         // ==========================================
         // GIẢM SÁT THƯƠNG TỪ BUFF CỦA PET
@@ -1723,32 +1876,22 @@ export class CampaignScene extends Phaser.Scene {
             if (this.player.shieldGroup && this.player.shieldGroup.list.length > 0) {
                 let sImg = this.player.shieldGroup.list[0];
                 
-                // Lấy tọa độ thực tế trên bản đồ
-                let worldPoint = new Phaser.Math.Vector2();
-                this.player.shieldGroup.getWorldTransformMatrix().transformPoint(sImg.x, sImg.y, worldPoint);
-                
-                // Vẽ hiệu ứng tại đúng tọa độ worldPoint
-                let breakFx = this.add.circle(
-                    worldPoint.x,
-                    worldPoint.y,
-                    15,
-                    0x00ffff,
-                    0.25
-                );
+                if (sImg && sImg.active) {
+                    let worldPoint = new Phaser.Math.Vector2();
+                    this.player.shieldGroup.getWorldTransformMatrix().transformPoint(sImg.x, sImg.y, worldPoint);
+                    
+                    let breakFx = this.add.circle(worldPoint.x, worldPoint.y, 15, 0x00ffff, 0.25);
+                    breakFx.setStrokeStyle(3, 0x00ffff);
+                    breakFx.setDepth(worldPoint.y + 10);
 
-                breakFx.setStrokeStyle(3, 0x00ffff);
-                breakFx.setDepth(worldPoint.y + 10);
+                    this.tweens.add({
+                        targets: breakFx, scale: 2.5, alpha: 0, duration: 300,
+                        onComplete: () => breakFx.destroy()
+                    });
 
-                this.tweens.add({
-                    targets: breakFx,
-                    scale: 2.5,
-                    alpha: 0,
-                    duration: 300,
-                    onComplete: () => breakFx.destroy()
-                });
-
-                this.player.shieldGroup.remove(sImg);
-                sImg.destroy(); 
+                    this.player.shieldGroup.remove(sImg);
+                    sImg.destroy(); 
+                }
             }
             
             if (this.player.shieldCount === 0) { 
@@ -1827,11 +1970,17 @@ export class CampaignScene extends Phaser.Scene {
     }
 
     createSkillUI() {
-        let cx = this.cameras.main.width / 2 - 300, cy = this.cameras.main.height - 60, i = 0;
-        for (let key in SKILL_CAMPAIGN_CONFIG) {
-            let sk = SKILL_CAMPAIGN_CONFIG[key], px = cx + (i * 75); sk.posX = px; sk.startY = cy; 
+        let cx = this.cameras.main.width / 2 - 100; // Căn giữa 3 ô
+        let cy = this.cameras.main.height - 60;
+
+        for (let i = 0; i < 3; i++) {
+            let skKey = window.equippedSkills[i];
+            if (!skKey) continue; // Bỏ qua nếu ô trống
             
-            // Gán nền đen và icon vào biến để dễ quản lý
+            let sk = SKILL_CAMPAIGN_CONFIG[skKey];
+            let px = cx + (i * 100); 
+            sk.posX = px; sk.startY = cy; 
+            
             let bgCircle = this.add.graphics().setDepth(10000).setScrollFactor(0).fillStyle(0x000000, 0.6).fillCircle(px, cy, 28);
             let ico = this.add.image(px, cy, sk.icon).setDepth(10001).setScrollFactor(0); 
             ico.setScale(35 / Math.max(ico.width, ico.height));
@@ -1839,12 +1988,21 @@ export class CampaignScene extends Phaser.Scene {
             let ov = this.add.graphics().setDepth(10002).setScrollFactor(0);
             let txt = this.add.text(px, cy, '', { fontSize: '22px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(10003).setScrollFactor(0).setVisible(false);
             let gl = this.add.graphics().setDepth(10004).setScrollFactor(0).lineStyle(3, EVO_COLORS[sk.level || 0], 1).strokeCircle(px, cy, 29);
-            let hk = this.add.text(px, cy - 45, sk.hotkey, { fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(10005).setScrollFactor(0);
             
-            // Đưa bgCircle và icon vào trong object sk.ui
+            let hotkeyStr = window.SKILL_SLOT_HOTKEYS['slot' + (i + 1)];
+            let hk = this.add.text(px, cy - 45, hotkeyStr, { fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(10005).setScrollFactor(0);
+            
             sk.ui = { bgCircle: bgCircle, icon: ico, overlay: ov, text: txt, glow: gl, hotkeyText: hk }; 
-            i++;
         }
+
+        window.refreshCampaignSkillHotkeysUI = () => {
+            for (let i = 0; i < 3; i++) {
+                let sKey = window.equippedSkills[i];
+                if (sKey && SKILL_CAMPAIGN_CONFIG[sKey] && SKILL_CAMPAIGN_CONFIG[sKey].ui) {
+                    SKILL_CAMPAIGN_CONFIG[sKey].ui.hotkeyText.setText(window.SKILL_SLOT_HOTKEYS['slot' + (i + 1)]);
+                }
+            }
+        };
     }
 
     checkAndCastSkill(skKey) {

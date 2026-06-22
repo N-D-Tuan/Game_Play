@@ -64,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Gọi hàm fetch ngay khi load xong game
     window.fetchPlayerData();
+    fetchTalentData();
     // ==========================================
 
     const homeScreen = document.getElementById('home-screen');
@@ -164,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     let talentPoints = 0;
     let unlockedNodes = [];
-    let equippedSkills = [null, null, null];
+    window.equippedSkills = [null, null, null];
 
     // Cây điều kiện: Key là kỹ năng muốn mở, Value là kỹ năng yêu cầu phải mở trước
     const TALENT_DEPENDENCIES = {
@@ -250,6 +251,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 slot.innerHTML = 'Trống';
                 slot.style.borderColor = '#888';
             }
+
+            let keyLabel = document.getElementById('key-slot-' + (index + 1));
+            if (keyLabel) keyLabel.innerText = window.SKILL_SLOT_HOTKEYS['slot' + (index + 1)];
         });
     }
 
@@ -1441,27 +1445,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (type === 'move') {
                     window.MOVE_CONFIG[keyName] = newKey;
                 } else if (type === 'skill') {
-                    // Cập nhật cho Luyện tập
-                    if (window.SKILL_CONFIG && window.SKILL_CONFIG[keyName]) {
-                        window.SKILL_CONFIG[keyName].hotkey = newKey;
-                    }
+                    window.SKILL_SLOT_HOTKEYS[keyName] = newKey;
 
-                    // [FIX ĐỒNG BỘ VƯỢT ẢI]: Cập nhật thẳng vào biến được Import trực tiếp từ skills.js
-                    if (SKILL_CAMPAIGN_CONFIG && SKILL_CAMPAIGN_CONFIG[keyName]) {
-                        SKILL_CAMPAIGN_CONFIG[keyName].hotkey = newKey;
-                    }
+                    let slotNumber = keyName.replace('slot', '');
+                    let keyLabel = document.getElementById('key-slot-' + slotNumber);
+                    if (keyLabel) keyLabel.innerText = newKey;
 
-                    // Ép màn hình vẽ lại UI ngay lập tức
                     try { 
                         if (typeof window.refreshSkillHotkeysUI === 'function') window.refreshSkillHotkeysUI(); 
                     } catch (error) {}
-                    
                     try { 
                         if (typeof window.refreshCampaignSkillHotkeysUI === 'function') window.refreshCampaignSkillHotkeysUI(); 
                     } catch (error) {}
                 } else if (type === 'pet_skill') {
                     window.PET_SKILL_HOTKEYS[keyName] = newKey;
-                    // Ép màn hình Vượt Ải vẽ lại chữ trên icon nếu đang mở
                     let activeScene = window.game && window.game.scene.isActive('CampaignScene') ? window.game.scene.getScene('CampaignScene') : null;
                     if (activeScene && activeScene.petCampaignSkills) {
                         let sk = activeScene.petCampaignSkills[keyName];
