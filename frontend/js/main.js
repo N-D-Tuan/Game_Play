@@ -2342,6 +2342,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+    
+    if (typeof loadInventoryFromServer === 'function') {
+        loadInventoryFromServer();
+    }
 
     loadPetsFromServer();
 });
