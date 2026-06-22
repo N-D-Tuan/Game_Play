@@ -1465,6 +1465,10 @@ export class CampaignScene extends Phaser.Scene {
                     if (t.type === 'Rectangle') {
                         objectsToDestroy.push(t);
                     }
+
+                    if ((t.type === 'Arc' || t.type === 'Graphics') && t.scrollFactorX !== 0) {
+                        objectsToDestroy.push(t);
+                    }
                     
                     // 2. Xóa các hạt hiệu ứng kỹ năng (Bỏ qua thời tiết)
                     if (t.type === 'ParticleEmitterManager' || t.type === 'ParticleEmitter') {

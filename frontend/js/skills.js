@@ -581,6 +581,7 @@ export function castHealEvo(scene, player) {
     // 3. ĐẶC QUYỀN LEVEL 2: BAN PHƯỚC (Tăng 50% tốc chạy trong 3 giây)
     if (level === 2) {
         player.speedMultiplier = 1.5;
+        if (window.updateStatsUI) window.updateStatsUI();
 
         // Xóa hào quang cũ nếu spam chiêu
         if (player.buffAura) player.buffAura.destroy();
@@ -599,6 +600,8 @@ export function castHealEvo(scene, player) {
         if (player.buffTimer) player.buffTimer.remove();
         player.buffTimer = scene.time.delayedCall(3000, () => {
             player.speedMultiplier = 1;
+            if (window.updateStatsUI) window.updateStatsUI();
+
             if (player.buffAura) {
                 player.buffAura.destroy();
                 player.buffAura = null;
@@ -1035,6 +1038,7 @@ export function castAnchorEvo(scene, player) {
         if (!isPlayerBuffed && Phaser.Math.Distance.Between(ship.x, ship.y, player.x, player.y) < 180) {
             isPlayerBuffed = true;
             player.speedMultiplier = pBuff;
+            if (window.updateStatsUI) window.updateStatsUI();
 
             // Hiệu ứng vòng tròn xanh biển quanh người khi buff tốc
             if (player.anchorBuffAura) {
@@ -1060,6 +1064,8 @@ export function castAnchorEvo(scene, player) {
             if (player.anchorBuffTimer) player.anchorBuffTimer.remove();
             player.anchorBuffTimer = scene.time.delayedCall(4000, () => {
                 player.speedMultiplier = 1;
+                if (window.updateStatsUI) window.updateStatsUI();
+                
                 if (player.anchorBuffAura) {
                     player.anchorBuffAura.destroy();
                     player.anchorBuffAura = null;

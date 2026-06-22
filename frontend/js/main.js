@@ -746,6 +746,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentStats.atk += Math.round(currentStats.atk * ((dynamicBuffs.atkPercent || 0) / 100)); 
                 currentStats.critRate += (dynamicBuffs.critRate || 0);
                 currentStats.dodge += (dynamicBuffs.dodge || 0);
+
+                // Đọc buff Tốc độ chạy từ các Kỹ năng (Hồi máu, Tàu chiến...)
+                if (activeScene.player && activeScene.player.speedMultiplier) {
+                    currentStats.speed = Math.round(currentStats.speed * activeScene.player.speedMultiplier);
+                }
             }
         }
 
@@ -758,7 +763,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if(document.getElementById('stat-lifesteal')) document.getElementById('stat-lifesteal').textContent = currentStats.lifesteal + '%';
         if(document.getElementById('stat-speed')) document.getElementById('stat-speed').textContent = currentStats.speed;
     }
-    
+    window.updateStatsUI = updateStatsUI;
     updateStatsUI();
 
     // ==========================================
