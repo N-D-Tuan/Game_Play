@@ -16,19 +16,22 @@ const config = {
     scene: { preload: preload, create: create, update: update }
 };
 
-// [MỚI]: Đưa cấu hình Phím lên window để main.js có thể chỉnh sửa
+// Đưa cấu hình Phím lên window để main.js có thể chỉnh sửa
 window.MOVE_CONFIG = { up: 'ARROWUP', down: 'ARROWDOWN', left: 'ARROWLEFT', right: 'ARROWRIGHT', melee: 'SPACE' };
 
+window.SKILL_SLOT_HOTKEYS = { slot1: '1', slot2: '2', slot3: '3' };
+window.equippedSkills = [null, null, null];
+
 window.SKILL_CONFIG = {
-    'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 3000,     currentCd: 0, ui: null, hotkey: '1' },
-    'swords':   { name: "⚔️ PHI KIẾM",    icon: 'sword',      cd: 5000,     currentCd: 0, ui: null, hotkey: '2' },
-    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 15000,    currentCd: 0, ui: null, hotkey: '3' },
-    'shield':   { name: "🛡️ LÁ CHẮN",     icon: 'shield',     cd: 12000,    currentCd: 0, ui: null, hotkey: '4' },
-    'heal':     { name: "💚 HỒI MÁU",     icon: 'heal',       cd: 15000,    currentCd: 0, ui: null, hotkey: '5' },
-    'earth':    { name: "⛰️ THỔ ĐỘN",     icon: 'earth2',     cd: 10000,    currentCd: 0, ui: null, hotkey: '6' },
-    'arrows':   { name: "🏹 VẠN TIỄN",    icon: 'arrows',     cd: 8000,     currentCd: 0, ui: null, hotkey: '7' },
-    'anchor':   { name: "⚓ TÀU CHIẾN",   icon: 'anchor',     cd: 15000,    currentCd: 0, ui: null, hotkey: '8' },
-    'doll':     { name: "🎎 HÌNH NHÂN",   icon: 'doll',       cd: 20000,    currentCd: 0, ui: null, hotkey: '9' },
+    'meteor':   { name: "☄️ THIÊN THẠCH", icon: 'fireball',   cd: 5000,     currentCd: 0, ui: null },
+    'swords':   { name: "⚔️ PHI KIẾM",    icon: 'sword',      cd: 5000,     currentCd: 0, ui: null },
+    'lightning':{ name: "⚡ SẤM SÉT",     icon: 'lightning1', cd: 15000,    currentCd: 0, ui: null },
+    'shield':   { name: "🛡️ LÁ CHẮN",     icon: 'shield',     cd: 12000,    currentCd: 0, ui: null },
+    'heal':     { name: "💚 HỒI MÁU",     icon: 'heal',       cd: 15000,    currentCd: 0, ui: null },
+    'earth':    { name: "⛰️ THỔ ĐỘN",     icon: 'earth2',     cd: 10000,    currentCd: 0, ui: null },
+    'arrows':   { name: "🏹 VẠN TIỄN",    icon: 'arrows',     cd: 8000,     currentCd: 0, ui: null },
+    'anchor':   { name: "⚓ TÀU CHIẾN",   icon: 'anchor',     cd: 15000,    currentCd: 0, ui: null },
+    'doll':     { name: "🎎 HÌNH NHÂN",   icon: 'doll',       cd: 20000,    currentCd: 0, ui: null },
 };
 
 window.game = new Phaser.Game(config);
@@ -140,12 +143,9 @@ function create() {
         }
 
         // 1. Kiểm tra xuất chiêu Kỹ năng
-        for (let skKey in window.SKILL_CONFIG) {
-            if (window.SKILL_CONFIG[skKey].hotkey === key) {
-                checkAndCastSkill.call(this, skKey);
-                return;
-            }
-        }
+        if (key === window.SKILL_SLOT_HOTKEYS.slot1 && window.equippedSkills[0]) { checkAndCastSkill.call(this, window.equippedSkills[0]); return; }
+        if (key === window.SKILL_SLOT_HOTKEYS.slot2 && window.equippedSkills[1]) { checkAndCastSkill.call(this, window.equippedSkills[1]); return; }
+        if (key === window.SKILL_SLOT_HOTKEYS.slot3 && window.equippedSkills[2]) { checkAndCastSkill.call(this, window.equippedSkills[2]); return; }
 
         // 2. Kiểm tra Di chuyển
         if (key === window.MOVE_CONFIG.up) moveState.up = true;
@@ -170,17 +170,31 @@ function create() {
 // HỆ THỐNG GIAO DIỆN HỒI CHIÊU (CÓ HIỂN THỊ PHÍM)
 // ==========================================
 function createSkillUI() {
-    let startX = window.innerWidth / 2 - 300; 
-    let startY = window.innerHeight - 60; // Nâng lên tí cho đỡ sát đáy
-    let spacing = 75; 
-    let index = 0;
+    let startX = window.innerWidth / 2 - 100; 
+    let startY = window.innerHeight - 60;
+    let spacing = 100; 
 
-    for (let key in window.SKILL_CONFIG) {
-        let skill = window.SKILL_CONFIG[key];
-        let posX = startX + (index * spacing);
+    for (let k in window.SKILL_CONFIG) {
+        let sk = window.SKILL_CONFIG[k];
+        if (sk.ui) {
+            if(sk.ui.bgCircle) sk.ui.bgCircle.destroy();
+            if(sk.ui.icon) sk.ui.icon.destroy();
+            if(sk.ui.overlay) sk.ui.overlay.destroy();
+            if(sk.ui.text) sk.ui.text.destroy();
+            if(sk.ui.glow) sk.ui.glow.destroy();
+            if(sk.ui.hotkeyText) sk.ui.hotkeyText.destroy();
+            sk.ui = null;
+        }
+    }
+
+    for (let i = 0; i < 3; i++) {
+        let skillKey = window.equippedSkills[i];
+        if (!skillKey) continue; // Bỏ qua nếu ô này trống
+
+        let skill = window.SKILL_CONFIG[skillKey];
+        let posX = startX + (i * spacing);
         skill.posX = posX; skill.startY = startY; 
 
-        // Khung nền đen
         let bgCircle = this.add.graphics();
         bgCircle.fillStyle(0x000000, 0.6);
         bgCircle.fillCircle(posX, startY, 28);
@@ -192,28 +206,26 @@ function createSkillUI() {
 
         let cdOverlay = this.add.graphics().setDepth(1502);
 
-        let cdText = this.add.text(posX, startY, '', { fontSize: '22px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 })
-            .setOrigin(0.5).setDepth(1503).setVisible(false);
+        let cdText = this.add.text(posX, startY, '', { fontSize: '22px', fill: '#ffffff', fontStyle: 'bold', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5).setDepth(1503).setVisible(false);
 
         let glow = this.add.graphics();
         glow.lineStyle(3, 0x00ffff, 1);
         glow.strokeCircle(posX, startY, 29);
         glow.setDepth(1504);
 
-        // Text hiển thị Phím Bấm nằm sát phía trên vòng tròn
-        let hotkeyText = this.add.text(posX, startY - 45, skill.hotkey, { 
-            fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 
-        }).setOrigin(0.5).setDepth(1505);
+        // Lấy phím đang gắn cho ô này hiển thị ra
+        let hotkey = window.SKILL_SLOT_HOTKEYS['slot' + (i + 1)];
+        let hotkeyText = this.add.text(posX, startY - 45, hotkey, { fontSize: '18px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(1505);
 
-        skill.ui = { overlay: cdOverlay, text: cdText, glow: glow, hotkeyText: hotkeyText };
-        index++;
+        skill.ui = { bgCircle: bgCircle, icon: icon, overlay: cdOverlay, text: cdText, glow: glow, hotkeyText: hotkeyText };
     }
 
     // Hàm public để main.js gọi vào khi đổi phím
     window.refreshSkillHotkeysUI = () => {
-        for (let k in window.SKILL_CONFIG) {
-            if (window.SKILL_CONFIG[k].ui) {
-                window.SKILL_CONFIG[k].ui.hotkeyText.setText(window.SKILL_CONFIG[k].hotkey);
+        for (let i = 0; i < 3; i++) {
+            let sKey = window.equippedSkills[i];
+            if (sKey && window.SKILL_CONFIG[sKey] && window.SKILL_CONFIG[sKey].ui) {
+                window.SKILL_CONFIG[sKey].ui.hotkeyText.setText(window.SKILL_SLOT_HOTKEYS['slot' + (i + 1)]);
             }
         }
     };

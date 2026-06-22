@@ -797,13 +797,6 @@ export function executePetActiveSkill(scene, petCode, skillLevel) {
             onComplete: () => {
                 dragon.destroy();
 
-                // 2. Bầu trời chuyển dần sang màu đỏ như máu trong 2 giây
-                let redSky = scene.add.graphics().setScrollFactor(0).setDepth(13000);
-                redSky.fillStyle(0xaa0000, 0.35); // Phủ lớp màu đỏ sẫm lên toàn màn hình
-                redSky.fillRect(0, 0, scene.cameras.main.width, scene.cameras.main.height);
-                redSky.setAlpha(0);
-                scene.tweens.add({ targets: redSky, alpha: 1, duration: 2000 });
-
                 // Chờ 2 giây cho bầu trời đỏ rực hẳn rồi mới giáng thế
                 scene.time.delayedCall(2000, () => {
                     
@@ -841,8 +834,6 @@ export function executePetActiveSkill(scene, petCode, skillLevel) {
                         ease: 'Linear',
                         onComplete: () => {
                             dashDragon.destroy();
-                            // Tan biến bầu trời đỏ từ từ trong 1 giây sau khi rồng bay xong
-                            scene.tweens.add({ targets: redSky, alpha: 0, duration: 1000, onComplete: () => redSky.destroy() });
                         }
                     });
 
