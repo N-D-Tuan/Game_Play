@@ -12,6 +12,7 @@ Route::prefix('talents')->group(function () {
     Route::get('/{playerId}', [PlayerController::class, 'getTalents']);
     Route::post('/unlock', [PlayerController::class, 'unlockTalent']);
     Route::post('/equip', [PlayerController::class, 'equipSkills']);
+    Route::post('/roll-awakening', [PlayerController::class, 'rollAwakening']);
 });
 
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
