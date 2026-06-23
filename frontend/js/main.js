@@ -133,6 +133,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 ];
                 
                 renderTalentTree();
+
+                if (data.awakening_stats) {
+                    let parsedStats = typeof data.awakening_stats === 'string' ? JSON.parse(data.awakening_stats) : data.awakening_stats;
+                    if (Array.isArray(parsedStats) && parsedStats.length === 8) {
+                        window.currentAwakeningStats = parsedStats;
+                        drawRadarChart();
+                        renderStatsList();
+                        window.updateStatsUI();
+                    }
+                }
             }
         } catch (error) {
             console.error("Lỗi khi tải dữ liệu Thiên Phú:", error);
@@ -704,64 +714,101 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateStatsUI() {
-        let currentStats = { ...BASE_STATS };
+        // GIỎ 1: CHỈ SỐ CỘNG THẲNG (FLAT)
+        let flatStats = { ...BASE_STATS };
+        // GIỎ 2: CHỈ SỐ PHẦN TRĂM (%) - Mặc định là 0%
+        let pctStats = { hp: 0, atk: 0, hpRegen: 0, speed: 0, dodge: 0, critRate: 0, critDamage: 0, lifesteal: 0 };
+
+        // 1. CỘNG TRANG BỊ (Chỉ cộng Flat)
         for (let slot in equippedItems) {
             let item = equippedItems[slot];
             if (item && item.stats) {
                 for (let statKey in item.stats) {
-                    if(currentStats[statKey] !== undefined) currentStats[statKey] += item.stats[statKey];
+                    if(flatStats[statKey] !== undefined) flatStats[statKey] += item.stats[statKey];
                 }
             }
         }
 
+        // 2. CỘNG THÚ CƯNG (Chỉ cộng Flat)
         if (window.equippedPet) {
             let pInfo = window.equippedPet.pet;
             let lvl = window.equippedPet.level;
-            currentStats.hp += Math.round(pInfo.base_hp + (lvl - 1) * pInfo.growth_hp);
-            currentStats.hpRegen += Math.round(pInfo.base_hp_regen + (lvl - 1) * pInfo.growth_hp_regen);
-            currentStats.atk += Math.round(pInfo.base_atk + (lvl - 1) * pInfo.growth_atk);
-            currentStats.dodge += Math.round(pInfo.base_dodge + (lvl - 1) * pInfo.growth_dodge);
-            currentStats.critRate += Math.round(pInfo.base_crit_rate + (lvl - 1) * pInfo.growth_crit_rate);
-            currentStats.critDamage += Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
-            currentStats.lifesteal += Math.round(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
-            currentStats.speed += Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
+            flatStats.hp += Math.round(pInfo.base_hp + (lvl - 1) * pInfo.growth_hp);
+            flatStats.hpRegen += Math.round(pInfo.base_hp_regen + (lvl - 1) * pInfo.growth_hp_regen);
+            flatStats.atk += Math.round(pInfo.base_atk + (lvl - 1) * pInfo.growth_atk);
+            flatStats.dodge += Math.round(pInfo.base_dodge + (lvl - 1) * pInfo.growth_dodge);
+            flatStats.critRate += Math.round(pInfo.base_crit_rate + (lvl - 1) * pInfo.growth_crit_rate);
+            flatStats.critDamage += Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
+            flatStats.lifesteal += Math.round(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
+            flatStats.speed += Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
 
-            window.playerStats = { ...currentStats };
-            
             // ==========================================
-            // ĐỌC BUFF ĐỘNG TỪ TRẬN CHIẾN
+            // ĐỌC BUFF ĐỘNG TỪ TRẬN CHIẾN (Phần Trăm %)
             // ==========================================
-            // Kiểm tra xem game có đang chạy màn Vượt Ải hay không
             let activeScene = window.game && window.game.scene.isActive('CampaignScene') ? window.game.scene.getScene('CampaignScene') : null;
-            
-            // Nếu đang trong trận, lấy các buff tạm thời (Máu < 50% hoặc đang bật chiêu O) cộng vào UI
             if (activeScene && activeScene.player) {                
                 let dynamicBuffs = getPetDynamicBuffs(activeScene, pInfo.pet_code, lvl);
 
-                //Kiến xanh
-                currentStats.lifesteal += (dynamicBuffs.lifesteal || 0);
-                currentStats.hpRegen += (dynamicBuffs.hpRegen || 0);
+                // Các buff trong trận chiến này đều là %
+                pctStats.lifesteal += (dynamicBuffs.lifesteal || 0);
+                pctStats.hpRegen += (dynamicBuffs.hpRegen || 0); // Đặc biệt: Kiến xanh buff HP Regen % tổng máu (Giữ theo logic cũ của bạn)
+                pctStats.atk += (dynamicBuffs.atkPercent || 0); 
+                pctStats.critRate += (dynamicBuffs.critRate || 0);
+                pctStats.dodge += (dynamicBuffs.dodge || 0);
 
-                //Kiến đỏ
-                currentStats.atk += Math.round(currentStats.atk * ((dynamicBuffs.atkPercent || 0) / 100)); 
-                currentStats.critRate += (dynamicBuffs.critRate || 0);
-                currentStats.dodge += (dynamicBuffs.dodge || 0);
-
-                // Đọc buff Tốc độ chạy từ các Kỹ năng (Hồi máu, Tàu chiến...)
+                // Speed riêng biệt của Phaser
                 if (activeScene.player && activeScene.player.speedMultiplier) {
-                    currentStats.speed = Math.round(currentStats.speed * activeScene.player.speedMultiplier);
+                    pctStats.speed += ((activeScene.player.speedMultiplier - 1) * 100); 
                 }
             }
         }
 
-        document.getElementById('stat-hp').textContent = currentStats.hp;
-        document.getElementById('stat-hpRegen').textContent = currentStats.hpRegen;
-        document.getElementById('stat-atk').textContent = currentStats.atk;
-        document.getElementById('stat-dodge').textContent = currentStats.dodge + '%';
-        if(document.getElementById('stat-critRate')) document.getElementById('stat-critRate').textContent = currentStats.critRate + '%';
-        if(document.getElementById('stat-critDamage')) document.getElementById('stat-critDamage').textContent = currentStats.critDamage + '%';
-        if(document.getElementById('stat-lifesteal')) document.getElementById('stat-lifesteal').textContent = currentStats.lifesteal + '%';
-        if(document.getElementById('stat-speed')) document.getElementById('stat-speed').textContent = currentStats.speed;
+        // 3. CỘNG TẾ ĐÀN THỨC TỈNH (Phân loại vào Giỏ 1 hoặc Giỏ 2)
+        if (window.currentAwakeningStats && window.currentAwakeningStats.length === 8) {
+            window.currentAwakeningStats.forEach(stat => {
+                if (!stat || !stat.id) return;
+                let id = stat.id;
+                let val = parseFloat(stat.value) || 0;
+                
+                if (stat.is_flat) {
+                    if (flatStats[id] !== undefined) flatStats[id] += val;
+                } else {
+                    if (pctStats[id] !== undefined) pctStats[id] += val;
+                }
+            });
+        }
+
+        // ==========================================
+        // 4. ÁP DỤNG CÔNG THỨC VÀNG TÍNH TỔNG CỤC
+        // ==========================================
+        let finalStats = { ...BASE_STATS };
+        
+        // Nhóm 1: Các chỉ số có Base to (Máu, ATK, Tốc, Hồi) -> Cần nhân với %
+        finalStats.hp = Math.round(flatStats.hp + (flatStats.hp * (pctStats.hp / 100)));
+        finalStats.atk = Math.round(flatStats.atk + (flatStats.atk * (pctStats.atk / 100)));
+        finalStats.speed = Math.round(flatStats.speed + (flatStats.speed * (pctStats.speed / 100)));
+        
+        // LƯU Ý ĐẶC BIỆT: Hồi máu ở logic cũ của bạn là buff thẳng HP regen, nên ta xử lý nhẹ chỗ này
+        finalStats.hpRegen = Math.round(flatStats.hpRegen + (flatStats.hpRegen * (pctStats.hpRegen / 100))); 
+        
+        // Nhóm 2: Các chỉ số đã là % (Crit, Dodge, Hút máu) -> Không nhân với nhau, mà chỉ việc cộng gộp Giỏ 1 + Giỏ 2
+        finalStats.dodge = (flatStats.dodge + pctStats.dodge).toFixed(1);
+        finalStats.critRate = (flatStats.critRate + pctStats.critRate).toFixed(1);
+        finalStats.critDamage = (flatStats.critDamage + pctStats.critDamage).toFixed(1);
+        finalStats.lifesteal = (flatStats.lifesteal + pctStats.lifesteal).toFixed(1);
+
+        // Lưu cho Game lấy chạy
+        window.playerStats = { ...finalStats };
+
+        // 5. HIỂN THỊ RA UI
+        document.getElementById('stat-hp').textContent = finalStats.hp;
+        document.getElementById('stat-hpRegen').textContent = finalStats.hpRegen;
+        document.getElementById('stat-atk').textContent = finalStats.atk;
+        document.getElementById('stat-dodge').textContent = finalStats.dodge + '%';
+        if(document.getElementById('stat-critRate')) document.getElementById('stat-critRate').textContent = finalStats.critRate + '%';
+        if(document.getElementById('stat-critDamage')) document.getElementById('stat-critDamage').textContent = finalStats.critDamage + '%';
+        if(document.getElementById('stat-lifesteal')) document.getElementById('stat-lifesteal').textContent = finalStats.lifesteal + '%';
+        if(document.getElementById('stat-speed')) document.getElementById('stat-speed').textContent = finalStats.speed;
     }
     window.updateStatsUI = updateStatsUI;
     updateStatsUI();
@@ -2347,5 +2394,205 @@ document.addEventListener("DOMContentLoaded", () => {
         loadInventoryFromServer();
     }
 
+    // ==========================================
+    // KHU VỰC TẾ ĐÀN THỨC TỈNH (AWAKENING ALTAR)
+    // ==========================================
+    const AWAKENING_LABELS = ['HP', 'ATK', 'Hồi Máu', 'Tốc Độ', 'Tỉ lệ CM', 'ST CM', 'Né', 'Hút Máu'];
+    
+    // Mảng chứa dữ liệu chuẩn của 8 ô
+    window.currentAwakeningStats = arrayFillNull(8); 
+    // Mảng lưu trạng thái khóa
+    let lockedStats = [false, false, false, false, false, false, false, false];
+
+    function arrayFillNull(size) {
+        let arr = [];
+        for(let i=0; i<size; i++) arr.push({ value_str: '+0', color: '#555555', ratio: 0, value: 0, is_flat: false });
+        return arr;
+    }
+
+    function drawRadarChart() {
+        const canvas = document.getElementById('radar-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const cx = 170, cy = 170, radius = 120; 
+
+        ctx.clearRect(0, 0, 340, 340);
+
+        // 1. Vẽ Lưới Mạng Nhện
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        for (let step = 1; step <= 5; step++) {
+            ctx.beginPath();
+            let r = radius * (step / 5);
+            for (let i = 0; i < 8; i++) {
+                let angle = (Math.PI * 2 * i / 8) - Math.PI / 2;
+                let x = cx + Math.cos(angle) * r;
+                let y = cy + Math.sin(angle) * r;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // 2. Vẽ 8 trục nối từ tâm ra rìa và Chữ (Labels)
+        for (let i = 0; i < 8; i++) {
+            let angle = (Math.PI * 2 * i / 8) - Math.PI / 2;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+            ctx.stroke();
+
+            ctx.fillStyle = lockedStats[i] ? '#555' : '#aaa';
+            ctx.font = lockedStats[i] ? 'italic 13px Arial' : 'bold 13px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let labelX = cx + Math.cos(angle) * (radius + 30);
+            let labelY = cy + Math.sin(angle) * (radius + 20);
+            ctx.fillText(AWAKENING_LABELS[i], labelX, labelY);
+        }
+
+        // 3. Vẽ Vùng Sức Mạnh của Nhân Vật (Dựa trên thông số Ratio API trả về)
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            let angle = (Math.PI * 2 * i / 8) - Math.PI / 2;
+            let val = window.currentAwakeningStats[i] ? window.currentAwakeningStats[i].ratio : 0; 
+            let x = cx + Math.cos(angle) * (radius * val);
+            let y = cy + Math.sin(angle) * (radius * val);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+        ctx.fill();
+        ctx.strokeStyle = '#ff3333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    function renderStatsList() {
+        const listContainer = document.getElementById('awakening-stats-list');
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+
+        for (let i = 0; i < 8; i++) {
+            let isLocked = lockedStats[i];
+            let statData = window.currentAwakeningStats[i] || { value_str: '+0', color: '#555' };
+            
+            // Xử lý Text-Shadow cho màu Đỏ
+            let textShadow = statData.color === '#ff0000' ? 'text-shadow: 0 0 10px #ff0000;' : '';
+
+            let itemDiv = document.createElement('div');
+            itemDiv.style.display = 'flex';
+            itemDiv.style.alignItems = 'center';
+            itemDiv.style.justifyContent = 'space-between';
+            itemDiv.style.padding = '8px 15px';
+            itemDiv.style.backgroundColor = isLocked ? '#222' : '#111';
+            itemDiv.style.border = isLocked ? '1px solid #555' : `1px solid ${statData.color}`;
+            itemDiv.style.borderRadius = '5px';
+
+            itemDiv.innerHTML = `
+                <span style="color: ${isLocked ? '#777' : '#fff'}; width: 80px; font-weight:bold;">${AWAKENING_LABELS[i]}</span>
+                <span style="color: ${isLocked ? '#777' : statData.color}; font-weight: bold; width: 80px; text-align: right; ${textShadow}">${statData.value_str}</span>
+                <button onclick="toggleLock(${i})" style="margin-left: 15px; background: none; border: none; font-size: 18px; cursor: pointer; filter: grayscale(${isLocked ? '0' : '100%'});">
+                    ${isLocked ? '🔒' : '🔓'}
+                </button>
+            `;
+            listContainer.appendChild(itemDiv);
+        }
+    }
+
+    window.toggleLock = function(index) {
+        lockedStats[index] = !lockedStats[index];
+        drawRadarChart(); 
+        renderStatsList(); 
+        
+        let lockedCount = lockedStats.filter(x => x).length;
+        let cost = 1;
+        if (lockedCount === 1) cost = 2;
+        else if (lockedCount === 2) cost = 5;
+        else if (lockedCount === 3) cost = 10;
+        else if (lockedCount >= 4 && lockedCount <= 6) cost = 50; 
+        else if (lockedCount === 7) cost = 100; 
+        
+        document.getElementById('roll-cost').innerText = `(Tốn ${cost} Điểm)`;
+    };
+
+    // SỰ KIỆN NÚT TẾ HỒN CALL API
+    const btnTeHon = document.getElementById('btn-te-hon');
+    if (btnTeHon) {
+        btnTeHon.addEventListener('mouseover', () => btnTeHon.style.boxShadow = '0 0 25px rgba(255,0,0,0.8)');
+        btnTeHon.addEventListener('mouseout', () => btnTeHon.style.boxShadow = 'none');
+
+        btnTeHon.addEventListener('click', async () => {
+            // BẮT BUỘC MỞ ĐỦ 9 SKILL
+            if (unlockedNodes.length < 9) {
+                showDarkFantasyAlert("Phải mở khóa toàn bộ Kỹ năng trước khi Tế Hồn!");
+                return;
+            }
+
+            let lockedCount = lockedStats.filter(x => x).length;
+            if (lockedCount === 8) {
+                showDarkFantasyAlert("Bạn đang khóa cả 8 ô! Hãy mở khóa ít nhất 1 ô để Tế Hồn.");
+                return;
+            }
+
+            let playerId = localStorage.getItem('playerId') || '1';
+            
+            try {
+                btnTeHon.disabled = true;
+                btnTeHon.innerHTML = `ĐANG TẾ LỄ...`;
+
+                const response = await fetch('http://127.0.0.1:8000/api/talents/roll-awakening', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        player_id: playerId, 
+                        locked_indexes: lockedStats 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // Cập nhật điểm thiên phú
+                    talentPoints = data.talent_points;
+                    document.getElementById('talent-points-text').innerText = talentPoints;
+                    
+                    // Cập nhật mảng kết quả và vẽ lại UI Tế Đàn
+                    window.currentAwakeningStats = data.stats;
+                    drawRadarChart();
+                    renderStatsList();
+
+                    // Rung màn hình nhẹ khi Roll thành công
+                    const altar = document.getElementById('awakening-altar');
+                    altar.style.transform = 'translate(-3px, 3px)';
+                    setTimeout(() => altar.style.transform = 'translate(3px, -3px)', 50);
+                    setTimeout(() => altar.style.transform = 'translate(0, 0)', 100);
+
+                    // TÍNH LẠI CHỈ SỐ GẦN NHẤT ĐỂ ÁP DỤNG NGAY LẬP TỨC
+                    window.updateStatsUI();
+
+                } else {
+                    showDarkFantasyAlert(data.message);
+                }
+            } catch (error) {
+                console.error("Lỗi Tế Đàn:", error);
+                showDarkFantasyAlert("Mất kết nối với Tế Đàn!");
+            } finally {
+                // Mở lại nút và tính lại giá tiền hiện tại
+                let cost = 1;
+                if (lockedCount === 1) cost = 2;
+                else if (lockedCount === 2) cost = 5;
+                else if (lockedCount === 3) cost = 10;
+                else if (lockedCount >= 4 && lockedCount <= 6) cost = 50; 
+                else if (lockedCount === 7) cost = 100;
+
+                btnTeHon.disabled = false;
+                btnTeHon.innerHTML = `TẾ HỒN <span id="roll-cost" style="color: #ffcc00; font-size: 20px;">(Tốn ${cost} Điểm)</span>`;
+            }
+        });
+    }
+
+    drawRadarChart();
+    renderStatsList();
     loadPetsFromServer();
 });

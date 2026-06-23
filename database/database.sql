@@ -14,6 +14,12 @@ ADD COLUMN talent_points INT DEFAULT 0,
 ADD COLUMN unlocked_nodes JSON,
 ADD COLUMN equipped_skills JSON;
 
+ALTER TABLE players 
+MODIFY COLUMN gold BIGINT NOT NULL DEFAULT 0;
+
+ALTER TABLE players
+ADD COLUMN awakening_stats JSON DEFAULT NULL;
+
 -- Cập nhật dữ liệu mặc định ban đầu cho Player 1 (Tránh lỗi Null JSON)
 UPDATE players 
 SET talent_points = 50,
