@@ -2592,6 +2592,30 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ==========================================
+    // SỰ KIỆN MỞ BẢNG QUY TẮC TẾ HỒN
+    // ==========================================
+    const btnAwakeningInfo = document.getElementById('btn-awakening-info');
+    const awakeningRulesModal = document.getElementById('awakening-rules-modal');
+    const closeAwakeningRules = document.getElementById('close-awakening-rules');
+
+    if (btnAwakeningInfo && awakeningRulesModal && closeAwakeningRules) {
+        btnAwakeningInfo.addEventListener('click', () => {
+            awakeningRulesModal.style.display = 'flex';
+        });
+
+        closeAwakeningRules.addEventListener('click', () => {
+            awakeningRulesModal.style.display = 'none';
+        });
+        
+        // Bấm ra ngoài khoảng đen để đóng modal
+        awakeningRulesModal.addEventListener('click', (e) => {
+            if (e.target === awakeningRulesModal) {
+                awakeningRulesModal.style.display = 'none';
+            }
+        });
+    }
+
     drawRadarChart();
     renderStatsList();
     loadPetsFromServer();
