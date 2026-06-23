@@ -42,7 +42,8 @@ class PlayerController extends Controller
             'talent_points' => $player->talent_points ?? 0,
             'unlocked_nodes' => $player->unlocked_nodes,
             'equipped_skills' => $player->equipped_skills,
-            'awakening_stats' => $player->awakening_stats
+            'awakening_stats' => $player->awakening_stats,
+            'awakening_locks' => $player->awakening_locks
         ]);
     }
 
@@ -315,5 +316,19 @@ class PlayerController extends Controller
             'stats' => $newStats,
             'message' => 'Tế Hồn thành công!'
         ]);
+    }
+
+    public function saveAwakeningLocks(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $locks = $request->input('locks');
+
+        if (is_array($locks)) {
+            \Illuminate\Support\Facades\DB::table('players')
+                ->where('id', $playerId)
+                ->update(['awakening_locks' => json_encode($locks)]);
+        }
+
+        return response()->json(['status' => 'success']);
     }
 }

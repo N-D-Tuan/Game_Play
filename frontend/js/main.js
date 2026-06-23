@@ -134,6 +134,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 renderTalentTree();
 
+                // Đọc trạng thái Ổ khóa từ Database
+                if (data.awakening_locks) {
+                    let parsedLocks = typeof data.awakening_locks === 'string' ? JSON.parse(data.awakening_locks) : data.awakening_locks;
+                    if (Array.isArray(parsedLocks) && parsedLocks.length === 8) {
+                        lockedStats = parsedLocks;
+                    }
+                }
+
+                // Đọc chỉ số Tế đàn               
                 if (data.awakening_stats) {
                     let parsedStats = typeof data.awakening_stats === 'string' ? JSON.parse(data.awakening_stats) : data.awakening_stats;
                     if (Array.isArray(parsedStats) && parsedStats.length === 8) {
@@ -2502,6 +2511,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.toggleLock = function(index) {
         lockedStats[index] = !lockedStats[index];
+
+        let playerId = localStorage.getItem('playerId') || '1';
+        fetch('http://127.0.0.1:8000/api/talents/save-awakening-locks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player_id: playerId, locks: lockedStats })
+        }).catch(err => console.error("Lỗi lưu ổ khóa:", err));
+
         drawRadarChart(); 
         renderStatsList(); 
         
