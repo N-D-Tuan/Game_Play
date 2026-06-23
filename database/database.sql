@@ -20,6 +20,9 @@ MODIFY COLUMN gold BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE players
 ADD COLUMN awakening_stats JSON DEFAULT NULL;
 
+ALTER TABLE players
+ADD COLUMN awakening_locks JSON DEFAULT NULL;
+
 -- Cập nhật dữ liệu mặc định ban đầu cho Player 1 (Tránh lỗi Null JSON)
 UPDATE players 
 SET talent_points = 50,

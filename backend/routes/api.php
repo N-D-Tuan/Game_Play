@@ -13,6 +13,7 @@ Route::prefix('talents')->group(function () {
     Route::post('/unlock', [PlayerController::class, 'unlockTalent']);
     Route::post('/equip', [PlayerController::class, 'equipSkills']);
     Route::post('/roll-awakening', [PlayerController::class, 'rollAwakening']);
+    Route::post('/save-awakening-locks', [PlayerController::class, 'saveAwakeningLocks']);
 });
 
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
