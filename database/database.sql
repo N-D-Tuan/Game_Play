@@ -23,6 +23,9 @@ ADD COLUMN awakening_stats JSON DEFAULT NULL;
 ALTER TABLE players
 ADD COLUMN awakening_locks JSON DEFAULT NULL;
 
+ALTER TABLE players
+ADD COLUMN rune_tree JSON DEFAULT NULL;
+
 -- Cập nhật dữ liệu mặc định ban đầu cho Player 1 (Tránh lỗi Null JSON)
 UPDATE players 
 SET talent_points = 50,
@@ -109,6 +112,17 @@ VALUES
 (217, 'Trái Cấm Địa Đàn', 'food', 'B', 0, 0, 0, 0, 'food1.png'),
 (218, 'Miếng Cắn Vực Thẳm', 'food', 'A', 0, 0, 0, 0, 'food2.png'),
 (219, 'Tàn Tích Thần Trí', 'food', 'S', 0, 0, 0, 0, 'food3.png');
+
+INSERT INTO items (id, name, type, rarity, hp, hp_regen, atk, dodge, crit_rate, crit_damage, lifesteal, speed, icon) 
+VALUES 
+(220, 'Bụi Tinh Tú', 'material', 'D', 0, 0, 0, 0, 0, 0, 0, 0, 'stardust.png'),
+(221, 'Tinh Chất Ngân Hà', 'material', 'S', 0, 0, 0, 0, 0, 0, 0, 0, 'galaxy_stardust.png'),
+(222, 'Tinh Thạch Đỏ', 'rune', 'S', 0, 0, 10, 0, 0, 5, 0, 0, 'rune_do.png'),
+(223, 'Tinh Thạch Tím', 'rune', 'S', 0, 0, 0, 0, 2, 0, 1, 0, 'rune_tim.png'),
+(224, 'Tinh Thạch Lục', 'rune', 'S', 0, 0, 0, 2, 0, 0, 0, 10, 'rune_luc.png'),
+(225, 'Tinh Thạch Lam', 'rune', 'S', 50, 2, 0, 0, 0, 0, 0, 0, 'rune_lam.png');
+
+ALTER TABLE items MODIFY COLUMN type VARCHAR(50) NOT NULL DEFAULT 'material';
 -- ==========================================
 -- BẢNG 2: TÚI ĐỒ CỦA NGƯỜI CHƠI (INVENTORY)
 -- ==========================================
@@ -722,3 +736,96 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 219, 0),
 (1, 219, 0),
 (1, 219, 0);
+
+-- Bụi Tinh Tú
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0),
+(1, 220, 0);
+
+-- Tinh Chất Ngân Hà
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0),
+(1, 221, 0);
+
+-- Tinh Thạch Đỏ
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0),
+(1, 222, 0);
+
+-- Tinh Thạch Tím
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0),
+(1, 223, 0);
+
+-- Tinh Thạch Lục
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0),
+(1, 224, 0);
+
+-- Tinh Thạch Lam
+INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0),
+(1, 225, 0);
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES 
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2),
+(1, 225, 0, 2);
+
+UPDATE player_items 
+SET upgrade_level = 1 
+WHERE item_id IN (222, 223, 224, 225) AND (upgrade_level = 0 OR upgrade_level IS NULL);
