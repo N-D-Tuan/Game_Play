@@ -566,24 +566,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         item_id: item.item_id, // ID gốc
                         name: item.name,
                         slot: item.slot || item.type,
+                        type: item.type,
                         rarity: item.rarity,
                         stats: item.stats,
                         icon: item.icon,
                         upgrade_level: item.upgrade_level || 0
                     };
 
-                    if (frontendItem.upgrade_level > 0) {
+                    // 1. ÁP DỤNG HỆ SỐ NHÂN CHO TRANG BỊ (LOẠI TRỪ ĐÁ RUNE)
+                    if (frontendItem.upgrade_level > 0 && frontendItem.slot !== 'rune') {
                         const STAT_MULTIPLIERS = {
-                            1: 1.1,   // Cấp +1
-                            2: 1.2,   // Cấp +2
-                            3: 1.3,   // Cấp +3
-                            4: 1.4,   // Cấp +4
-                            5: 1.6,   // Cấp +5
-                            6: 1.7,   // Cấp +6
-                            7: 1.9,   // Cấp +7
-                            8: 2.2,   // Cấp +8
-                            9: 2.5,   // Cấp +9 
-                            10: 3     // Cấp +10
+                            1: 1.1, 2: 1.2, 3: 1.3, 4: 1.4, 5: 1.6, 
+                            6: 1.7, 7: 1.9, 8: 2.2, 9: 2.5, 10: 3
                         };
 
                         let statMultiplier = STAT_MULTIPLIERS[frontendItem.upgrade_level] || 1;
@@ -591,6 +585,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         for (let statKey in frontendItem.stats) {
                             let baseValue = frontendItem.stats[statKey];
                             frontendItem.stats[statKey] = Math.round(baseValue * statMultiplier);
+                        }
+                    } 
+                    // 2. CÔNG THỨC NHÂN CHỈ SỐ DÀNH RIÊNG CHO ĐÁ RUNE (Dựa theo Level)
+                    else if (frontendItem.upgrade_level > 1 && frontendItem.slot === 'rune') {
+                        let runeMultiplier = frontendItem.upgrade_level;
+
+                        for (let statKey in frontendItem.stats) {
+                            let baseValue = frontendItem.stats[statKey];
+                            frontendItem.stats[statKey] = Math.round(baseValue * runeMultiplier);
                         }
                     }
 
@@ -631,32 +634,36 @@ document.addEventListener("DOMContentLoaded", () => {
                         // ==========================================
                         // TÁCH NGUYÊN LIỆU VÀ TRANG BỊ
                         // ==========================================
-                        if (frontendItem.slot === 'material' || frontendItem.slot === 'food') {
-                            if (!materialsMap[frontendItem.item_id]) materialsMap[frontendItem.item_id] = [];
-                            materialsMap[frontendItem.item_id].push(frontendItem);
+                        if (frontendItem.slot === 'material' || frontendItem.slot === 'food' || frontendItem.slot === 'rune' || frontendItem.type === 'rune') {
+                            // Tạo khóa gộp: ID gốc + Cấp độ (VD: Tinh Thạch Đỏ cấp 2 sẽ là "302_2")
+                            let level = frontendItem.upgrade_level || 0;
+                            let stackKey = `${frontendItem.item_id}_${level}`;
+
+                            if (!materialsMap[stackKey]) materialsMap[stackKey] = [];
+                            materialsMap[stackKey].push(frontendItem);
                         } else {
                             otherItems.push(frontendItem); 
                         }
                     }
                 });
 
-                let groupedMaterials = [];
+                let groupedStackables = [];
 
-                for (let itemId in materialsMap) {
-                    let itemsOfThisType = materialsMap[itemId];
-                    while (itemsOfThisType.length > 0) {
-                        let chunk = itemsOfThisType.splice(0, 50); // Cắt 50 phần tử
+                for (let stackKey in materialsMap) {
+                    let itemsOfThisTypeAndLevel = materialsMap[stackKey];
+                    while (itemsOfThisTypeAndLevel.length > 0) {
+                        let chunk = itemsOfThisTypeAndLevel.splice(0, 50); // Cắt 50 phần tử
                         let stackItem = { ...chunk[0] };     // Lấy 1 món làm đại diện hiển thị
                         stackItem.quantity = chunk.length;   // Gắn số lượng (1 đến 50)
                         
                         // Lưu mảng ID gốc để sau này API trừ vật phẩm có thể trừ chính xác
                         stackItem.stacked_ids = chunk.map(i => i.id); 
                         
-                        groupedMaterials.push(stackItem);
+                        groupedStackables.push(stackItem);
                     }
                 }
 
-                myInventory = [...groupedMaterials, ...otherItems];
+                myInventory = [...groupedStackables, ...otherItems];
 
                 // Cập nhật lại UI
                 updateStatsUI();
@@ -907,7 +914,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return tooltip.trim();
         }
 
-        // 2. Nếu là NGUYÊN LIỆU ĐẶC BIỆT (Bùa, Huyết thạch, Trứng)
+        // 2. Nếu là NGUYÊN LIỆU ĐẶC BIỆT
         if (item.item_id === 215) { // Hộ Thể Phù
             tooltip += `Bảo vệ trang bị khi Cường hóa thất bại.\n`;
             tooltip += `Dùng cho trang bị từ Cấp +1 đến +6.\n`;
@@ -935,6 +942,16 @@ document.addEventListener("DOMContentLoaded", () => {
             tooltip += `Thu thập đủ 10 mảnh để Dung hợp thành 1 quả Trứng hoàn chỉnh.\n`;
             return tooltip.trim();
         }
+        if (item.item_id === 220) { 
+            tooltip += `Kết tinh từ việc phân giải trang bị rác.\n`;
+            tooltip += `Dùng để khơi thông rãnh năng lượng trên Bản Đồ Sao.\n`;
+            return tooltip.trim();
+        }        
+        if (item.item_id === 221) { 
+            tooltip += `Vật chất quý giá rớt ra khi đi Ải.\n`;
+            tooltip += `Dùng để mở khóa các Điểm Nút Tối Thượng.\n`;
+            return tooltip.trim();
+        }
 
         // 3. Nếu là TRANG BỊ BÌNH THƯỜNG (Có chỉ số Máu, ATK...)
         for(let stat in item.stats) {
@@ -949,8 +966,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // CLICK ĐỂ MẶC TRANG BỊ
     async function equipItem(item) {
-        if (item.slot === 'material' || item.slot === 'food') {
-            showDarkFantasyAlert("Không thể mặc nguyên liệu hoặc thức ăn lên người!");
+        if (item.slot === 'material' || item.slot === 'food' || item.slot === 'rune' || item.type === 'rune') {
+            showDarkFantasyAlert("Vật phẩm này không thể mặc trực tiếp lên người!");
             return;
         }
         
@@ -992,11 +1009,13 @@ document.addEventListener("DOMContentLoaded", () => {
             let matchFilter = true;
             
             if (filterMode === 'equip') {
-                matchFilter = item.slot !== 'material' && item.slot !== 'food';
+                matchFilter = item.slot !== 'material' && item.slot !== 'food' && item.slot !== 'rune' && item.type !== 'rune';
             } else if (filterMode === 'material') {
                 matchFilter = item.slot === 'material';
             } else if (filterMode === 'food') {
                 matchFilter = item.slot === 'food';
+            } else if (filterMode === 'rune') {
+                matchFilter = item.slot === 'rune' || item.type === 'rune';
             }
 
             return matchSearch && matchFilter;
