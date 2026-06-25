@@ -426,8 +426,31 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // 1. Trả đồ từ bảng Ghép đồ
         if (typeof forgeItems !== 'undefined' && forgeItems.length > 0) {
-            myInventory.push(...forgeItems);
-            forgeItems = [];
+            // Rút từng món trong lò ra và ném vào Balo (Dùng lại logic gộp đồ)
+            while(forgeItems.length > 0) {
+                let item = forgeItems.pop();
+                let isStackable = (item.slot === 'material' || item.slot === 'food' || item.slot === 'rune' || item.type === 'rune');
+                
+                if (isStackable) {
+                    let existingStack = myInventory.find(invItem => 
+                        invItem.item_id === item.item_id && 
+                        invItem.upgrade_level === item.upgrade_level && 
+                        invItem.quantity < 50
+                    );
+
+                    if (existingStack) {
+                        existingStack.quantity += 1;
+                        if (!existingStack.stacked_ids) existingStack.stacked_ids = [];
+                        existingStack.stacked_ids.push(item.id);
+                    } else {
+                        item.quantity = 1;
+                        item.stacked_ids = [item.id];
+                        myInventory.push(item);
+                    }
+                } else {
+                    myInventory.push(item);
+                }
+            }
             renderForge();
             hasChanged = true;
         }
@@ -1117,7 +1140,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (currentTab === 'equip') {
                     equipItem(item);
                 } else if (currentTab === 'forge') {
-                    if (currentForgeMode === 'merge') {
+                    if (currentForgeMode === 'merge' || currentForgeMode === 'dismantle') {
                         addToForge(item);
                     } else if (currentForgeMode === 'upgrade') {
                         // Logic bỏ vào đe cường hóa
@@ -1227,18 +1250,62 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Kiểm tra tính đồng nhất (Chỉ cho phép ghép đồ CÙNG BẬC)
-        if (forgeItems.length > 0) {
-            let sampleItem = forgeItems[0];
-            if (item.rarity !== sampleItem.rarity) {
-                showDarkFantasyAlert("Vật phẩm hiến tế phải có CÙNG BẬC PHẨM CHẤT!");
+        let isRune = (item.slot === 'rune' || item.type === 'rune');
+
+        // LOGIC 1: ĐANG Ở CHẾ ĐỘ PHÂN GIẢI
+        if (currentForgeMode === 'dismantle') {
+            if (isRune) {
+                showDarkFantasyAlert("Không thể phân giải Tinh Thạch!");
                 return;
+            }
+            // Không cần xét cùng bậc, cho phép ném rác lộn xộn vào
+        } 
+        // LOGIC 2: ĐANG Ở CHẾ ĐỘ GHÉP ĐỒ / GHÉP ĐÁ
+        else if (currentForgeMode === 'merge') {
+            if (forgeItems.length > 0) {
+                let firstItem = forgeItems[0];
+                let firstIsRune = (firstItem.slot === 'rune' || firstItem.type === 'rune');
+
+                // Chặn trộn lẫn Trang bị và Đá Rune với nhau
+                if (isRune !== firstIsRune) {
+                    showDarkFantasyAlert("Không thể trộn lẫn Trang Bị và Tinh Thạch!");
+                    return;
+                }
+
+                // Nếu là Ghép Đá Rune
+                if (isRune) {
+                    if (forgeItems.length >= 3) {
+                        showDarkFantasyAlert("Dung hợp Tinh Thạch chỉ cần đúng 3 viên!");
+                        return;
+                    }
+                    if (item.item_id !== firstItem.item_id || item.upgrade_level !== firstItem.upgrade_level) {
+                        showDarkFantasyAlert("Tinh Thạch ghép phải CÙNG MÀU và CÙNG CẤP ĐỘ!");
+                        return;
+                    }
+                } 
+                // Nếu là Ghép Trang Bị
+                else {
+                    if (item.rarity !== firstItem.rarity) {
+                        showDarkFantasyAlert("Trang bị ghép phải CÙNG BẬC PHẨM CHẤT!");
+                        return;
+                    }
+                }
             }
         }
 
         // Đưa vào lò và xóa khỏi Balo
-        forgeItems.push(item);
-        myInventory = myInventory.filter(invItem => invItem.id !== item.id);
+        let singleItem = { ...item }; // Copy thuộc tính
+
+        if (item.quantity && item.quantity > 1) {
+            singleItem.quantity = 1; // Trong lò chỉ hiển thị là 1 viên
+            singleItem.id = item.stacked_ids.pop(); // Rút 1 ID thật từ cuối mảng ra để gọi API
+            item.quantity -= 1; // Giảm số lượng trong balo đi 1
+            forgeItems.push(singleItem);
+        } else {
+            forgeItems.push(singleItem);
+            // Nếu chỉ còn 1 viên thì xóa luôn cái ô đó khỏi Balo
+            myInventory = myInventory.filter(invItem => invItem.id !== item.id);
+        }
         
         renderForge();
         renderInventory();
@@ -1247,9 +1314,33 @@ document.addEventListener("DOMContentLoaded", () => {
     function removeFromForge(index) {
         let item = forgeItems[index];
         if (item) {
-            // Trả về balo và xóa khỏi lò
-            myInventory.push(item);
             forgeItems.splice(index, 1);
+            
+            // TRẢ VỀ BALO: Xử lý tự động gộp lại vào cục có sẵn (Rune, Vật liệu)
+            let isStackable = (item.slot === 'material' || item.slot === 'food' || item.slot === 'rune' || item.type === 'rune');
+            
+            if (isStackable) {
+                // Tìm xem trong balo có cục nào cùng loại, cùng cấp và chưa đầy 50 viên không
+                let existingStack = myInventory.find(invItem => 
+                    invItem.item_id === item.item_id && 
+                    invItem.upgrade_level === item.upgrade_level && 
+                    invItem.quantity < 50
+                );
+
+                if (existingStack) {
+                    existingStack.quantity += 1; // Tăng số lượng lên 1
+                    if (!existingStack.stacked_ids) existingStack.stacked_ids = [];
+                    existingStack.stacked_ids.push(item.id); // Trả lại ID thật vào mảng
+                } else {
+                    // Nếu không có cục nào, tạo thành 1 cục mới đứng riêng
+                    item.quantity = 1;
+                    item.stacked_ids = [item.id];
+                    myInventory.push(item);
+                }
+            } else {
+                // Trang bị thường thì vứt thẳng lại vào Balo
+                myInventory.push(item);
+            }
             
             renderForge();
             renderInventory();
@@ -1633,59 +1724,72 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnForgeSubmit = document.getElementById('btn-forge-submit');
 
     if (btnForgeSubmit) {
-        btnForgeSubmit.addEventListener('click', async () => {
-            // 1. Kiểm tra điều kiện đầu vào
+        btnForgeSubmit.onclick = async () => {
             let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
-            if (isCampaignActive) {
-                showDarkFantasyAlert("Không thể hiến tế khi đang Vượt Ải!");
-                return; 
+            if (isCampaignActive) return showDarkFantasyAlert("Không thể thao tác khi đang Vượt Ải!");
+
+            if (forgeItems.length === 0) return showDarkFantasyAlert("Lò rèn đang trống!");
+
+            let apiEndpoint = '';
+            
+            // XÁC ĐỊNH LOGIC GỌI API THEO CHẾ ĐỘ & LOẠI ĐỒ
+            if (currentForgeMode === 'dismantle') {
+                apiEndpoint = 'http://127.0.0.1:8000/api/forge/dismantle';
+            } else if (currentForgeMode === 'merge') {
+                let isRune = (forgeItems[0].slot === 'rune' || forgeItems[0].type === 'rune');
+                
+                if (isRune) {
+                    if (forgeItems.length !== 3) return showDarkFantasyAlert("Cần đúng 3 viên Tinh Thạch để dung hợp!");
+                    apiEndpoint = 'http://127.0.0.1:8000/api/forge/merge-runes';
+                } else {
+                    if (forgeItems.length !== 10) return showDarkFantasyAlert("Cần đúng 10 Trang Bị để tiến hành ghép!");
+                    apiEndpoint = 'http://127.0.0.1:8000/api/forge/merge';
+                }
             }
 
-            if (forgeItems.length < 10) {
-                showDarkFantasyAlert("Lò rèn yêu cầu đúng 10 vật phẩm để khởi động!");
-                return;
-            }
-
-            // 2. Gom 10 cái ID lại thành 1 mảng để gửi lên Server
             const materialIds = forgeItems.map(item => item.id);
             let playerId = localStorage.getItem('playerId') || '1';
 
             try {
-                // Khóa nút và đổi text để tránh người chơi spam click
-                btnForgeSubmit.textContent = "Đang rèn...";
+                let originalText = btnForgeSubmit.textContent;
+                btnForgeSubmit.textContent = "ĐANG XỬ LÝ...";
                 btnForgeSubmit.disabled = true;
 
-                // 3. Gọi API
-                const response = await fetch('http://127.0.0.1:8000/api/forge/merge', {
+                const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        player_id: playerId,
-                        materials: materialIds
-                    })
+                    body: JSON.stringify({ player_id: playerId, materials: materialIds })
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.status === 'success') {
-                    // Làm trống lò rèn ở biến JS (vì đồ đã bị Server xóa)
                     forgeItems = [];
-                    
-                    // Render lại lò rèn (để xóa hình ảnh 10 nguyên liệu đi)
                     renderForge();
+                    showDarkFantasyAlert(data.message);
 
-                    // Xử lý giao diện dựa trên nhân phẩm của người chơi
-                    if (data.result === 'success') {
-                        showDarkFantasyAlert(data.message);
-                        displayForgeResult(data.item, 'success');
-                    } else if (data.result === 'fail') {
-                        showDarkFantasyAlert(data.message);
-                        displayForgeResult(data.survived_item, 'fail'); 
-                    }                   
+                    // HIỂN THỊ KẾT QUẢ VÀO Ô TRUNG TÂM
+                    if (currentForgeMode === 'dismantle') {
+                        // Nếu là Phân giải, hiện hình ảnh Bụi Tinh Tú thu được
+                        let resultSlot = document.getElementById('forge-result');
+                        if (resultSlot) {
+                            let icon = data.galaxy > 0 ? 'galaxy_stardust.png' : 'stardust.png';
+                            let qtyText = data.galaxy > 0 ? `+${data.galaxy} Tinh Chất Ngân Hà` : `+${data.stardust} Bụi Tinh Tú`;
+                            resultSlot.innerHTML = `<img src="../assets/items/${icon}" style="width: 50px; height: 50px; object-fit: contain;">`;
+                            resultSlot.style.borderColor = '#00ff00';
+                            resultSlot.style.boxShadow = `0 0 20px rgba(0, 255, 0, 0.5)`;
+                            resultSlot.setAttribute('data-tooltip', `THÀNH CÔNG\n${qtyText}`);
+                        }
+                    } else {
+                        // Nếu là Ghép đồ/Ghép đá
+                        if (data.result === 'success') {
+                            displayForgeResult(data.item, 'success');
+                        } else if (data.result === 'fail') {
+                            displayForgeResult(data.survived_item, 'fail'); 
+                        } 
+                    }
                     
-                    // Gọi API load lại kho đồ để lấy dữ liệu mới nhất
                     await loadInventoryFromServer();
-
                 } else {
                     showDarkFantasyAlert(data.message || "Có lỗi xảy ra trong lò rèn!");
                 }
@@ -1694,11 +1798,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Lỗi Lò rèn:", error);
                 showDarkFantasyAlert("Mất kết nối đến Lò rèn!");
             } finally {
-                // Trả lại trạng thái bình thường cho nút
-                btnForgeSubmit.textContent = "Tiến hành hiến tế";
+                btnForgeSubmit.textContent = currentForgeMode === 'dismantle' ? "TIẾN HÀNH PHÂN GIẢI" : "TIẾN HÀNH GHÉP";
                 btnForgeSubmit.disabled = false;
             }
-        });
+        };
     }
 
     // Hàm vẽ món đồ kết quả ra ô trung tâm Lò rèn
@@ -1706,12 +1809,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const resultSlot = document.getElementById('forge-result');
         if (!resultSlot) return;
 
+        if ((itemData.slot === 'rune' || itemData.type === 'rune') && itemData.upgrade_level > 1) {
+            let runeMultiplier = itemData.upgrade_level;
+            if (itemData.stats) {
+                for (let statKey in itemData.stats) {
+                    let baseValue = itemData.stats[statKey];
+                    itemData.stats[statKey] = Math.round(baseValue * runeMultiplier);
+                }
+            }
+        }
+
         let rankInfo = RARITY_CONFIG[itemData.rarity];
         let imagePath = `../assets/items/${itemData.icon}`;
         let textShadow = itemData.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;' : '';
 
-        // Gắn tooltip cơ bản cho món đồ kết quả
-        resultSlot.setAttribute('data-tooltip', `[${rankInfo.name}] ${itemData.name.toUpperCase()}\nPhẩm chất: Bậc ${itemData.rarity}`);
+        resultSlot.setAttribute('data-tooltip', buildTooltip(itemData));
 
         // NẾU THẤT BẠI: Đồ xỉn màu (grayscale) và viền đỏ máu
         if (status === 'fail') {
@@ -2262,26 +2374,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const subtabMerge = document.getElementById('subtab-merge');
     const subtabUpgrade = document.getElementById('subtab-upgrade');
+    const subtabDismantle = document.getElementById('subtab-dismantle');
+
     const contentMerge = document.getElementById('forge-merge-content');
     const contentUpgrade = document.getElementById('forge-upgrade-content');
+    const magicCircle = document.querySelector('.magic-circle');
+
+    function resetSubtabStyles() {
+        [subtabMerge, subtabUpgrade, subtabDismantle].forEach(btn => {
+            if(!btn) return;
+            btn.style.background = 'transparent';
+            btn.style.borderColor = '#555';
+            btn.style.color = '#888';
+            btn.style.boxShadow = 'none';
+        });
+    }
 
     subtabMerge.addEventListener('click', () => {
         returnAllForgeItemsToBalo();
         currentForgeMode = 'merge';
+        resetSubtabStyles();
         subtabMerge.style.background = 'linear-gradient(90deg, transparent, #8b0000, transparent)';
         subtabMerge.style.borderColor = '#ff0000'; subtabMerge.style.color = '#fff'; subtabMerge.style.boxShadow = '0 0 10px #ff0000';
-        subtabUpgrade.style.background = 'transparent'; subtabUpgrade.style.borderColor = '#555'; subtabUpgrade.style.color = '#888'; subtabUpgrade.style.boxShadow = 'none';
         contentMerge.style.display = 'flex'; contentUpgrade.style.display = 'none';
+        btnForgeSubmit.textContent = "TIẾN HÀNH HIẾN TẾ";
+
+        btnForgeSubmit.classList.remove('btn-dismantle-theme');
+        if (magicCircle) magicCircle.classList.remove('circle-dismantle-theme');
     });
 
     subtabUpgrade.addEventListener('click', () => {
         returnAllForgeItemsToBalo();
         currentForgeMode = 'upgrade';
+        resetSubtabStyles();
         subtabUpgrade.style.background = 'linear-gradient(90deg, transparent, #0055aa, transparent)';
         subtabUpgrade.style.borderColor = '#00aaff'; subtabUpgrade.style.color = '#fff'; subtabUpgrade.style.boxShadow = '0 0 10px #00aaff';
-        subtabMerge.style.background = 'transparent'; subtabMerge.style.borderColor = '#555'; subtabMerge.style.color = '#888'; subtabMerge.style.boxShadow = 'none';
         contentMerge.style.display = 'none'; contentUpgrade.style.display = 'flex';
         renderUpgradeUI();
+    });
+
+    subtabDismantle.addEventListener('click', () => {
+        returnAllForgeItemsToBalo();
+        currentForgeMode = 'dismantle';
+        resetSubtabStyles();
+        subtabDismantle.style.background = 'linear-gradient(90deg, transparent, #008800, transparent)';
+        subtabDismantle.style.borderColor = '#00ff00'; subtabDismantle.style.color = '#fff'; subtabDismantle.style.boxShadow = '0 0 10px #00ff00';
+        contentMerge.style.display = 'flex'; contentUpgrade.style.display = 'none';
+        btnForgeSubmit.textContent = "TIẾN HÀNH PHÂN GIẢI";
+
+        btnForgeSubmit.classList.add('btn-dismantle-theme');
+        if (magicCircle) magicCircle.classList.add('circle-dismantle-theme');
     });
 
     // ==========================================

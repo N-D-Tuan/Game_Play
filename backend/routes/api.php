@@ -18,9 +18,11 @@ Route::prefix('talents')->group(function () {
 
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
 Route::post('/equipment/toggle', [InventoryController::class, 'toggleEquip']);
-Route::post('/forge/merge', [InventoryController::class, 'forge']);
 Route::post('/campaign/save-loot', [InventoryController::class, 'saveLoot']);
+Route::post('/forge/merge', [InventoryController::class, 'forge']);
 Route::post('/forge/upgrade', [InventoryController::class, 'upgradeItem']);
+Route::post('/forge/merge-runes', [InventoryController::class, 'mergeRunes']);
+Route::post('/forge/dismantle', [InventoryController::class, 'dismantleItems']);
 
 Route::prefix('pets')->group(function () {
     Route::get('/{playerId}', [PetController::class, 'getPlayerPets']);

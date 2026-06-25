@@ -571,6 +571,28 @@ body, html {
 }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 
+/* ==========================================
+   THEME MÀU XANH LÁ CHO CHẾ ĐỘ PHÂN GIẢI
+========================================== */
+/* Đổi màu Nút bấm */
+.forge-action-btn.btn-dismantle-theme {
+    background: linear-gradient(90deg, transparent, #004400, transparent);
+    border: 1px solid #00ff00;
+    color: #ffcc00;
+}
+.forge-action-btn.btn-dismantle-theme:hover {
+    background: linear-gradient(90deg, transparent, #008800, transparent);
+    color: #fff;
+    box-shadow: 0 0 15px #00ff00;
+    color: #ffcc00;
+}
+
+/* Đổi màu Vòng tròn ma thuật */
+.magic-circle.circle-dismantle-theme {
+    border: 2px dashed #008800;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.4), inset 0 0 20px rgba(0, 255, 0, 0.4);
+}
+
 /* Ô chứa đồ thành phẩm (Ở giữa) */
 .forge-center-slot {
     width: 65px; height: 65px;
