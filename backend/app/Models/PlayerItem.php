@@ -10,7 +10,7 @@ class PlayerItem extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'player_id', 'item_id', 'is_equipped', 'obtained_at'
+        'player_id', 'item_id', 'is_equipped', 'obtained_at', 'upgrade_level'
     ];
 
     // Tạo relationship N-1 tới bảng Items

@@ -775,6 +775,28 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 222, 0),
 (1, 222, 0),
 (1, 222, 0);
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES 
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2),
+(1, 222, 0, 2);
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES 
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3),
+(1, 222, 0, 3);
 
 -- Tinh Thạch Tím
 INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 

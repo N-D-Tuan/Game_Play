@@ -397,4 +397,142 @@ class InventoryController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Lỗi máy chủ: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * 4. DUNG HỢP TINH THẠCH (ĐÁ RUNE)
+     */
+    public function mergeRunes(Request $request)
+    {
+        $request->validate([
+            'player_id' => 'required|integer',
+            'materials' => 'required|array|size:3', // Ép buộc phải đúng 3 viên
+        ]);
+
+        $playerId = $request->player_id;
+        $materialIds = $request->materials;
+
+        return DB::transaction(function () use ($playerId, $materialIds) {
+            $materials = PlayerItem::with('item')
+                ->where('player_id', $playerId)
+                ->whereIn('id', $materialIds)
+                ->get();
+
+            if ($materials->count() !== 3) {
+                return response()->json(['status' => 'error', 'message' => 'Vật phẩm không hợp lệ!']);
+            }
+
+            // Lấy viên đầu tiên làm chuẩn để kiểm tra
+            $firstRune = $materials->first();
+
+            // Kiểm tra xem có đúng là Rune không
+            if ($firstRune->item->type !== 'rune') {
+                return response()->json(['status' => 'error', 'message' => 'Chỉ có thể dung hợp Tinh Thạch!']);
+            }
+
+            // Kiểm tra tính đồng nhất (Cùng ID gốc - tức là cùng màu, và Cùng Cấp độ)
+            foreach ($materials as $rune) {
+                if ($rune->item_id !== $firstRune->item_id) {
+                    return response()->json(['status' => 'error', 'message' => '3 viên Tinh Thạch phải có CÙNG LOẠI (Cùng màu)!']);
+                }
+                if ($rune->upgrade_level !== $firstRune->upgrade_level) {
+                    return response()->json(['status' => 'error', 'message' => '3 viên Tinh Thạch phải có CÙNG CẤP ĐỘ!']);
+                }
+            }
+
+            // Xóa 3 viên cũ
+            PlayerItem::whereIn('id', $materialIds)->delete();
+
+            // Tạo 1 viên mới với Cấp độ + 1
+            $newLevel = $firstRune->upgrade_level + 1;
+            $newRune = PlayerItem::create([
+                'player_id' => $playerId,
+                'item_id' => $firstRune->item_id,
+                'is_equipped' => 0,
+                'upgrade_level' => $newLevel
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'result' => 'success',
+                'message' => 'Dung hợp Tinh Thạch thành công lên Lv.' . $newLevel . '!',
+                'item' => [
+                    'id' => $newRune->id,
+                    'name' => $firstRune->item->name,
+                    'rarity' => $firstRune->item->rarity,
+                    'icon' => $firstRune->item->icon,
+                    'upgrade_level' => $newLevel
+                ]
+            ]);
+        });
+    }
+
+    /**
+     * 5. PHÂN GIẢI TRANG BỊ RÁC (LẤY BỤI TINH TÚ)
+     */
+    public function dismantleItems(Request $request)
+    {
+        $request->validate([
+            'player_id' => 'required|integer',
+            'materials' => 'required|array|min:1|max:10', // Phân giải từ 1 đến 10 món cùng lúc
+        ]);
+
+        $playerId = $request->player_id;
+        $materialIds = $request->materials;
+
+        return DB::transaction(function () use ($playerId, $materialIds) {
+            $items = PlayerItem::with('item')
+                ->where('player_id', $playerId)
+                ->whereIn('id', $materialIds)
+                ->get();
+
+            $stardustCount = 0; // ID 220 (Bụi Tinh Tú)
+            $galaxyCount = 0;   // ID 221 (Tinh Chất Ngân Hà)
+
+            foreach ($items as $item) {
+                // Chặn phân giải các đồ không phải trang bị (Mảnh trứng, Thức ăn, Đá Rune...)
+                if (in_array($item->item->type, ['material', 'food', 'rune'])) {
+                    return response()->json(['status' => 'error', 'message' => 'Không thể phân giải Nguyên liệu, Thức ăn hoặc Tinh Thạch!']);
+                }
+                if ($item->is_equipped == 1) {
+                    return response()->json(['status' => 'error', 'message' => 'Không thể phân giải trang bị đang mặc trên người!']);
+                }
+
+                // Quy đổi độ hiếm ra số lượng Bụi
+                $rarity = $item->item->rarity;
+                if ($rarity === 'F') $stardustCount += 1;
+                elseif ($rarity === 'E') $stardustCount += 2;
+                elseif ($rarity === 'D') $stardustCount += 5;
+                elseif ($rarity === 'C') $stardustCount += 15;
+                elseif ($rarity === 'B') $stardustCount += 30;
+                elseif ($rarity === 'A') $galaxyCount += 3;
+                elseif ($rarity === 'S') $galaxyCount += 10;
+            }
+
+            // Xóa các trang bị rác
+            PlayerItem::whereIn('id', $materialIds)->delete();
+
+            // Insert Bụi Tinh Tú vào kho
+            $insertData = [];
+            $now = \Carbon\Carbon::now();
+            
+            for ($i = 0; $i < $stardustCount; $i++) {
+                $insertData[] = ['player_id' => $playerId, 'item_id' => 220, 'is_equipped' => 0, 'upgrade_level' => 0];
+            }
+            for ($i = 0; $i < $galaxyCount; $i++) {
+                $insertData[] = ['player_id' => $playerId, 'item_id' => 221, 'is_equipped' => 0, 'upgrade_level' => 0];
+            }
+
+            if (!empty($insertData)) {
+                PlayerItem::insert($insertData);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'result' => 'dismantle',
+                'message' => "Phân giải thành công! Thu được: {$stardustCount} Bụi Tinh Tú, {$galaxyCount} Tinh Chất Ngân Hà.",
+                'stardust' => $stardustCount,
+                'galaxy' => $galaxyCount
+            ]);
+        });
+    }
 }
