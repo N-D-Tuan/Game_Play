@@ -367,7 +367,7 @@ body, html {
 
 /* --- GIAO DIỆN KHO ĐỒ --- */
 .inventory-container {
-    display: flex; width: 900px; height: 600px;
+    display: flex; width: 900px; height: 650px;
     background: #1e1e1e; border: 4px solid #8b0000;
     border-radius: 10px; color: #fff;
     position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.9);
@@ -402,7 +402,7 @@ body, html {
 }
 
 /* Bảng thông số */
-.char-stats { background: #111; padding: 15px; border-radius: 8px; margin-top: 40px; border: 1px solid #333; }
+.char-stats { background: #111; padding: 15px; border-radius: 8px; margin-top: 50px; border: 1px solid #333; }
 .stat-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
 .stat-row span:last-child { color: #00ff00; font-weight: bold; }
 
@@ -501,7 +501,7 @@ body, html {
 
 /* 4. Giao diện Thanh lật trang Balo */
 .inventory-pagination {
-    display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px;
+    display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 30px;
 }
 .page-btn {
     background: #333; color: #fff; border: 1px solid #555; padding: 6px 15px; 
