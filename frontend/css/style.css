@@ -40,40 +40,50 @@
    ========================================== */
 #home-screen {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-    background-color: #0a0a0a;
+    background: radial-gradient(circle at center, #2a0825 0%, #05000a 100%);
+    background: url('../assets/bg_galaxy.jpg') repeat center center; 
+    background-size: cover; 
     display: flex; justify-content: center; align-items: center;
     z-index: 10000; transition: opacity 1s ease;
+    overflow: hidden;
 }
 
+/* Khung chứa hòn đảo PNG */
 .map-container {
     position: relative;
-    width: 100vw;
-    height: 100vh;
-    background: url('../assets/menu_map1.jpg') no-repeat center center;
+    width: 90vw; 
+    max-width: calc(80vh * (16 / 9)); 
+    aspect-ratio: 16 / 9; 
+    background: url('../assets/menu_map.png') no-repeat center center;
     background-size: 100% 100%;
-    z-index: 1;
+    z-index: 1;  
+    margin-top: 50px; 
+    filter: drop-shadow(0 20px 50px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 20px rgba(100, 0, 50, 0.3));
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: pixelated;
+    animation: floatingTitle 3s ease-in-out infinite;
 }
 
 .map-game-title {
     position: absolute; 
-    top: 15px; /* Đẩy sát lên trên một chút để không đè vào lâu đài */
-    left: 50%; 
+    top: 0px;
+    left: 52%; 
     transform: translateX(-50%);
     font-family: 'MedievalSharp', cursive; 
-    font-size: 55px;
-    color: #ffda75; /* Vàng nhạt hoàng gia */
+    font-size: 45px;
+    color: #ffda75;
     text-shadow: 
         3px 3px 0 #3a0000,
         -1px -1px 0 #3a0000,  
         0 0 25px #ff0000, 
-        0 0 45px #ff0000; /* Quầng sáng đỏ rực rỡ hơn */
+        0 0 45px #ff0000;
     letter-spacing: 12px; 
     pointer-events: none; 
     z-index: 100;
-    animation: floatingTitle 3s ease-in-out infinite;
+    white-space: nowrap;
+    animation: none;
 }
 
-/* Thêm thanh gạch dưới cho tiêu đề thêm phần quyền lực */
 .map-game-title::after {
     content: ''; position: absolute;
     bottom: -5px; left: 50%; transform: translateX(-50%);
@@ -81,25 +91,25 @@
     background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, transparent 80%);
 }
 
-@keyframes floatingTitle { 0%, 100% { top: 15px; } 50% { top: 22px; } }
+@keyframes floatingTitle { 
+    0%, 100% { top: 10px; } 
+    50% { top: 20px; } 
+}
 
 /* CÁC ĐIỂM CHẠM CÔNG TRÌNH VÔ HÌNH */
 .map-building {
     position: absolute; cursor: pointer;
     border-radius: 50%;
     transition: 0.3s ease; z-index: 10;
-    /* ⚠️ MẸO: Bỏ comment 2 dòng dưới nếu bạn muốn tự chỉnh lại tọa độ (nó sẽ hiện viền đỏ) */
     /* border: 2px solid rgba(255,0,0,0.5); 
     background: rgba(255,0,0,0.2); */
 }
 
-/* Rê chuột vào: Phát sáng hào quang quanh tòa nhà */
-.map-building:hover {
+/* .map-building:hover {
     background: radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, transparent 70%);
     box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
-}
+} */
 
-/* Tên Công Trình trôi lơ lửng */
 .building-label {
     position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.85); color: #ffcc00; border: 1px solid #ffcc00;
@@ -108,12 +118,10 @@
     opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Hiện nhãn khi rê chuột */
 .map-building:hover .building-label {
     opacity: 1; top: -35px; text-shadow: 0 0 10px currentColor; box-shadow: 0 0 15px currentColor;
 }
 
-/* Nút Cài đặt góc phải */
 .top-right-btn {
     position: absolute;
     top: 15px;
