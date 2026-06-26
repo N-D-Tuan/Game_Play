@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnNextPage = document.getElementById('btn-next-page');
     const pageInfo = document.getElementById('page-info');
     let currentPage = 1;
-    const itemsPerPage = 35;
+    const itemsPerPage = 49;
 
     function openInventoryModal(tabIdToClick) {
         inventoryModal.style.display = 'flex'; 
