@@ -19,17 +19,14 @@ document.addEventListener("DOMContentLoaded", () => {
     window.currentGold = 0;
     const goldText = document.getElementById('player-gold');
 
-    // Hàm tạo hiệu ứng nhảy số (Chạy từ số cũ lên số mới)
     window.animateGoldValue = function(start, end, duration = 800) {
         let startTime = null;
         const step = (timestamp) => {
             if (!startTime) startTime = timestamp;
             const progress = Math.min((timestamp - startTime) / duration, 1);
-            // Hàm easeOutQuad để số chạy chậm dần về cuối
             const easeProgress = progress * (2 - progress); 
             const currentVal = Math.floor(start + (end - start) * easeProgress);
             
-            // Format số có dấu phẩy (VD: 50,000)
             goldText.innerText = currentVal.toLocaleString('en-US');
             
             if (progress < 1) {
@@ -41,35 +38,32 @@ document.addEventListener("DOMContentLoaded", () => {
         window.requestAnimationFrame(step);
     };
 
-    // Hàm gọi API lấy thông tin người chơi (Bao gồm Vàng)
+    // Hàm gọi API lấy thông tin người chơi
     window.fetchPlayerData = async function() {
         let playerId = localStorage.getItem('playerId');
         if (!playerId) return;
 
         try {
-            // Giả sử Backend của bạn có API này để trả về thông tin player
             const response = await fetch(`http://127.0.0.1:8000/api/players/${playerId}`);
             const data = await response.json();
             
             if (data.status === 'success') {
                 let newGold = data.player.gold;
-                // Gọi hiệu ứng nhảy số từ số vàng hiện tại lên số Vàng mới
                 window.animateGoldValue(window.currentGold, newGold);
-                window.currentGold = newGold; // Cập nhật lại biến lưu trữ
+                window.currentGold = newGold;
             }
         } catch (error) {
             console.error("Lỗi khi tải thông tin người chơi:", error);
         }
     };
 
-    // Gọi hàm fetch ngay khi load xong game
     window.fetchPlayerData();
     fetchTalentData();
     // ==========================================
 
     const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
-    // Liên kết với ID các công trình mới trên Map
+
     const buildingPractice = document.getElementById('building-practice');
     const buildingCampaign = document.getElementById('building-campaign');
     const buildingTalent = document.getElementById('building-talent');
@@ -79,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Nút Tập luyện (Restart Game)
     buildingPractice.addEventListener('click', () => {
+        window.playHomeClickSound();
         homeScreen.style.opacity = '0';
         setTimeout(() => {
             homeScreen.style.display = 'none';
@@ -93,6 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     buildingCampaign.addEventListener('click', () => {
+        window.playHomeClickSound();
         homeScreen.style.opacity = '0';
         setTimeout(() => {
             homeScreen.style.display = 'none';
@@ -164,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Mở màn hình Thiên Phú
     buildingTalent.addEventListener('click', () => {
+        window.playHomeClickSound();
         fetchTalentData();
         homeScreen.style.opacity = '0';
         setTimeout(() => {
@@ -403,9 +400,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 50);
     }
 
-    buildingInventory.addEventListener('click', () => openInventoryModal('tab-equip-btn'));
-    buildingForge.addEventListener('click', () => openInventoryModal('tab-forge-btn'));
-    buildingPet.addEventListener('click', () => openInventoryModal('tab-pet-btn'));
+    buildingInventory.addEventListener('click', () => {
+        window.playHomeClickSound();
+        openInventoryModal('tab-equip-btn');
+    });
+
+    buildingForge.addEventListener('click', () => {
+        window.playHomeClickSound();
+        openInventoryModal('tab-forge-btn');
+    });
+
+    buildingPet.addEventListener('click', () => {
+        window.playHomeClickSound();
+        openInventoryModal('tab-pet-btn');
+    });
 
     // ==========================================
     // LOGIC CHUYỂN TAB TRANG BỊ & GHÉP ĐỒ
@@ -2807,6 +2815,15 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    window.playHomeClickSound = function() {
+        if (typeof window.game !== 'undefined') {
+            let activeScene = window.game.scene.getScenes(true)[0];
+            if (activeScene) {
+                activeScene.sound.play('homeClick', { volume: 0.5 });
+            }
+        }
+    };
 
     drawRadarChart();
     renderStatsList();

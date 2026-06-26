@@ -62,7 +62,8 @@ let moveState = { up: false, down: false, left: false, right: false };
 // ==========================================
 function preload() {
     this.load.image('bg', '../assets/bg.png');
-    this.load.audio('bgm', '../assets/bg_music.mp3'); 
+    this.load.audio('bgm', '../assets/bg_music.mp3');
+    this.load.audio('homeClick', '../assets/home_click.mp3'); 
     this.load.image('player', '../assets/player.png'); 
     this.load.image('monster', '../assets/monster.png'); 
     this.load.image('aa', '../assets/aa1.png');
@@ -97,6 +98,17 @@ function create() {
         window.bgMusic = this.sound.add('bgm', { loop: true, volume: volSlider ? parseFloat(volSlider.value) : 0.5 });
         window.bgMusic.play();
     }
+
+    this.homeClickSound = this.sound.add('homeClick', {
+        volume: 0.7
+    });
+
+    window.playHomeClickSound = () => {
+        if (this.homeClickSound) {
+            this.homeClickSound.stop();
+            this.homeClickSound.play();
+        }
+    };
     
     for(let key in window.SKILL_CONFIG) { window.SKILL_CONFIG[key].currentCd = 0; }
 
