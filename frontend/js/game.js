@@ -308,7 +308,7 @@ function createPauseMenu() {
         e.stopPropagation(); 
         
         // Giả lập click vào nút Kho Đồ gốc ngoài HTML
-        document.getElementById('btn-inventory').click(); 
+        document.getElementById('building-inventory').click(); 
         
         // Khóa tương tác của game để tránh click xuyên thấu
         this.input.enabled = false;

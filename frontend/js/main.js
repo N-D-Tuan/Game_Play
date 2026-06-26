@@ -69,11 +69,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
-    const btnPractice = document.getElementById('btn-practice');
-    const btnCampaign = document.getElementById('btn-campaign');
+    // Liên kết với ID các công trình mới trên Map
+    const buildingPractice = document.getElementById('building-practice');
+    const buildingCampaign = document.getElementById('building-campaign');
+    const buildingTalent = document.getElementById('building-talent');
+    const buildingInventory = document.getElementById('building-inventory');
+    const buildingForge = document.getElementById('building-forge');
+    const buildingPet = document.getElementById('building-pet');
     
     // Nút Tập luyện (Restart Game)
-    btnPractice.addEventListener('click', () => {
+    buildingPractice.addEventListener('click', () => {
         homeScreen.style.opacity = '0';
         setTimeout(() => {
             homeScreen.style.display = 'none';
@@ -87,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 1000);
     });
 
-    btnCampaign.addEventListener('click', () => {
+    buildingCampaign.addEventListener('click', () => {
         homeScreen.style.opacity = '0';
         setTimeout(() => {
             homeScreen.style.display = 'none';
@@ -108,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 1000);
     });
 
-    const btnTalent = document.getElementById('btn-talent');
     const talentScreen = document.getElementById('talent-screen');
     const btnCloseTalent = document.getElementById('btn-close-talent');
 
@@ -159,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Mở màn hình Thiên Phú
-    btnTalent.addEventListener('click', () => {
+    buildingTalent.addEventListener('click', () => {
         fetchTalentData();
         homeScreen.style.opacity = '0';
         setTimeout(() => {
@@ -374,9 +378,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     // HỆ THỐNG KHO ĐỒ (INVENTORY SYSTEM) - ĐÃ CẬP NHẬT
     // ==========================================
-    const btnInventory = document.getElementById('btn-inventory');
     const inventoryModal = document.getElementById('inventory-modal');
     const closeInventory = document.getElementById('close-inventory');
+
     const invGrid = document.getElementById('inventory-grid');
     const invSearch = document.getElementById('inv-search');
     const invSort = document.getElementById('inv-sort');
@@ -387,7 +391,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnNextPage = document.getElementById('btn-next-page');
     const pageInfo = document.getElementById('page-info');
     let currentPage = 1;
-    const itemsPerPage = 35; // 35 là 5 hàng x 7 cột
+    const itemsPerPage = 35;
+
+    function openInventoryModal(tabIdToClick) {
+        inventoryModal.style.display = 'flex'; 
+        loadInventoryFromServer(); 
+        
+        setTimeout(() => {
+            let tabBtn = document.getElementById(tabIdToClick);
+            if (tabBtn) tabBtn.click();
+        }, 50);
+    }
+
+    buildingInventory.addEventListener('click', () => openInventoryModal('tab-equip-btn'));
+    buildingForge.addEventListener('click', () => openInventoryModal('tab-forge-btn'));
+    buildingPet.addEventListener('click', () => openInventoryModal('tab-pet-btn'));
 
     // ==========================================
     // LOGIC CHUYỂN TAB TRANG BỊ & GHÉP ĐỒ
@@ -699,10 +717,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    btnInventory.addEventListener('click', () => { 
-        inventoryModal.style.display = 'flex'; 
-        loadInventoryFromServer(); 
-    });
     closeInventory.addEventListener('click', () => { 
         inventoryModal.style.display = 'none'; 
 

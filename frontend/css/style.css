@@ -1,107 +1,147 @@
 @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
 
 /* ==========================================
+   GIAO DIỆN TIỀN TỆ (HUD)
+   ========================================== */
+.gold-hud {
+    position: fixed; 
+    top: 20px; 
+    left: 80px; 
+    background: linear-gradient(90deg, rgba(20,5,10,0.95), rgba(60,10,20,0.8));
+    border: 2px solid #550000;
+    border-left: 5px solid #d4af37; /* Nhấn nhá viền trái màu vàng hoàng gia */
+    border-radius: 4px 15px 15px 4px;
+    padding: 6px 30px 6px 15px;
+    display: flex; align-items: center; gap: 12px; 
+    z-index: 100000 !important; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(255,0,0,0.2);
+    transition: 0.3s ease;
+}
+
+.gold-hud:hover {
+    box-shadow: 0 0 20px rgba(212,175,55,0.4);
+    border-color: #d4af37;
+}
+
+.gold-icon {
+    width: 32px; height: 32px; object-fit: contain;
+    filter: drop-shadow(0 0 5px #ffaa00);
+}
+
+.gold-text {
+    color: #ffda75; font-size: 22px; font-weight: bold;
+    text-shadow: 2px 2px 0px #3a0000, 0 0 10px #ffaa00;
+    font-family: 'MedievalSharp', cursive; /* Đồng bộ font với game */
+    letter-spacing: 1px;
+}
+
+/* ==========================================
    GIAO DIỆN TRANG CHỦ (HOME SCREEN)
    ========================================== */
 #home-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: #0a0a0a;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 10000; transition: opacity 1s ease;
+}
+
+.map-container {
+    position: relative;
     width: 100vw;
     height: 100vh;
-    background: url('../assets/bg_home.webp') no-repeat center center;
-    background-size: cover;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000; 
-    transition: opacity 1s ease;
+    background: url('../assets/menu_map1.jpg') no-repeat center center;
+    background-size: 100% 100%;
+    z-index: 1;
 }
 
-.overlay-dark {
+.map-game-title {
+    position: absolute; 
+    top: 15px; /* Đẩy sát lên trên một chút để không đè vào lâu đài */
+    left: 50%; 
+    transform: translateX(-50%);
+    font-family: 'MedievalSharp', cursive; 
+    font-size: 55px;
+    color: #ffda75; /* Vàng nhạt hoàng gia */
+    text-shadow: 
+        3px 3px 0 #3a0000,
+        -1px -1px 0 #3a0000,  
+        0 0 25px #ff0000, 
+        0 0 45px #ff0000; /* Quầng sáng đỏ rực rỡ hơn */
+    letter-spacing: 12px; 
+    pointer-events: none; 
+    z-index: 100;
+    animation: floatingTitle 3s ease-in-out infinite;
+}
+
+/* Thêm thanh gạch dưới cho tiêu đề thêm phần quyền lực */
+.map-game-title::after {
+    content: ''; position: absolute;
+    bottom: -5px; left: 50%; transform: translateX(-50%);
+    width: 120%; height: 3px;
+    background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, transparent 80%);
+}
+
+@keyframes floatingTitle { 0%, 100% { top: 15px; } 50% { top: 22px; } }
+
+/* CÁC ĐIỂM CHẠM CÔNG TRÌNH VÔ HÌNH */
+.map-building {
+    position: absolute; cursor: pointer;
+    border-radius: 50%;
+    transition: 0.3s ease; z-index: 10;
+    /* ⚠️ MẸO: Bỏ comment 2 dòng dưới nếu bạn muốn tự chỉnh lại tọa độ (nó sẽ hiện viền đỏ) */
+    /* border: 2px solid rgba(255,0,0,0.5); 
+    background: rgba(255,0,0,0.2); */
+}
+
+/* Rê chuột vào: Phát sáng hào quang quanh tòa nhà */
+.map-building:hover {
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, transparent 70%);
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+}
+
+/* Tên Công Trình trôi lơ lửng */
+.building-label {
+    position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85); color: #ffcc00; border: 1px solid #ffcc00;
+    padding: 5px 15px; border-radius: 6px; font-family: 'MedievalSharp', cursive;
+    font-size: 16px; font-weight: bold; white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Hiện nhãn khi rê chuột */
+.map-building:hover .building-label {
+    opacity: 1; top: -35px; text-shadow: 0 0 10px currentColor; box-shadow: 0 0 15px currentColor;
+}
+
+/* Nút Cài đặt góc phải */
+.top-right-btn {
     position: absolute;
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%;
-    background: rgba(10, 5, 15, 0.65); /* Làm tối nền để nổi bật font mới */
-    z-index: 0;
-}
+    top: 15px;
+    right: 25px;
+    z-index: 100;
 
-.game-title {
-    font-family: 'MedievalSharp', cursive; /* Áp dụng font mới */
-    font-size: 80px;
-    color: #ffcc00;
-    text-shadow: 0 0 20px #ff0000, 0 0 40px #ff8800;
-    margin-bottom: 60px;
-    z-index: 1;
-    letter-spacing: 5px;
-    text-align: center;
-}
-
-/* KHUNG CHỨA MENU NẰM DỌC */
-.menu-buttons {
-    display: flex;
-    flex-direction: column; /* Bắt buộc các nút xếp chồng lên nhau (Dọc) */
-    align-items: center;    /* Căn giữa cột dọc */
-    gap: 20px;              /* Khoảng cách giữa các nút */
-    z-index: 1;
-}
-
-/* STYLE NÚT BẤM */
-.menu-btn {
-    font-family: 'MedievalSharp', cursive; /* Áp dụng font mới */
-    font-size: 32px;
-    color: #d4af37; 
-    
-    background: linear-gradient(90deg, transparent, rgba(20, 0, 5, 0.8), transparent);
-    
+    background: transparent;
     border: none;
-    border-top: 2px solid transparent;
-    border-bottom: 2px solid transparent;
-    border-image: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.4), transparent) 1;
-    
-    /* CHIỀU RỘNG CỐ ĐỊNH ĐỂ MENU DỌC ĐỀU NHAU TĂM TẮP */
-    width: 350px; 
-    padding: 15px 0; 
-    text-align: center; /* Căn giữa chữ trong nút */
-    
+    outline: none;
+
+    color: #ccc;
+    font-size: 32px;
     cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    transition: all 0.4s ease-in-out;
-    position: relative;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 1);
-    overflow: hidden; 
+
+    padding: 0;
+    line-height: 1;
+
+    transition: transform 0.2s ease, color 0.2s ease, text-shadow 0.2s ease;
 }
 
-/* Tia sáng lướt qua */
-.menu-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 40%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.4), transparent);
-    transform: skewX(-45deg);
-    transition: left 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+.top-right-btn:hover {
+    color: #ffcc00;
+    transform: rotate(30deg) scale(1.15);
+    text-shadow: 0 0 10px #ffcc00;
 }
 
-/* Hiệu ứng khi rê chuột vào */
-.menu-btn:hover {
-    color: #fffacd; 
-    background: linear-gradient(90deg, transparent, rgba(120, 5, 5, 0.9), transparent);
-    border-image: linear-gradient(90deg, transparent, rgba(255, 215, 0, 1), transparent) 1;
-    letter-spacing: 8px;
-    text-shadow: 0 0 10px #ffcc00, 0 0 20px #ff0000;
-    box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.5), 0 0 20px rgba(255, 0, 0, 0.3);
-    transform: scale(1.05); 
-}
-
-.menu-btn:hover::before {
-    left: 200%;
+.top-right-btn:active {
+    transform: rotate(30deg) scale(0.95);
 }
 
 /* ==========================================
