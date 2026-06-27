@@ -42,6 +42,7 @@ class InventoryController extends Controller
                 'item_id' => $base->id,
                 'name' => $base->name,
                 'slot' => $base->type,
+                'type' => $base->type,
                 'rarity' => $base->rarity,
                 'stats' => $stats,
                 'icon' => $base->icon,

@@ -438,7 +438,8 @@ body, html {
 /* Tooltip */
 .inv-item[data-tooltip]:hover::after,
 .forge-slot[data-tooltip]:hover::after,
-#forge-result[data-tooltip]:hover::after {
+#forge-result[data-tooltip]:hover::after,
+.astro-slot[data-tooltip]:hover::after {
     content: attr(data-tooltip); position: absolute; top: 115%; left: 50%; transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.95); border: 1px solid #ffcc00; color: #fff;
     padding: 12px; border-radius: 6px; white-space: pre-wrap; min-width: 160px;
@@ -900,7 +901,7 @@ body, html {
 /* Kế thừa Tooltip cho các ô rãnh khảm giống như Balo */
 .astro-slot[data-tooltip]:hover::after,
 #astro-core[data-tooltip]:hover::after {
-    content: attr(data-tooltip); position: absolute; top: 115%; left: 50%; transform: translateX(-50%);
+    content: attr(data-tooltip); position: absolute; top: auto; bottom:115%; left: 50%; transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.95); border: 1px solid #ffcc00; color: #fff;
     padding: 12px; border-radius: 6px; white-space: pre-wrap; min-width: 160px;
     z-index: 999999; pointer-events: none; font-size: 13px; line-height: 1.6;
@@ -956,4 +957,14 @@ body, html {
 
 .rune-page-info {
     color: #fff;
+}
+
+#astro-core::before,
+#astro-core::after {
+    display: none !important;
+    content: none !important;
+}
+
+.astrolabe-map-panel{
+    overflow: visible !important;
 }

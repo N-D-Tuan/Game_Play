@@ -16,7 +16,9 @@ class Player extends Model
         'talent_points',
         'unlocked_nodes',
         'equipped_skills',
-        'awakening_stats'
+        'awakening_stats',
+        'level_star',
+        'astrolabe_stats'
     ];
 
     protected $casts = [
