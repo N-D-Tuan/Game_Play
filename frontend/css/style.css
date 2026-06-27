@@ -115,7 +115,7 @@
     background: rgba(0, 0, 0, 0.85); color: #ffcc00; border: 1px solid #ffcc00;
     padding: 5px 15px; border-radius: 6px; font-family: 'MedievalSharp', cursive;
     font-size: 16px; font-weight: bold; white-space: nowrap; pointer-events: none;
-    opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 1; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .map-building:hover .building-label {
@@ -376,7 +376,7 @@ body, html {
 
 /* Nửa trái (Nhân vật) */
 .char-panel {
-    width: 40%; padding: 20px; border-right: 2px solid #444;
+    width: 42%; padding: 15px; border-right: 2px solid #444;
     display: flex; flex-direction: column;
 }
 .char-header h3 { text-align: center; color: #ffcc00; margin-top: 20px; }
@@ -435,7 +435,7 @@ body, html {
 /* Hiển thị cấp bậc chữ S, A, B... */
 .item-rank { position: absolute; bottom: 2px; right: 4px; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
 
-/* Tooltip (Bảng hiện thông tin khi đưa chuột vào) */
+/* Tooltip */
 .inv-item[data-tooltip]:hover::after,
 .forge-slot[data-tooltip]:hover::after,
 #forge-result[data-tooltip]:hover::after {
