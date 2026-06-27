@@ -486,7 +486,17 @@ body, html {
 /* 2. Căn giữa hoàn hảo cho chữ Trống/Tên trang bị */
 .slot-label {
     font-size: 11px; color: #777; position: absolute;
-    top: 58%; left: 50%; transform: translate(-50%, -50%); 
+    top: 54%; left: 50%; transform: translate(-50%, -50%); 
+    pointer-events: none; width: 100%; text-align: center;
+}
+.slot-label-upgrade {
+    font-size: 11px; color: #777; position: absolute;
+    top: 70%; left: 50%; transform: translate(-50%, -50%); 
+    pointer-events: none; width: 100%; text-align: center;
+}
+.slot-label-rune {
+    font-size: 11px; color: #777; position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%); 
     pointer-events: none; width: 100%; text-align: center;
 }
 
@@ -846,4 +856,104 @@ body, html {
     animation: s-tier-breathing 2s infinite;
     filter: drop-shadow(0 0 8px #ff0000);
     object-fit: contain;
+}
+
+/* ==========================================
+   GIAO DIỆN THÁP TINH TÚ (ASTROLABE)
+   ========================================== */
+#astrolabe-screen {
+    position: absolute; 
+    top: 0; left: 0; 
+    width: 100vw; height: 100vh;
+    /* Gắn ảnh nền của bạn vào đây */
+    background: url('../assets/bg_rune.jpg') no-repeat center center;
+    background-size: cover;
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center;
+    z-index: 15000; /* Nổi lên bằng với Thiên Phú */
+}
+
+/* --- CSS CHO CÁC RÃNH KHẢM RUNE TRÊN BẢN ĐỒ SAO --- */
+.astro-slot {
+    width: 65px; 
+    height: 65px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px dashed; /* Màu border đã được cấu hình trong HTML */
+    border-radius: 12px;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+    position: relative;
+    z-index: 10;
+}
+
+.astro-slot:hover {
+    transform: scale(1.15);
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 999;
+}
+
+/* Kế thừa Tooltip cho các ô rãnh khảm giống như Balo */
+.astro-slot[data-tooltip]:hover::after,
+#astro-core[data-tooltip]:hover::after {
+    content: attr(data-tooltip); position: absolute; top: 115%; left: 50%; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95); border: 1px solid #ffcc00; color: #fff;
+    padding: 12px; border-radius: 6px; white-space: pre-wrap; min-width: 160px;
+    z-index: 999999; pointer-events: none; font-size: 13px; line-height: 1.6;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8); text-align: left;
+}
+
+#astro-core:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 60px #00ffff;
+}
+
+.material-hover {
+    position: relative;
+}
+
+/* Kích hoạt Tooltip cho Bụi tinh tú và Tinh chất */
+.material-hover[data-tooltip]:hover::after {
+    content: attr(data-tooltip); 
+    position: absolute; 
+    top: 130%; 
+    left: 50%; 
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95); 
+    border: 1px solid #ffcc00; 
+    color: #fff;
+    padding: 10px; 
+    border-radius: 6px; 
+    white-space: pre-wrap; 
+    min-width: 180px;
+    z-index: 9999999; /* Z-index siêu bự để đè lên tất cả */
+    pointer-events: none; 
+    font-size: 13px; 
+    line-height: 1.5;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8); 
+    text-align: center;
+}
+
+/* Ép Tooltip của Đá Rune hiển thị ngược lên trên và đè lên mọi thứ */
+#rune-inventory-grid .inv-item[data-tooltip]:hover::after {
+    top: auto;
+    bottom: 120%;
+    z-index: 9999999;
+}
+
+#rune-inventory-grid .inv-item[data-tooltip]:hover::after {
+    top: auto;
+    bottom: 115%;
+}
+
+.rune-pagination {
+    display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;
+}
+
+.rune-page-info {
+    color: #fff;
 }
