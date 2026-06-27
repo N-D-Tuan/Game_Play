@@ -62,7 +62,7 @@ let moveState = { up: false, down: false, left: false, right: false };
 // ==========================================
 function preload() {
     this.load.image('bg', '../assets/bg.png');
-    this.load.audio('bgm', '../assets/bg_music.mp3');
+    this.load.audio('bgm', '../assets/bg_music.ogg');
     this.load.audio('homeClick', '../assets/home_click.mp3'); 
     this.load.image('player', '../assets/player.png'); 
     this.load.image('monster', '../assets/monster.png'); 
@@ -95,7 +95,10 @@ function create() {
 
     if (!this.sound.get('bgm')) {
         let volSlider = document.getElementById('volume-slider');
-        window.bgMusic = this.sound.add('bgm', { loop: true, volume: volSlider ? parseFloat(volSlider.value) : 0.5 });
+        window.bgMusic = this.sound.add('bgm', { 
+            loop: true,
+            volume: volSlider ? parseFloat(volSlider.value) : 0.5 
+        });
         window.bgMusic.play();
     }
 
