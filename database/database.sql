@@ -786,17 +786,17 @@ INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES
 (1, 222, 0, 2),
 (1, 222, 0, 2),
 (1, 222, 0, 2);
-INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES 
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES
+(1, 222, 0, 1),
+(1, 222, 0, 2),
 (1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3),
-(1, 222, 0, 3);
+(1, 222, 0, 4),
+(1, 222, 0, 5),
+(1, 222, 0, 6),
+(1, 222, 0, 7),
+(1, 222, 0, 8),
+(1, 222, 0, 9),
+(1, 222, 0, 10);
 
 -- Tinh Thạch Tím
 INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
@@ -810,6 +810,17 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 223, 0),
 (1, 223, 0),
 (1, 223, 0);
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES
+(1, 223, 0, 1),
+(1, 223, 0, 2),
+(1, 223, 0, 3),
+(1, 223, 0, 4),
+(1, 223, 0, 5),
+(1, 223, 0, 6),
+(1, 223, 0, 7),
+(1, 223, 0, 8),
+(1, 223, 0, 9),
+(1, 223, 0, 10);
 
 -- Tinh Thạch Lục
 INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
@@ -823,6 +834,17 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 224, 0),
 (1, 224, 0),
 (1, 224, 0);
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES
+(1, 224, 0, 1),
+(1, 224, 0, 2),
+(1, 224, 0, 3),
+(1, 224, 0, 4),
+(1, 224, 0, 5),
+(1, 224, 0, 6),
+(1, 224, 0, 7),
+(1, 224, 0, 8),
+(1, 224, 0, 9),
+(1, 224, 0, 10);
 
 -- Tinh Thạch Lam
 INSERT INTO player_items (player_id, item_id, is_equipped) VALUES 
@@ -836,17 +858,17 @@ INSERT INTO player_items (player_id, item_id, is_equipped) VALUES
 (1, 225, 0),
 (1, 225, 0),
 (1, 225, 0);
-INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES 
+INSERT INTO player_items (player_id, item_id, is_equipped, upgrade_level) VALUES
+(1, 225, 0, 1),
 (1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2),
-(1, 225, 0, 2);
+(1, 225, 0, 3),
+(1, 225, 0, 4),
+(1, 225, 0, 5),
+(1, 225, 0, 6),
+(1, 225, 0, 7),
+(1, 225, 0, 8),
+(1, 225, 0, 9),
+(1, 225, 0, 10);
 
 UPDATE player_items 
 SET upgrade_level = 1 

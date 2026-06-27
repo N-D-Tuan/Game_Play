@@ -70,6 +70,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const buildingInventory = document.getElementById('building-inventory');
     const buildingForge = document.getElementById('building-forge');
     const buildingPet = document.getElementById('building-pet');
+    const buildingAstrolabe = document.getElementById('building-astrolabe');
+    const buildingArena = document.getElementById('building-arena');
+    const buildingShop= document.getElementById('building-shop');
     
     // Nút Tập luyện (Restart Game)
     buildingPractice.addEventListener('click', () => {
@@ -372,6 +375,39 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    const astrolabeScreen = document.getElementById('astrolabe-screen');
+    const btnCloseAstrolabe = document.getElementById('btn-close-astrolabe');
+
+    buildingAstrolabe.addEventListener('click', () => {
+        window.playHomeClickSound();
+
+        renderRuneInventory();
+
+        homeScreen.style.opacity = '0';
+        
+        setTimeout(() => {
+            homeScreen.style.display = 'none';
+            astrolabeScreen.style.display = 'flex';
+            
+            setTimeout(() => { 
+                astrolabeScreen.style.opacity = '1'; 
+            }, 50);
+        }, 500);
+    });
+
+    btnCloseAstrolabe.addEventListener('click', () => {
+        astrolabeScreen.style.opacity = '0';
+        
+        setTimeout(() => {
+            astrolabeScreen.style.display = 'none';
+            homeScreen.style.display = 'flex';
+            
+            setTimeout(() => { 
+                homeScreen.style.opacity = '1'; 
+            }, 50);
+        }, 500);
+    });
+
     // ==========================================
     // HỆ THỐNG KHO ĐỒ (INVENTORY SYSTEM) - ĐÃ CẬP NHẬT
     // ==========================================
@@ -519,7 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     tabEquipBtn.addEventListener('click', () => {
         if (invFilter) {
-            invFilter.value = 'all';
+            invFilter.value = 'equip';
             renderInventory();
         }
 
@@ -537,7 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     tabForgeBtn.addEventListener('click', () => {
         if (invFilter) {
-            invFilter.value = 'all';
+            invFilter.value = 'equip';
             renderInventory();
         }
 
@@ -636,9 +672,14 @@ document.addEventListener("DOMContentLoaded", () => {
                             frontendItem.stats[statKey] = Math.round(baseValue * statMultiplier);
                         }
                     } 
-                    // 2. CÔNG THỨC NHÂN CHỈ SỐ DÀNH RIÊNG CHO ĐÁ RUNE (Dựa theo Level)
+                    // 2. CÔNG THỨC NHÂN CHỈ SỐ DÀNH RIÊNG CHO ĐÁ RUNE
                     else if (frontendItem.upgrade_level > 1 && frontendItem.slot === 'rune') {
-                        let runeMultiplier = frontendItem.upgrade_level;
+                        const RUNE_MULTIPLIERS = {
+                            1: 1.0, 2: 1.5, 3: 2.0, 4: 2.6, 5: 3.3, 
+                            6: 4.1, 7: 5.0, 8: 6.0, 9: 7.2, 10: 8.5
+                        };
+
+                        let runeMultiplier = RUNE_MULTIPLIERS[frontendItem.upgrade_level] || 1;
 
                         for (let statKey in frontendItem.stats) {
                             let baseValue = frontendItem.stats[statKey];
@@ -1067,6 +1108,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         filteredItems.sort((a, b) => {
+            let isRuneA = (a.slot === 'rune' || a.type === 'rune');
+            let isRuneB = (b.slot === 'rune' || b.type === 'rune');
+            
+            if (isRuneA && isRuneB) {
+                if (a.item_id !== b.item_id) {
+                    return a.item_id - b.item_id; 
+                }
+
+                return (b.upgrade_level || 0) - (a.upgrade_level || 0); 
+            }
+
             if (sortMode === 'name') return a.name.localeCompare(b.name);
             if (sortMode === 'rarity') return RARITY_CONFIG[b.rarity].weight - RARITY_CONFIG[a.rarity].weight;
         });
@@ -1515,7 +1567,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderInventory();
             };
         } else {
-            slot.innerHTML = '<span class="slot-label" style="opacity: 0.5;">Trống</span>';
+            slot.innerHTML = '<span class="slot-label" style="opacity: 0.5; margin-top: 6px;">Trống</span>';
             slot.style.borderColor = '#555';
             slot.style.boxShadow = 'none';
             slot.style.animation = 'none';
@@ -1832,7 +1884,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!resultSlot) return;
 
         if ((itemData.slot === 'rune' || itemData.type === 'rune') && itemData.upgrade_level > 1) {
-            let runeMultiplier = itemData.upgrade_level;
+            const RUNE_MULTIPLIERS = {
+                1: 1.0, 2: 1.5, 3: 2.0, 4: 2.6, 5: 3.3, 
+                6: 4.1, 7: 5.0, 8: 6.0, 9: 7.2, 10: 8.5
+            };
+            let runeMultiplier = RUNE_MULTIPLIERS[itemData.upgrade_level] || 1;
+            
             if (itemData.stats) {
                 for (let statKey in itemData.stats) {
                     let baseValue = itemData.stats[statKey];
@@ -2824,6 +2881,113 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     };
+
+    // ==========================================
+    // LOGIC RENDER TÚI TINH THẠCH & PHÂN TRANG
+    // ==========================================
+    let currentRunePage = 1;
+    const runesPerPage = 25;
+
+    window.renderRuneInventory = function() {
+        const runeGrid = document.getElementById('rune-inventory-grid');
+        if (!runeGrid) return;
+        runeGrid.innerHTML = '';
+
+        // 1. Cập nhật Số lượng Bụi & Tinh chất
+        let stardustCount = myInventory.filter(i => i.item_id === 220).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        let galaxyCount = myInventory.filter(i => i.item_id === 221).reduce((sum, item) => sum + (item.quantity || 1), 0);
+        document.getElementById('txt-stardust').innerText = stardustCount;
+        document.getElementById('txt-galaxy').innerText = galaxyCount;
+
+        // 2. Lọc Đá Rune và Phân trang
+        let runes = myInventory.filter(item => item.slot === 'rune' || item.type === 'rune');
+        
+        runes.sort((a, b) => {
+            if (a.item_id !== b.item_id) {
+                return a.item_id - b.item_id;u
+            }
+            return (b.upgrade_level || 0) - (a.upgrade_level || 0);
+        });
+
+        let totalPages = Math.ceil(runes.length / runesPerPage) || 1;
+        if (currentRunePage > totalPages) currentRunePage = totalPages;
+        
+        let startIndex = (currentRunePage - 1) * runesPerPage;
+        let pageRunes = runes.slice(startIndex, startIndex + runesPerPage);
+
+        // Cập nhật UI Nút phân trang
+        const btnPrev = document.getElementById('btn-rune-prev');
+        const btnNext = document.getElementById('btn-rune-next');
+        const pageInfo = document.getElementById('rune-page-info');
+        
+        if (pageInfo) pageInfo.textContent = `Trang ${currentRunePage} / ${totalPages}`;
+        if (btnPrev) btnPrev.disabled = currentRunePage === 1;
+        if (btnNext) btnNext.disabled = currentRunePage === totalPages;
+
+        // 3. Render từng viên Rune vào lưới
+        pageRunes.forEach(rune => {
+            let div = document.createElement('div');
+            div.className = 'inv-item';
+            
+            let itemColor = RARITY_CONFIG[rune.rarity].color;
+            let rankTextColor = itemColor;
+            let textShadow = '';
+
+            if (rune.rarity === 'S') {
+                textShadow = 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;';
+                itemColor = '#ffffff';
+                rankTextColor = '#000000';
+                div.style.animation = 's-tier-breathing 2s ease-in-out infinite';
+            }
+            
+            let qtyHtml = (rune.quantity && rune.quantity > 1) 
+                ? `<div style="position: absolute; top: -5px; left: -5px; font-size: 12px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.85); padding: 2px 5px; border-radius: 6px; border: 1px solid #ffcc00; z-index: 5;">x${rune.quantity}</div>` 
+                : '';
+            
+            let plusText = '';
+            let lvl = rune.upgrade_level || 0;
+            if (lvl > 0) { 
+                let textColor = getUpgradeColor(lvl);
+                plusText = `<span style="position: absolute; bottom: 15px; right: 4px; font-size: 13px; color:${textColor}; font-weight:bold; text-shadow: 1px 1px 2px #000;">+${lvl}</span>`;
+            }
+
+            div.innerHTML = `${qtyHtml}
+                             <img src="../assets/items/${rune.icon}" style="width: 40px; height: 40px; object-fit: contain;">
+                             <span class="item-rank" style="color: ${rankTextColor}; ${textShadow}">${rune.rarity}</span>
+                             ${plusText}`;
+            
+            div.style.borderColor = itemColor;
+            div.setAttribute('data-tooltip', buildTooltip(rune));
+            
+            div.addEventListener('click', () => {
+                showDarkFantasyAlert("Tính năng Khảm Tinh Thạch đang được phát triển!");
+            });
+
+            runeGrid.appendChild(div);
+        });
+
+        // 4. Điền các ô trống cho đẹp mắt
+        for(let i = pageRunes.length; i < runesPerPage; i++) {
+            let emptyDiv = document.createElement('div');
+            emptyDiv.className = 'inv-item';
+            emptyDiv.innerHTML = `<span class="slot-label" style="opacity: 0.2">Trống</span>`;
+            runeGrid.appendChild(emptyDiv);
+        }
+    };
+
+    const btnRunePrev = document.getElementById('btn-rune-prev');
+    const btnRuneNext = document.getElementById('btn-rune-next');
+    
+    if (btnRunePrev) {
+        btnRunePrev.addEventListener('click', () => { 
+            if (currentRunePage > 1) { currentRunePage--; renderRuneInventory(); } 
+        });
+    }
+    if (btnRuneNext) {
+        btnRuneNext.addEventListener('click', () => { 
+            currentRunePage++; renderRuneInventory(); 
+        });
+    }
 
     drawRadarChart();
     renderStatsList();
