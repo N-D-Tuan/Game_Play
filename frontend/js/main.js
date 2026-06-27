@@ -51,6 +51,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 let newGold = data.player.gold;
                 window.animateGoldValue(window.currentGold, newGold);
                 window.currentGold = newGold;
+
+                window.playerData = data.player; 
+                if (typeof window.updateAstroCoreUI === 'function') window.updateAstroCoreUI();
             }
         } catch (error) {
             console.error("Lỗi khi tải thông tin người chơi:", error);
@@ -377,21 +380,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const astrolabeScreen = document.getElementById('astrolabe-screen');
     const btnCloseAstrolabe = document.getElementById('btn-close-astrolabe');
+    const astroCore = document.getElementById('astro-core');
 
-    buildingAstrolabe.addEventListener('click', () => {
+    buildingAstrolabe.addEventListener('click', async () => {
         window.playHomeClickSound();
 
-        renderRuneInventory();
+        await loadInventoryFromServer();
+
+        if (typeof window.renderRuneInventory === 'function') {
+            window.renderRuneInventory();
+        }
 
         homeScreen.style.opacity = '0';
-        
         setTimeout(() => {
             homeScreen.style.display = 'none';
             astrolabeScreen.style.display = 'flex';
-            
-            setTimeout(() => { 
-                astrolabeScreen.style.opacity = '1'; 
-            }, 50);
+            setTimeout(() => { astrolabeScreen.style.opacity = '1'; }, 50);
+            setTimeout(() => {
+                if (window.setupAstroCoreTooltip) {
+                    window.setupAstroCoreTooltip();
+                }
+            }, 100);
         }, 500);
     });
 
@@ -408,8 +417,85 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 500);
     });
 
+    // SỰ KIỆN CLICK ĐỂ ĐỘT PHÁ LÕI SAO
+    if (astroCore) {
+        astroCore.addEventListener('click', async () => {
+            let currentLevel = window.playerData ? (window.playerData.level_star || 1) : 1; 
+            
+            if (currentLevel >= 10) {
+                return showDarkFantasyAlert("Lõi Sao đã đạt đến cảnh giới tối thượng, không thể hấp thụ thêm năng lượng!");
+            }
+
+            let slots = ['astro_red', 'astro_blue', 'astro_green', 'astro_purple'];
+            let equippedRunes = slots.map(s => equippedItems[s]).filter(r => r != null);
+
+            if (equippedRunes.length < 4) {
+                return showDarkFantasyAlert("Cần khảm đủ 4 rãnh Tinh Thạch để Đột phá!");
+            }
+
+            let hasWrongLevel = equippedRunes.some(r => r.upgrade_level !== currentLevel);
+            if (hasWrongLevel) {
+                return showDarkFantasyAlert(`Lõi Sao level ${currentLevel} yêu cầu 4 viên Tinh Thạch level ${currentLevel} để hấp thụ!`);
+            }
+
+            let costConfig = {
+                1: { id: 220, amount: 10, name: "Bụi Tinh Tú" },
+                2: { id: 220, amount: 20, name: "Bụi Tinh Tú" },
+                3: { id: 220, amount: 30, name: "Bụi Tinh Tú" },
+                4: { id: 220, amount: 50, name: "Bụi Tinh Tú" },
+                5: { id: 220, amount: 80, name: "Bụi Tinh Tú" },
+                6: { id: 220, amount: 120, name: "Bụi Tinh Tú" },
+                7: { id: 221, amount: 10, name: "Tinh Chất Ngân Hà" },
+                8: { id: 221, amount: 25, name: "Tinh Chất Ngân Hà" },
+                9: { id: 221, amount: 50, name: "Tinh Chất Ngân Hà" }
+            };
+            
+            let reqCost = costConfig[currentLevel];
+            // Đếm số lượng tài nguyên hiện có trong túi (myInventory)
+            let currentMaterialCount = myInventory.filter(i => i.item_id === reqCost.id).reduce((sum, item) => sum + (item.quantity || 1), 0);
+            
+            if (currentMaterialCount < reqCost.amount) {
+                return showDarkFantasyAlert(`Bạn cần có ít nhất ${reqCost.amount} ${reqCost.name} để Đột phá! Hãy đi phân giải trang bị để kiếm thêm.`);
+            }
+
+            try {
+                let playerId = localStorage.getItem('playerId') || 1;
+                showDarkFantasyAlert("Đang tiến hành dung hợp năng lượng...");
+                
+                const response = await fetch('http://127.0.0.1:8000/api/astrolabe/upgrade-core', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: playerId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showDarkFantasyAlert("ĐỘT PHÁ THÀNH CÔNG! Năng lượng đã được hấp thụ.");
+
+                    if (typeof window.fetchPlayerData === 'function') window.fetchPlayerData();
+                    
+                    await loadInventoryFromServer(); 
+                    
+                    if (typeof window.renderRuneInventory === 'function') {
+                        window.renderRuneInventory();
+                    }
+
+                    if (typeof window.updateStatsUI === 'function') {
+                        window.updateStatsUI();
+                    }
+                } else {
+                    showDarkFantasyAlert(data.message || "Đột phá thất bại!");
+                }
+            } catch (err) {
+                console.error(err);
+                showDarkFantasyAlert("Lỗi kết nối đến Tháp Tinh Tú!");
+            }
+        });
+    }
+
     // ==========================================
-    // HỆ THỐNG KHO ĐỒ (INVENTORY SYSTEM) - ĐÃ CẬP NHẬT
+    // HỆ THỐNG KHO ĐỒ (INVENTORY SYSTEM)
     // ==========================================
     const inventoryModal = document.getElementById('inventory-modal');
     const closeInventory = document.getElementById('close-inventory');
@@ -640,6 +726,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     slot.removeAttribute('data-tooltip');
                 });
 
+                // Trả các ô khảm Tinh Thạch (astro-slot) về trạng thái "Trống" trước khi vẽ lại
+                document.querySelectorAll('.astro-slot').forEach(slot => {
+                    slot.innerHTML = `<span class="slot-label-rune">Trống</span>`;
+                    slot.classList.remove('filled');
+                    slot.removeAttribute('data-player-item-id');
+                    slot.removeAttribute('data-tooltip');
+                });
+
                 let materialsMap = {};
                 let otherItems = [];
 
@@ -687,7 +781,25 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }
 
-                    if (item.is_equipped == 1) {
+                    if (item.is_equipped == 1 && frontendItem.slot === 'rune') {
+                        // RUNE ĐANG KHẢM: không có cột equipped_slot trong DB,
+                        // nên ta suy ra màu/rãnh trực tiếp từ item_id (mỗi item_id rune = 1 màu cố định).
+                        const RUNE_COLORS_BY_ID = { 222: 'red', 223: 'purple', 224: 'green', 225: 'blue' };
+                        let runeColor = RUNE_COLORS_BY_ID[frontendItem.item_id];
+
+                        if (runeColor) {
+                            equippedItems['astro_' + runeColor] = frontendItem;
+
+                            // Vẽ lên đúng ô khảm tương ứng trên Tháp Tinh Tú
+                            let astroSlotDiv = document.querySelector(`.astro-slot[data-color="${runeColor}"][data-index="1"]`);
+                            if (astroSlotDiv) {
+                                astroSlotDiv.innerHTML = `<img src="../assets/items/${frontendItem.icon}" style="width: 50px; height: 50px; object-fit: contain;">`;
+                                astroSlotDiv.classList.add('filled');
+                                astroSlotDiv.setAttribute('data-player-item-id', frontendItem.id);
+                                astroSlotDiv.setAttribute('data-tooltip', buildTooltip(frontendItem));
+                            }
+                        }
+                    } else if (item.is_equipped == 1) {
                         equippedItems[frontendItem.slot] = frontendItem;
                         
                         // Đổi sang dùng thẻ img
@@ -879,6 +991,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         }
+
+        // ==========================================
+        // 3.5. CỘNG THÁP TINH TÚ (HẤP THỤ + ĐANG KHẢM)
+        // ==========================================
+        // A. Cộng sức mạnh vĩnh viễn đã hấp thụ trong Lõi
+        if (window.playerData && window.playerData.astrolabe_stats) {
+            let coreStats = typeof window.playerData.astrolabe_stats === 'string' ? JSON.parse(window.playerData.astrolabe_stats) : window.playerData.astrolabe_stats;
+            for (let statKey in coreStats) {
+                if (flatStats[statKey] !== undefined) flatStats[statKey] += coreStats[statKey];
+                else if (pctStats[statKey] !== undefined) pctStats[statKey] += coreStats[statKey];
+            }
+        }
+
+        // B. Cộng sức mạnh của các viên đá ĐANG KHẢM
+        let astroSlots = ['astro_red', 'astro_blue', 'astro_green', 'astro_purple'];
+        astroSlots.forEach(slotKey => {
+            let rune = equippedItems[slotKey];
+            if (rune && rune.stats) {
+                for (let statKey in rune.stats) {
+                    if (flatStats[statKey] !== undefined) flatStats[statKey] += rune.stats[statKey];
+                    else if (pctStats[statKey] !== undefined) pctStats[statKey] += rune.stats[statKey];
+                }
+            }
+        });
 
         // ==========================================
         // 4. ÁP DỤNG CÔNG THỨC VÀNG TÍNH TỔNG CỤC
@@ -1218,6 +1354,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         addToForge(item);
                     } else if (currentForgeMode === 'upgrade') {
                         // Logic bỏ vào đe cường hóa
+                        if (item.slot === 'rune' || item.type === 'rune') {
+                            showDarkFantasyAlert("Không thể cường hóa Tinh Thạch!");
+                            return;
+                        }
                         if (item.rarity !== 'S' || item.slot === 'material' || item.slot === 'food') {
                             return showDarkFantasyAlert("Chỉ trang bị Bậc S mới có thể Cường Hóa!");
                         }
@@ -1332,7 +1472,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 showDarkFantasyAlert("Không thể phân giải Tinh Thạch!");
                 return;
             }
-            // Không cần xét cùng bậc, cho phép ném rác lộn xộn vào
         } 
         // LOGIC 2: ĐANG Ở CHẾ ĐỘ GHÉP ĐỒ / GHÉP ĐÁ
         else if (currentForgeMode === 'merge') {
@@ -2902,6 +3041,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // 2. Lọc Đá Rune và Phân trang
         let runes = myInventory.filter(item => item.slot === 'rune' || item.type === 'rune');
         
+        runes.forEach(rune => {
+            const RUNE_COLORS = {
+                222: 'red',
+                223: 'purple',
+                224: 'green',
+                225: 'blue'
+            };
+            rune.color = RUNE_COLORS[rune.item_id] || 'red'; 
+        });
+
         runes.sort((a, b) => {
             if (a.item_id !== b.item_id) {
                 return a.item_id - b.item_id;u
@@ -2960,7 +3109,19 @@ document.addEventListener("DOMContentLoaded", () => {
             div.setAttribute('data-tooltip', buildTooltip(rune));
             
             div.addEventListener('click', () => {
-                showDarkFantasyAlert("Tính năng Khảm Tinh Thạch đang được phát triển!");
+                const targetSlot = document.querySelector(`.astro-slot[data-color="${rune.color}"][data-index="1"]`);
+
+                if (!targetSlot) {
+                    showDarkFantasyAlert("Không tìm thấy rãnh khảm tương ứng!");
+                    return;
+                }
+
+                if (targetSlot.classList.contains('filled')) {
+                    showDarkFantasyAlert("Rãnh này đã có Tinh Thạch! Hãy bấm vào rãnh để tháo ra trước.");
+                    return;
+                }
+
+                khamRuneVaoSlot(rune, targetSlot);
             });
 
             runeGrid.appendChild(div);
@@ -2973,7 +3134,77 @@ document.addEventListener("DOMContentLoaded", () => {
             emptyDiv.innerHTML = `<span class="slot-label" style="opacity: 0.2">Trống</span>`;
             runeGrid.appendChild(emptyDiv);
         }
+
+        // 5. Gắn sự kiện click TÁO RUNE cho 4 ô khảm (chỉ gắn 1 lần)
+        document.querySelectorAll('.astro-slot').forEach(slotEl => {
+            if (slotEl.dataset.unequipBound) return; // tránh gắn trùng nhiều lần
+            slotEl.dataset.unequipBound = '1';
+
+            slotEl.addEventListener('click', () => {
+                if (!slotEl.classList.contains('filled')) return; // ô trống thì không làm gì khi click trực tiếp vào ô
+                thaoRuneKhoiSlot(slotEl);
+            });
+        });
     };
+
+    async function khamRuneVaoSlot(rune, slotElement) {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/astrolabe/equip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    player_id: localStorage.getItem('playerId'),
+                    item_id: rune.id,
+                    slot: slotElement.getAttribute('data-color') 
+                })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                showDarkFantasyAlert("Khảm Tinh Thạch thành công!");
+                await loadInventoryFromServer();
+                renderRuneInventory();
+                window.updateStatsUI();
+            } else {
+                showDarkFantasyAlert(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            showDarkFantasyAlert("Lỗi khi khảm Tinh Thạch!");
+        }
+    }
+
+    async function thaoRuneKhoiSlot(slotElement) {
+        try {
+            const playerItemId = slotElement.getAttribute('data-player-item-id');
+            if (!playerItemId) {
+                showDarkFantasyAlert("Không xác định được Tinh Thạch trong rãnh này!");
+                return;
+            }
+
+            const response = await fetch('http://127.0.0.1:8000/api/astrolabe/unequip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    player_id: localStorage.getItem('playerId'),
+                    item_id: playerItemId
+                })
+            });
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                showDarkFantasyAlert("Đã tháo Tinh Thạch!");
+                await loadInventoryFromServer();
+                renderRuneInventory();
+                window.updateStatsUI();
+            } else {
+                showDarkFantasyAlert(data.message);
+            }
+        } catch (err) {
+            console.error(err);
+            showDarkFantasyAlert("Lỗi khi tháo Tinh Thạch!");
+        }
+    }
 
     const btnRunePrev = document.getElementById('btn-rune-prev');
     const btnRuneNext = document.getElementById('btn-rune-next');
@@ -2988,6 +3219,154 @@ document.addEventListener("DOMContentLoaded", () => {
             currentRunePage++; renderRuneInventory(); 
         });
     }
+
+    // ==========================================
+    // CẬP NHẬT GIAO DIỆN LÕI SAO (UI & TOOLTIP)
+    // ==========================================
+    window.updateAstroCoreUI = function() {
+        let core = document.getElementById('astro-core');
+        if (!core || !window.playerData) return;
+
+        let level = window.playerData.level_star || 1;
+        
+        // Parse chuỗi JSON từ Database
+        let stats = {};
+        if (window.playerData.astrolabe_stats) {
+            try {
+                stats = typeof window.playerData.astrolabe_stats === 'string' ? JSON.parse(window.playerData.astrolabe_stats) : window.playerData.astrolabe_stats;
+            } catch(e) { console.error("Lỗi đọc chỉ số Lõi sao", e); }
+        }
+        
+        // 1. Cập nhật diện mạo (Icon + Chữ)
+        core.innerHTML = `
+            <span style="font-size: 26px; filter: drop-shadow(0 0 8px #ffcc00);">⚜️</span>
+            <span style="color: #ffcc00; font-size: 14px; text-shadow: 0 0 8px rgba(255,204,0,0.8); margin-top: 3px;">LÕI SAO ${level}</span>
+        `;
+
+        // 2. Xây dựng Tooltip thông số
+        let tooltip = `[NĂNG LƯỢNG TÍCH LŨY]\nLõi Tinh Tú - Cấp độ: ${level}\n-------------------\nSức mạnh đã hấp thụ:\n`;
+        let hasStats = false;
+        
+        for (let stat in stats) {
+            if (STAT_NAMES[stat] && stats[stat] > 0) {
+                let suffix = (['dodge', 'critRate', 'critDamage', 'lifesteal'].includes(stat)) ? '%' : '';
+                tooltip += `${STAT_NAMES[stat]}: ${stats[stat]}${suffix}\n`;
+                hasStats = true;
+            }
+        }
+
+        if (!hasStats) {
+            tooltip += `(Chưa hấp thụ Tinh Thạch nào)\n`;
+        }
+
+        const UPGRADE_COSTS = {
+            1: { id: 220, amount: 10, name: "Bụi Tinh Tú" },
+            2: { id: 220, amount: 20, name: "Bụi Tinh Tú" },
+            3: { id: 220, amount: 30, name: "Bụi Tinh Tú" },
+            4: { id: 220, amount: 50, name: "Bụi Tinh Tú" },
+            5: { id: 220, amount: 80, name: "Bụi Tinh Tú" },
+            6: { id: 220, amount: 120, name: "Bụi Tinh Tú" },
+            7: { id: 221, amount: 10, name: "Tinh Chất Ngân Hà" },
+            8: { id: 221, amount: 25, name: "Tinh Chất Ngân Hà" },
+            9: { id: 221, amount: 50, name: "Tinh Chất Ngân Hà" }
+        };
+        
+        if (level >= 10) {
+            tooltip += `-------------------\n✨ [CẢNH GIỚI TỐI ĐA]\nLõi Sao đã thức tỉnh hoàn toàn!`;
+            // Cập nhật luôn chữ LÕI SAO thành LÕI TỐI THƯỢNG cho ngầu
+            core.innerHTML = `
+                <span style="font-size: 28px; filter: drop-shadow(0 0 15px #ff00ff);">🌌</span>
+                <span style="color: #ffaa00; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin-top: 3px; font-weight: bold;">LÕI TỐI THƯỢNG</span>
+            `;
+        } else {
+            tooltip += `-------------------\nBấm để Đột phá (Cần khảm đủ 4 viên Đá Rune Lv.${level})`;
+        }
+
+        core.setAttribute('data-tooltip', tooltip.trim());
+    };
+
+    // ==========================================
+    // TOOLTIP RIÊNG CHO LÕI SAO (ASTRO-CORE)
+    // ==========================================
+    window.setupAstroCoreTooltip = function () {
+        const coreEl = document.getElementById('astro-core');
+        if (!coreEl) return;
+
+        let tooltipEl = document.getElementById('astro-core-custom-tooltip');
+        if (!tooltipEl) {
+            tooltipEl = document.createElement('div');
+            tooltipEl.id = 'astro-core-custom-tooltip';
+            tooltipEl.style.position = 'fixed';
+            tooltipEl.style.zIndex = '99999999';
+            tooltipEl.style.display = 'none';
+            tooltipEl.style.maxWidth = '260px';
+            tooltipEl.style.padding = '10px 14px';
+            tooltipEl.style.background = 'rgba(10, 15, 25, 0.97)';
+            tooltipEl.style.border = '1px solid #00ffff';
+            tooltipEl.style.borderRadius = '8px';
+            tooltipEl.style.color = '#fff';
+            tooltipEl.style.fontSize = '13px';
+            tooltipEl.style.fontFamily = 'Arial, sans-serif';
+            tooltipEl.style.lineHeight = '1.5';
+            tooltipEl.style.whiteSpace = 'pre-line';
+            tooltipEl.style.boxShadow = '0 0 15px rgba(0,255,255,0.4)';
+            tooltipEl.style.pointerEvents = 'none';
+            document.body.appendChild(tooltipEl);
+        }
+
+        function showCoreTooltip() {
+            const text = coreEl.getAttribute('data-tooltip');
+            if (!text) return;
+            tooltipEl.textContent = text;
+            tooltipEl.style.display = 'block';
+            positionCoreTooltip();
+        }
+
+        function hideCoreTooltip() {
+            tooltipEl.style.display = 'none';
+        }
+
+        function positionCoreTooltip() {
+            const coreRect = coreEl.getBoundingClientRect();
+            const tooltipRect = tooltipEl.getBoundingClientRect();
+            const margin = 12;
+
+            // HIỂN THỊ PHÍA TRÊN LÕI SAO
+            let left =
+                coreRect.left +
+                (coreRect.width / 2) -
+                (tooltipRect.width / 2);
+
+            let top =
+                coreRect.top -
+                tooltipRect.height -
+                margin;
+
+            // Nếu bị tràn lên trên thì chuyển xuống dưới
+            if (top < margin) {
+                top = coreRect.bottom + margin;
+            }
+
+            // Không cho tràn trái
+            if (left < margin) {
+                left = margin;
+            }
+
+            // Không cho tràn phải
+            if (left + tooltipRect.width > window.innerWidth - margin) {
+                left = window.innerWidth - tooltipRect.width - margin;
+            }
+
+            tooltipEl.style.left = `${left}px`;
+            tooltipEl.style.top = `${top}px`;
+        }
+
+        coreEl.addEventListener('mouseenter', showCoreTooltip);
+        coreEl.addEventListener('mouseleave', hideCoreTooltip);
+        window.addEventListener('resize', () => {
+            if (tooltipEl.style.display === 'block') positionCoreTooltip();
+        });
+    };
 
     drawRadarChart();
     renderStatsList();

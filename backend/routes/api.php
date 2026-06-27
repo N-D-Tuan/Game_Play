@@ -8,6 +8,10 @@ use App\Http\Controllers\Api\PlayerController;
 
 Route::get('/players/{id}', [PlayerController::class, 'show']);
 
+Route::post('/astrolabe/upgrade-core', [PlayerController::class, 'upgradeCore']);
+Route::post('/astrolabe/equip', [PlayerController::class, 'equipRune']);
+Route::post('/astrolabe/unequip', [PlayerController::class, 'unequipRune']);
+
 Route::prefix('talents')->group(function () {
     Route::get('/{playerId}', [PlayerController::class, 'getTalents']);
     Route::post('/unlock', [PlayerController::class, 'unlockTalent']);

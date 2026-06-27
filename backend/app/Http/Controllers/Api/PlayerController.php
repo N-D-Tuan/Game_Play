@@ -331,4 +331,236 @@ class PlayerController extends Controller
 
         return response()->json(['status' => 'success']);
     }
+
+    public function upgradeCore(Request $request)
+    {
+        $playerId = $request->input('player_id');
+
+        return DB::transaction(function () use ($playerId) {
+            $player = DB::table('players')->where('id', $playerId)->lockForUpdate()->first();
+            
+            if (!$player) return response()->json(['status' => 'error', 'message' => 'Player không tồn tại!'], 404);
+            if ($player->level_star >= 10) return response()->json(['status' => 'error', 'message' => 'Đã đạt cấp tối đa!']);
+
+            // Không có cột equipped_slot trong DB, nên ta lấy rune đang khảm
+            // dựa theo item_id của 4 màu Tinh Thạch cố định (đỏ/tím/lục/lam).
+            $runeItemIds = [222, 223, 224, 225]; // Đỏ, Tím, Lục, Lam
+
+            $runes = DB::table('player_items')
+                ->join('items', 'player_items.item_id', '=', 'items.id')
+                ->where('player_items.player_id', $playerId)
+                ->where('player_items.is_equipped', 1)
+                ->whereIn('player_items.item_id', $runeItemIds)
+                ->select('player_items.*', 'items.hp', 'items.hp_regen', 'items.atk', 'items.dodge',
+                          'items.crit_rate', 'items.crit_damage', 'items.lifesteal', 'items.speed')
+                ->get();
+
+            if ($runes->count() < 4) {
+                return response()->json(['status' => 'error', 'message' => 'Cần khảm đủ 4 rãnh!']);
+            }
+
+            if ($runes->contains(fn($r) => $r->upgrade_level != $player->level_star)) {
+                return response()->json(['status' => 'error', 'message' => "Cần 4 viên Tinh Thạch Lv.{$player->level_star}!"]);
+            }
+
+            $upgradeCosts = [
+                1 => ['id' => 220, 'amount' => 10],
+                2 => ['id' => 220, 'amount' => 20],
+                3 => ['id' => 220, 'amount' => 30],
+                4 => ['id' => 220, 'amount' => 50],
+                5 => ['id' => 220, 'amount' => 80],
+                6 => ['id' => 220, 'amount' => 120],
+                7 => ['id' => 221, 'amount' => 10],
+                8 => ['id' => 221, 'amount' => 25],
+                9 => ['id' => 221, 'amount' => 50],
+            ];
+
+            $cost = $upgradeCosts[$player->level_star];
+            
+            // Dựa theo database.sql của bạn, các nguyên liệu đang lưu mỗi item 1 dòng
+            $materials = DB::table('player_items')
+                ->where('player_id', $playerId)
+                ->where('item_id', $cost['id'])
+                ->where('is_equipped', 0)
+                ->limit($cost['amount'])
+                ->get();
+
+            if ($materials->count() < $cost['amount']) {
+                $materialName = $cost['id'] == 220 ? 'Bụi Tinh Tú' : 'Tinh Chất Ngân Hà';
+                return response()->json([
+                    'status' => 'error', 
+                    'message' => "Không đủ {$cost['amount']} {$materialName} để Đột phá!"
+                ]);
+            }
+
+            // Tiến hành XÓA nguyên liệu
+            DB::table('player_items')->whereIn('id', $materials->pluck('id'))->delete();
+            // ==========================================
+
+            $currentStats = json_decode($player->astrolabe_stats ?? '{}', true);
+            
+            $multipliers = [1 => 1.0, 2 => 1.5, 3 => 2.0, 4 => 2.6, 5 => 3.3, 6 => 4.1, 7 => 5.0, 8 => 6.0, 9 => 7.2, 10 => 8.5];
+            $multiplier = $multipliers[$player->level_star] ?? 1.0;
+
+            // Map cột DB của items -> tên field stat dùng ở frontend
+            $statColumnMap = [
+                'hp' => 'hp',
+                'hp_regen' => 'hpRegen',
+                'atk' => 'atk',
+                'dodge' => 'dodge',
+                'crit_rate' => 'critRate',
+                'crit_damage' => 'critDamage',
+                'lifesteal' => 'lifesteal',
+                'speed' => 'speed',
+            ];
+
+            foreach ($runes as $rune) {
+                foreach ($statColumnMap as $column => $statKey) {
+                    $baseValue = $rune->$column ?? 0;
+                    if ($baseValue == 0) continue;
+
+                    $actualValue = round($baseValue * $multiplier);
+                    $currentStats[$statKey] = ($currentStats[$statKey] ?? 0) + $actualValue;
+                }
+            }
+
+            DB::table('players')->where('id', $playerId)->update([
+                'level_star' => $player->level_star + 1,
+                'astrolabe_stats' => json_encode($currentStats)
+            ]);
+
+            DB::table('player_items')->whereIn('id', $runes->pluck('id'))->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Đột phá thành công!',
+                'new_level' => $player->level_star + 1
+            ]);
+        });
+    }
+
+    public function equipRune(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $runeId = $request->input('item_id');
+        $slot = $request->input('slot'); // "red" | "blue" | "green" | "purple" (chỉ dùng để validate, không lưu DB)
+
+        if (!$playerId || !$runeId || !$slot) {
+            return response()->json(['status' => 'error', 'message' => 'Thiếu dữ liệu gửi lên!'], 400);
+        }
+
+        // Vì DB không có cột equipped_slot, ta dùng item_id để suy ra màu/rãnh
+        // (mỗi item_id rune ứng với đúng 1 màu cố định, nên màu = rãnh).
+        $slotColorToItemId = [
+            'red'    => 222, // Tinh Thạch Đỏ
+            'purple' => 223, // Tinh Thạch Tím
+            'green'  => 224, // Tinh Thạch Lục
+            'blue'   => 225, // Tinh Thạch Lam
+        ];
+
+        $normalizedSlot = str_replace('astro_', '', $slot); // chấp nhận cả "red" và "astro_red"
+
+        if (!isset($slotColorToItemId[$normalizedSlot])) {
+            return response()->json(['status' => 'error', 'message' => 'Rãnh khảm không hợp lệ!'], 400);
+        }
+
+        $expectedItemId = $slotColorToItemId[$normalizedSlot];
+
+        return DB::transaction(function () use ($playerId, $runeId, $normalizedSlot, $expectedItemId) {
+            // 0. Lấy level_star hiện tại của Lõi Sao (Tháp Tinh Tú)
+            $player = DB::table('players')->where('id', $playerId)->first();
+
+            if (!$player) {
+                return response()->json(['status' => 'error', 'message' => 'Không tìm thấy người chơi!'], 404);
+            }
+
+            // 1. Kiểm tra viên đá muốn khảm
+            $rune = DB::table('player_items')
+                ->join('items', 'player_items.item_id', '=', 'items.id')
+                ->where('player_items.id', $runeId)
+                ->where('player_items.player_id', $playerId)
+                ->select('player_items.*', 'items.type', 'items.rarity',
+                          'items.hp', 'items.hp_regen', 'items.atk', 'items.dodge',
+                          'items.crit_rate', 'items.crit_damage', 'items.lifesteal', 'items.speed')
+                ->first();
+
+            if (!$rune) {
+                return response()->json(['status' => 'error', 'message' => 'Không tìm thấy Tinh Thạch!']);
+            }
+
+            if ($rune->type !== 'rune') {
+                return response()->json(['status' => 'error', 'message' => 'Vật phẩm này không phải Tinh Thạch!']);
+            }
+
+            // 1b. CHỈ cho khảm rune có upgrade_level KHỚP ĐÚNG với level_star hiện tại của Lõi Sao
+            if ((int) $rune->upgrade_level !== (int) $player->level_star) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Lõi Sao Lv.{$player->level_star} chỉ nhận Tinh Thạch Lv.{$player->level_star}!"
+                ]);
+            }
+
+            // 2. Đối chiếu màu rune với rãnh người chơi chọn (vì rãnh = màu cố định theo item_id)
+            if ((int) $rune->item_id !== $expectedItemId) {
+                return response()->json(['status' => 'error', 'message' => 'Tinh Thạch này không khớp với rãnh này!']);
+            }
+
+            if ($rune->is_equipped == 1) {
+                return response()->json(['status' => 'error', 'message' => 'Tinh Thạch này đang được khảm rồi!']);
+            }
+
+            // 3. Kiểm tra rãnh (cùng màu = cùng item_id) đã có viên khác đang khảm chưa
+            $existingRune = DB::table('player_items')
+                ->where('player_id', $playerId)
+                ->where('item_id', $expectedItemId)
+                ->where('is_equipped', 1)
+                ->first();
+
+            if ($existingRune) {
+                return response()->json(['status' => 'error', 'message' => 'Rãnh đã có Tinh Thạch! Hãy tháo ra trước.']);
+            }
+
+            // 4. Thực hiện khảm (chỉ cập nhật cột is_equipped đã có sẵn, không đụng schema)
+            DB::table('player_items')->where('id', $runeId)->update([
+                'is_equipped' => 1
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Khảm Tinh Thạch thành công!'
+            ]);
+        });
+    }
+
+    public function unequipRune(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $runeId = $request->input('item_id'); // id của player_items (dòng rune đang khảm)
+
+        if (!$playerId || !$runeId) {
+            return response()->json(['status' => 'error', 'message' => 'Thiếu dữ liệu gửi lên!'], 400);
+        }
+
+        $rune = DB::table('player_items')
+            ->where('id', $runeId)
+            ->where('player_id', $playerId)
+            ->first();
+
+        if (!$rune) {
+            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy Tinh Thạch!'], 404);
+        }
+
+        if ($rune->is_equipped != 1) {
+            return response()->json(['status' => 'error', 'message' => 'Tinh Thạch này chưa được khảm!'], 400);
+        }
+
+        DB::table('player_items')->where('id', $runeId)->update([
+            'is_equipped' => 0
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã tháo Tinh Thạch!'
+        ]);
+    }
 }

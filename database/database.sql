@@ -23,15 +23,16 @@ ADD COLUMN awakening_stats JSON DEFAULT NULL;
 ALTER TABLE players
 ADD COLUMN awakening_locks JSON DEFAULT NULL;
 
-ALTER TABLE players
-ADD COLUMN rune_tree JSON DEFAULT NULL;
-
 -- Cập nhật dữ liệu mặc định ban đầu cho Player 1 (Tránh lỗi Null JSON)
 UPDATE players 
 SET talent_points = 50,
 	unlocked_nodes = '{}', 
     equipped_skills = '[]' 
 WHERE id = 1;
+
+ALTER TABLE players
+ADD COLUMN level_star INT NOT NULL DEFAULT 1,
+ADD COLUMN astrolabe_stats JSON DEFAULT NULL;
 
 -- ==========================================
 -- BẢNG 1: DANH MỤC TRANG BỊ GỐC (MASTER DATA)
