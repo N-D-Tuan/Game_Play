@@ -3244,7 +3244,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         // 2. Xây dựng Tooltip thông số
-        let tooltip = `[NĂNG LƯỢNG TÍCH LŨY]\nLõi Tinh Tú - Cấp độ: ${level}\n-------------------\nSức mạnh đã hấp thụ:\n`;
+        let tooltip = `Lõi Tinh Tú - Cấp độ: ${level}\n-------------------\nSức mạnh đã hấp thụ:\n`;
         let hasStats = false;
         
         for (let stat in stats) {
@@ -3279,7 +3279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span style="color: #ffaa00; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin-top: 3px; font-weight: bold;">LÕI TỐI THƯỢNG</span>
             `;
         } else {
-            tooltip += `-------------------\nBấm để Đột phá (Cần khảm đủ 4 viên Đá Rune Lv.${level})`;
+            tooltip += `-------------------\nCần khảm đủ 4 viên Đá Rune Lv.${level}`;
         }
 
         core.setAttribute('data-tooltip', tooltip.trim());

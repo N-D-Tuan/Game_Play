@@ -438,8 +438,7 @@ body, html {
 /* Tooltip */
 .inv-item[data-tooltip]:hover::after,
 .forge-slot[data-tooltip]:hover::after,
-#forge-result[data-tooltip]:hover::after,
-.astro-slot[data-tooltip]:hover::after {
+#forge-result[data-tooltip]:hover::after {
     content: attr(data-tooltip); position: absolute; top: 115%; left: 50%; transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.95); border: 1px solid #ffcc00; color: #fff;
     padding: 12px; border-radius: 6px; white-space: pre-wrap; min-width: 160px;
@@ -453,7 +452,7 @@ body, html {
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.85); /* Nền đen mờ che trang chủ */
-    z-index: 99998;
+    z-index: 100005;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -508,6 +507,10 @@ body, html {
     padding: 12px; border-radius: 6px; white-space: pre-wrap; min-width: 160px;
     z-index: 999999; pointer-events: none; font-size: 13px; line-height: 1.6;
     box-shadow: 0 4px 10px rgba(0,0,0,0.8); text-align: left;
+}
+#inventory-grid .inv-item:nth-child(n+29)[data-tooltip]:hover::after {
+    top: auto;
+    bottom: 115%;
 }
 
 /* 4. Giao diện Thanh lật trang Balo */
@@ -720,7 +723,7 @@ body, html {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 99999 !important; /* Đè lên tất cả */
+    z-index: 100005 !important; /* Đè lên tất cả */
 }
 
 /* 1. Độ rộng của toàn bộ thanh cuộn */
