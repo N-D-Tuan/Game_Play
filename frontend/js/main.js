@@ -3376,7 +3376,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span style="color: #ffaa00; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin-top: 3px; font-weight: bold;">LÕI TỐI THƯỢNG</span>
             `;
         } else {
-            tooltip += `-------------------\nCần khảm đủ 4 viên Đá Rune Lv.${level}`;
+            const UPGRADE_COSTS = {
+                1: { amount: 10, name: "Bụi Tinh Tú" },
+                2: { amount: 20, name: "Bụi Tinh Tú" },
+                3: { amount: 30, name: "Bụi Tinh Tú" },
+                4: { amount: 50, name: "Bụi Tinh Tú" },
+                5: { amount: 80, name: "Bụi Tinh Tú" },
+                6: { amount: 120, name: "Bụi Tinh Tú" },
+                7: { amount: 10, name: "Tinh Chất Ngân Hà" },
+                8: { amount: 25, name: "Tinh Chất Ngân Hà" },
+                9: { amount: 50, name: "Tinh Chất Ngân Hà" }
+            };
+
+            let cost = UPGRADE_COSTS[level];
+            tooltip += `-------------------\n[ĐIỀU KIỆN ĐỘT PHÁ]\n`;
+            tooltip += `- Cần 4 viên Tinh Thạch Lv.${level}\n`;
+            if (cost) {
+                tooltip += `- Cần ${cost.amount} ${cost.name}`;
+            }
         }
 
         core.setAttribute('data-tooltip', tooltip.trim());
