@@ -934,16 +934,17 @@ document.addEventListener("DOMContentLoaded", () => {
         let pctStats = { hp: 0, atk: 0, hpRegen: 0, speed: 0, dodge: 0, critRate: 0, critDamage: 0, lifesteal: 0 };
 
         // 1. CỘNG TRANG BỊ (Chỉ cộng Flat)
-        for (let slot in equippedItems) {
+        const standardEquipSlots = ['head', 'chest', 'legs', 'weapon', 'accessory', 'shoes'];
+        standardEquipSlots.forEach(slot => {
             let item = equippedItems[slot];
             if (item && item.stats) {
                 for (let statKey in item.stats) {
                     if(flatStats[statKey] !== undefined) flatStats[statKey] += item.stats[statKey];
                 }
             }
-        }
+        });
 
-        // 2. CỘNG THÚ CƯNG (Chỉ cộng Flat)
+        // 2. CỘNG THÚ CƯNG (Chỉ cộng CHỈ SỐ GỐC Flat)
         if (window.equippedPet) {
             let pInfo = window.equippedPet.pet;
             let lvl = window.equippedPet.level;
@@ -955,29 +956,9 @@ document.addEventListener("DOMContentLoaded", () => {
             flatStats.critDamage += Math.round(pInfo.base_crit_damage + (lvl - 1) * pInfo.growth_crit_damage);
             flatStats.lifesteal += Math.round(pInfo.base_lifesteal + (lvl - 1) * pInfo.growth_lifesteal);
             flatStats.speed += Math.round(pInfo.base_speed + (lvl - 1) * pInfo.growth_speed);
-
-            // ==========================================
-            // ĐỌC BUFF ĐỘNG TỪ TRẬN CHIẾN (Phần Trăm %)
-            // ==========================================
-            let activeScene = window.game && window.game.scene.isActive('CampaignScene') ? window.game.scene.getScene('CampaignScene') : null;
-            if (activeScene && activeScene.player) {                
-                let dynamicBuffs = getPetDynamicBuffs(activeScene, pInfo.pet_code, lvl);
-
-                // Các buff trong trận chiến này đều là %
-                pctStats.lifesteal += (dynamicBuffs.lifesteal || 0);
-                pctStats.hpRegen += (dynamicBuffs.hpRegen || 0); // Đặc biệt: Kiến xanh buff HP Regen % tổng máu (Giữ theo logic cũ của bạn)
-                pctStats.atk += (dynamicBuffs.atkPercent || 0); 
-                pctStats.critRate += (dynamicBuffs.critRate || 0);
-                pctStats.dodge += (dynamicBuffs.dodge || 0);
-
-                // Speed riêng biệt của Phaser
-                if (activeScene.player && activeScene.player.speedMultiplier) {
-                    pctStats.speed += ((activeScene.player.speedMultiplier - 1) * 100); 
-                }
-            }
         }
 
-        // 3. CỘNG TẾ ĐÀN THỨC TỈNH (Phân loại vào Giỏ 1 hoặc Giỏ 2)
+        // 3. CỘNG TẾ ĐÀN THỨC TỈNH
         if (window.currentAwakeningStats && window.currentAwakeningStats.length === 8) {
             window.currentAwakeningStats.forEach(stat => {
                 if (!stat || !stat.id) return;
@@ -992,10 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // ==========================================
-        // 3.5. CỘNG THÁP TINH TÚ (HẤP THỤ + ĐANG KHẢM)
-        // ==========================================
-        // A. Cộng sức mạnh vĩnh viễn đã hấp thụ trong Lõi
+        // 4. CỘNG THÁP TINH TÚ (HẤP THỤ + ĐANG KHẢM)
         if (window.playerData && window.playerData.astrolabe_stats) {
             let coreStats = typeof window.playerData.astrolabe_stats === 'string' ? JSON.parse(window.playerData.astrolabe_stats) : window.playerData.astrolabe_stats;
             for (let statKey in coreStats) {
@@ -1004,7 +982,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // B. Cộng sức mạnh của các viên đá ĐANG KHẢM
         let astroSlots = ['astro_red', 'astro_blue', 'astro_green', 'astro_purple'];
         astroSlots.forEach(slotKey => {
             let rune = equippedItems[slotKey];
@@ -1017,28 +994,78 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // ==========================================
-        // 4. ÁP DỤNG CÔNG THỨC VÀNG TÍNH TỔNG CỤC
+        // 5. TÍNH CHỈ SỐ TĨNH (TRƯỚC KHI VÀO ẢI) ĐỂ TÍNH LỰC CHIẾN
+        // ==========================================
+        // Ép % của Tế Đàn, Tinh Thạch vào chỉ số Flat để ra chỉ số tổng hợp cố định
+        let staticStats = { ...BASE_STATS };
+        
+        staticStats.hp = Math.round(flatStats.hp + (flatStats.hp * (pctStats.hp / 100)));
+        staticStats.atk = Math.round(flatStats.atk + (flatStats.atk * (pctStats.atk / 100)));
+        staticStats.speed = Math.round(flatStats.speed + (flatStats.speed * (pctStats.speed / 100)));
+        staticStats.hpRegen = Math.round(flatStats.hpRegen + (flatStats.hpRegen * (pctStats.hpRegen / 100))); 
+        
+        staticStats.dodge = flatStats.dodge + pctStats.dodge;
+        staticStats.critRate = flatStats.critRate + pctStats.critRate;
+        staticStats.critDamage = flatStats.critDamage + pctStats.critDamage;
+        staticStats.lifesteal = flatStats.lifesteal + pctStats.lifesteal;
+
+        // ==========================================
+        // 5.1. TÍNH TOÁN LỰC CHIẾN TỪ BỘ CHỈ SỐ TĨNH NÀY
+        // ==========================================
+        let combatPower = 0;
+        combatPower += staticStats.hp * 5;          // 1 Máu = 5 LC
+        combatPower += staticStats.hpRegen * 5;    // 1 Hồi máu = 5 LC
+        combatPower += staticStats.atk * 150;         // 1 Tấn công = 150 LC
+        combatPower += staticStats.speed * 5;       // 1 Tốc độ = 5 LC
+        combatPower += staticStats.dodge * 50;      // 1% Né = 50 LC
+        combatPower += staticStats.critRate * 100;   // 1% Tỉ lệ CM = 100 LC
+        combatPower += staticStats.critDamage * 100;  // 1% ST CM = 100 LC
+        combatPower += staticStats.lifesteal * 80;  // 1% Hút máu = 80 LC
+
+        let cpElement = document.getElementById('player-combat-power');
+        if (cpElement) cpElement.textContent = Math.round(combatPower).toLocaleString('en-US');
+
+        // ==========================================
+        // 6. ĐỌC BUFF ĐỘNG TỪ TRẬN CHIẾN
+        // (Đoạn này nằm sau Lực Chiến nên Lực chiến sẽ không bị ảnh hưởng)
+        // ==========================================
+        if (window.equippedPet) {
+            let pInfo = window.equippedPet.pet;
+            let lvl = window.equippedPet.level;
+            let activeScene = window.game && window.game.scene.isActive('CampaignScene') ? window.game.scene.getScene('CampaignScene') : null;
+            
+            if (activeScene && activeScene.player) {                
+                let dynamicBuffs = getPetDynamicBuffs(activeScene, pInfo.pet_code, lvl);
+
+                pctStats.lifesteal += (dynamicBuffs.lifesteal || 0);
+                pctStats.hpRegen += (dynamicBuffs.hpRegen || 0); 
+                pctStats.atk += (dynamicBuffs.atkPercent || 0); 
+                pctStats.critRate += (dynamicBuffs.critRate || 0);
+                pctStats.dodge += (dynamicBuffs.dodge || 0);
+
+                if (activeScene.player && activeScene.player.speedMultiplier) {
+                    pctStats.speed += ((activeScene.player.speedMultiplier - 1) * 100); 
+                }
+            }
+        }
+
+        // ==========================================
+        // 7. TÍNH TOÁN LẠI LẦN CUỐI ĐỂ HIỂN THỊ RA GIAO DIỆN (Đã gồm buff Pet)
         // ==========================================
         let finalStats = { ...BASE_STATS };
-        
-        // Nhóm 1: Các chỉ số có Base to (Máu, ATK, Tốc, Hồi) -> Cần nhân với %
         finalStats.hp = Math.round(flatStats.hp + (flatStats.hp * (pctStats.hp / 100)));
         finalStats.atk = Math.round(flatStats.atk + (flatStats.atk * (pctStats.atk / 100)));
         finalStats.speed = Math.round(flatStats.speed + (flatStats.speed * (pctStats.speed / 100)));
-        
-        // LƯU Ý ĐẶC BIỆT: Hồi máu ở logic cũ của bạn là buff thẳng HP regen, nên ta xử lý nhẹ chỗ này
         finalStats.hpRegen = Math.round(flatStats.hpRegen + (flatStats.hpRegen * (pctStats.hpRegen / 100))); 
         
-        // Nhóm 2: Các chỉ số đã là % (Crit, Dodge, Hút máu) -> Không nhân với nhau, mà chỉ việc cộng gộp Giỏ 1 + Giỏ 2
         finalStats.dodge = (flatStats.dodge + pctStats.dodge).toFixed(1);
         finalStats.critRate = (flatStats.critRate + pctStats.critRate).toFixed(1);
         finalStats.critDamage = (flatStats.critDamage + pctStats.critDamage).toFixed(1);
         finalStats.lifesteal = (flatStats.lifesteal + pctStats.lifesteal).toFixed(1);
 
-        // Lưu cho Game lấy chạy
         window.playerStats = { ...finalStats };
 
-        // 5. HIỂN THỊ RA UI
+        // HIỂN THỊ CHỈ SỐ RA GIAO DIỆN
         document.getElementById('stat-hp').textContent = finalStats.hp;
         document.getElementById('stat-hpRegen').textContent = finalStats.hpRegen;
         document.getElementById('stat-atk').textContent = finalStats.atk;
