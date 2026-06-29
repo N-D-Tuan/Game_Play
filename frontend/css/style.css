@@ -222,7 +222,8 @@
 }
 
 /* CUSTOM THANH KÉO (SLIDER) CHUẨN GAME */
-input[type=range]::-webkit-slider-thumb {
+input[type=range] {
+    appearance: none;
     -webkit-appearance: none;
     width: 60%;
     background: transparent;
@@ -459,7 +460,7 @@ body, html {
 }
 
 /* 1. Nút X nhỏ gọn góc trên cùng bên phải */
-#close-inventory {
+#close-inventory, #close-shop {
     position: absolute;  
     top: -10px;
     right: 15px; 
@@ -478,7 +479,7 @@ body, html {
     transition: 0.2s; 
     z-index: 1000;
 }
-#close-inventory:hover { 
+#close-inventory:hover, #close-shop:hover { 
     transform: scale(1.2); 
     color: #ff0000; 
 }
@@ -1122,4 +1123,74 @@ body, html {
         transform: scale(1.08);
         filter: brightness(1.4);
     }
+}
+
+/* ==========================================
+   GIAO DIỆN CỬA HÀNG BÍ ẨN (SHOP)
+   ========================================== */
+.shop-container {
+    display: flex; flex-direction: column; 
+    width: 850px; height: 600px;
+    background: #111111; 
+    border: 4px solid #4b0082; /* Viền màu tím bí ẩn */
+    border-radius: 10px; color: #fff;
+    position: relative; 
+    box-shadow: 0 0 40px rgba(163, 53, 238, 0.4), inset 0 0 20px rgba(75, 0, 130, 0.5);
+    font-family: Arial, sans-serif;
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 cột */
+    grid-template-rows: repeat(3, 1fr);    /* 3 hàng = 9 ô */
+    gap: 15px;
+    width: 100%;
+    height: 100%;
+}
+
+.shop-item-card {
+    background: rgba(20, 20, 20, 0.9);
+    border: 2px solid #333;
+    border-radius: 8px;
+    display: flex;
+    padding: 10px;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.shop-item-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    border-color: #a335ee;
+    background: rgba(40, 10, 60, 0.8);
+    box-shadow: 0 5px 15px rgba(163, 53, 238, 0.3);
+}
+
+.shop-item-icon-box {
+    width: 60px; height: 60px;
+    background: #000;
+    border-radius: 6px;
+    display: flex; justify-content: center; align-items: center;
+    border: 1px solid #555;
+    position: relative;
+}
+
+.shop-item-info {
+    flex-grow: 1;
+    display: flex; flex-direction: column; justify-content: center;
+}
+
+.shop-item-name {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+    font-family: 'MedievalSharp', cursive;
+}
+
+.shop-item-price {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 15px; font-weight: bold; color: #ffcc00;
 }

@@ -3486,6 +3486,94 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    // ==========================================
+    // HỆ THỐNG CỬA HÀNG BÍ ẨN (SHOP SYSTEM)
+    // ==========================================
+    const shopModal = document.getElementById('shop-modal');
+    const closeShop = document.getElementById('close-shop');
+    
+    const tabShopBuy = document.getElementById('tab-shop-buy');
+    const tabShopSell = document.getElementById('tab-shop-sell');
+    const viewShopBuy = document.getElementById('view-shop-buy');
+    const viewShopSell = document.getElementById('view-shop-sell');
+
+    // Mở Shop
+    if (buildingShop) {
+        buildingShop.addEventListener('click', () => {
+            window.playHomeClickSound();
+            shopModal.style.display = 'flex';
+            
+            // Vẽ 9 món đồ giả ra màn hình để xem UI
+            renderMockShopItems(); 
+        });
+    }
+
+    // Đóng Shop
+    if (closeShop) {
+        closeShop.addEventListener('click', () => {
+            shopModal.style.display = 'none';
+        });
+    }
+
+    // Chuyển Tab
+    tabShopBuy.addEventListener('click', () => {
+        tabShopBuy.classList.add('active'); tabShopBuy.style.color = '#a335ee'; tabShopBuy.style.borderBottomColor = '#a335ee';
+        tabShopSell.classList.remove('active'); tabShopSell.style.color = '#888'; tabShopSell.style.borderBottomColor = 'transparent';
+        viewShopBuy.style.display = 'flex'; viewShopSell.style.display = 'none';
+    });
+
+    tabShopSell.addEventListener('click', () => {
+        tabShopSell.classList.add('active'); tabShopSell.style.color = '#00ff00'; tabShopSell.style.borderBottomColor = '#00ff00';
+        tabShopBuy.classList.remove('active'); tabShopBuy.style.color = '#888'; tabShopBuy.style.borderBottomColor = 'transparent';
+        viewShopSell.style.display = 'flex'; viewShopBuy.style.display = 'none';
+    });
+
+    // Hàm tạo 9 vật phẩm giả để Test Giao Diện
+    function renderMockShopItems() {
+        const grid = document.getElementById('shop-items-grid');
+        grid.innerHTML = ''; // Xóa đồ cũ
+
+        // Tạo 9 món đồ ngẫu nhiên
+        const mockItems = [
+            { name: "Bụi Tinh Tú", icon: "stardust.png", price: 5000, rarity: "C", color: "#a335ee", qty: 10 },
+            { name: "Huyết Thạch", icon: "bloodstone.png", price: 15000, rarity: "A", color: "#ff0000", qty: 5 },
+            { name: "Trứng Thú Cưng", icon: "egg.png", price: 50000, rarity: "S", color: "#ffffff", qty: 1 },
+            { name: "Tinh Chất Ngân Hà", icon: "galaxy_stardust.png", price: 20000, rarity: "B", color: "#ffd700", qty: 2 },
+            { name: "Hộ Thể Phù", icon: "charm_normal.png", price: 12000, rarity: "D", color: "#00aaff", qty: 3 },
+            { name: "Tinh Thạch Đỏ", icon: "rune_do.png", price: 8000, rarity: "S", color: "#ffffff", qty: 1 },
+            { name: "Mảnh Trứng", icon: "egg_piece.png", price: 4500, rarity: "D", color: "#00aaff", qty: 1 },
+            { name: "Trái Cấm Địa Đàn", icon: "food1.png", price: 2000, rarity: "B", color: "#ffd700", qty: 5 },
+            { name: "Thánh Hộ Phù", icon: "charm_holy.png", price: 85000, rarity: "S", color: "#ffffff", qty: 1 },
+        ];
+
+        mockItems.forEach(item => {
+            let card = document.createElement('div');
+            card.className = 'shop-item-card';
+            
+            // Xử lý viền S
+            let shadowStyle = item.rarity === 'S' ? 'box-shadow: 0 0 10px #fff;' : '';
+            
+            card.innerHTML = `
+                <div class="shop-item-icon-box" style="border-color: ${item.color}; ${shadowStyle}">
+                    <img src="../assets/items/${item.icon}" style="width: 45px; height: 45px; object-fit: contain;">
+                    <span style="position: absolute; bottom: 2px; right: 4px; font-size: 11px; font-weight: bold; color: ${item.rarity === 'S' ? '#000' : item.color}; ${item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;' : ''}">${item.rarity}</span>
+                </div>
+                <div class="shop-item-info">
+                    <span class="shop-item-name" style="color: ${item.rarity === 'S' ? '#fff' : item.color};">${item.name} x${item.qty}</span>
+                    <span class="shop-item-price">
+                        <img src="../assets/gold.png" style="width: 16px;"> ${item.price.toLocaleString('en-US')}
+                    </span>
+                </div>
+            `;
+            
+            card.onclick = () => {
+                showDarkFantasyAlert(`Bạn muốn mua ${item.name} với giá ${item.price} Vàng? (Chức năng đang xây dựng)`);
+            };
+
+            grid.appendChild(card);
+        });
+    }
+
     drawRadarChart();
     renderStatsList();
     loadPetsFromServer();
