@@ -222,7 +222,7 @@
 }
 
 /* CUSTOM THANH KÉO (SLIDER) CHUẨN GAME */
-input[type=range] {
+input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 60%;
     background: transparent;
@@ -402,7 +402,7 @@ body, html {
 }
 
 /* Bảng thông số */
-.char-stats { background: #111; padding: 15px; border-radius: 8px; margin-top: 50px; border: 1px solid #333; }
+.char-stats { background: #111; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #333; }
 .stat-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
 .stat-row span:last-child { color: #00ff00; font-weight: bold; }
 
@@ -970,4 +970,38 @@ body, html {
 
 .astrolabe-map-panel{
     overflow: visible !important;
+}
+
+/* ==========================================
+   HIỂN THỊ TỔNG LỰC CHIẾN (COMBAT POWER)
+   ========================================== */
+.lc-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 50px;
+}
+
+.lc-label {
+    font-size: 20px;
+    color: #ffcc00;
+    font-weight: 700;
+}
+
+.lc-value-box {
+    background: linear-gradient(180deg, #ffcc00, #6c5236); /* Gradient từ nâu sáng xuống nâu tối */
+    border: 2px solid #3a1c0d; /* Viền nâu đen */
+    border-radius: 4px;
+    padding: 2px 15px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.5); /* Đổ bóng tạo độ sâu */
+}
+
+.lc-value {
+    font-size: 18px;
+    color: #ffffff;
+    letter-spacing: 1px;
+    font-weight: 700;
+    text-align: center;
+    margin: 15px;
 }
