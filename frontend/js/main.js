@@ -11,6 +11,9 @@ window.PET_SKILL_HOTKEYS = PET_SKILL_HOTKEYS;
 window.PET_SKILL_DATA = PET_SKILL_DATA;
 
 document.addEventListener("DOMContentLoaded", () => {
+    window.isGameBooting = true;
+    setTimeout(() => { window.isGameBooting = false; }, 2000);
+
     localStorage.setItem('playerId', '1');
 
     // ==========================================
@@ -36,6 +39,54 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         };
         window.requestAnimationFrame(step);
+    };
+
+    // ==========================================
+    // LOGIC THÔNG BÁO TĂNG LỰC CHIẾN
+    // ==========================================
+    let lcToastTimeout = null;
+    let lcAnimFrame = null;
+    
+    // Biến toàn cục để theo dõi Lực Chiến cũ
+    window.lastCombatPower = undefined; 
+
+    window.showLCIncreaseToast = function(startVal, endVal) {
+        const toast = document.getElementById('lc-increase-toast');
+        const valSpan = document.getElementById('lc-toast-value');
+
+        // 1. Nếu đang có thông báo cũ chạy -> Hủy ngay để nhường chỗ cho cái mới
+        if (lcToastTimeout) clearTimeout(lcToastTimeout);
+        if (lcAnimFrame) cancelAnimationFrame(lcAnimFrame);
+
+        // 2. Hiện Toast lên
+        toast.classList.add('show');
+
+        // 3. Logic chạy nhảy số (Giống tiền Vàng nhưng chạy nhanh hơn)
+        let startTime = null;
+        const duration = 1200; // Chạy số trong 1.2s
+
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            
+            // Dùng hiệu ứng easeOut để số chạy nhanh lúc đầu, chậm lúc cuối cho cảm giác thỏa mãn
+            const easeOut = 1 - Math.pow(1 - progress, 4); 
+            const currentVal = Math.floor(startVal + (endVal - startVal) * easeOut);
+
+            valSpan.innerText = currentVal.toLocaleString('en-US');
+
+            if (progress < 1) {
+                lcAnimFrame = requestAnimationFrame(step);
+            } else {
+                valSpan.innerText = endVal.toLocaleString('en-US');
+                
+                // 4. Khi số chạy xong, giữ nguyên hiện trường 1.5 giây rồi mới trượt xuống ẩn đi
+                lcToastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 1500);
+            }
+        };
+        lcAnimFrame = requestAnimationFrame(step);
     };
 
     // Hàm gọi API lấy thông tin người chơi
@@ -1022,8 +1073,27 @@ document.addEventListener("DOMContentLoaded", () => {
         combatPower += staticStats.critDamage * 100;  // 1% ST CM = 100 LC
         combatPower += staticStats.lifesteal * 80;  // 1% Hút máu = 80 LC
 
+        let finalCombatPower = Math.round(combatPower);
         let cpElement = document.getElementById('player-combat-power');
-        if (cpElement) cpElement.textContent = Math.round(combatPower).toLocaleString('en-US');
+        if (cpElement) cpElement.textContent = finalCombatPower.toLocaleString('en-US');
+
+        // ==========================================
+        // KIỂM TRA ĐỂ GỌI THÔNG BÁO TĂNG LỰC CHIẾN
+        // ==========================================
+        if (typeof window.lastCombatPower === 'undefined' || window.isGameBooting) {
+            // Lần chạy đầu tiên HOẶC đang trong 2s đầu tiên load game: 
+            // Chỉ âm thầm cập nhật mốc LC, KHÔNG HIỆN THÔNG BÁO!
+            window.lastCombatPower = combatPower;
+        } else if (combatPower > window.lastCombatPower) {
+            // Nếu Lực Chiến MỚI > Lực Chiến CŨ: Gọi thông báo
+            if (typeof window.showLCIncreaseToast === 'function') {
+                window.showLCIncreaseToast(window.lastCombatPower, combatPower);
+            }
+            window.lastCombatPower = combatPower; // Lưu lại mốc mới
+        } else {
+            // Nếu giảm (tháo đồ) hoặc bằng: Chỉ cập nhật lại mốc, không báo gì
+            window.lastCombatPower = combatPower;
+        }
 
         // ==========================================
         // 6. ĐỌC BUFF ĐỘNG TỪ TRẬN CHIẾN
