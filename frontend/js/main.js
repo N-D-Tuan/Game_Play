@@ -1122,16 +1122,20 @@ document.addEventListener("DOMContentLoaded", () => {
         // ==========================================
         // 7. TÍNH TOÁN LẠI LẦN CUỐI ĐỂ HIỂN THỊ RA GIAO DIỆN (Đã gồm buff Pet)
         // ==========================================
+        const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
         let finalStats = { ...BASE_STATS };
         finalStats.hp = Math.round(flatStats.hp + (flatStats.hp * (pctStats.hp / 100)));
         finalStats.atk = Math.round(flatStats.atk + (flatStats.atk * (pctStats.atk / 100)));
         finalStats.speed = Math.round(flatStats.speed + (flatStats.speed * (pctStats.speed / 100)));
         finalStats.hpRegen = Math.round(flatStats.hpRegen + (flatStats.hpRegen * (pctStats.hpRegen / 100))); 
         
-        finalStats.dodge = (flatStats.dodge + pctStats.dodge).toFixed(1);
-        finalStats.critRate = (flatStats.critRate + pctStats.critRate).toFixed(1);
-        finalStats.critDamage = (flatStats.critDamage + pctStats.critDamage).toFixed(1);
-        finalStats.lifesteal = (flatStats.lifesteal + pctStats.lifesteal).toFixed(1);
+        // ÁP DỤNG GIỚI HẠN (HARD CAPS)
+        finalStats.dodge = clamp(parseFloat(flatStats.dodge + pctStats.dodge), 0, 75).toFixed(1);
+        finalStats.critRate = clamp(parseFloat(flatStats.critRate + pctStats.critRate), 0, 100).toFixed(1);
+        finalStats.critDamage = (flatStats.critDamage + pctStats.critDamage).toFixed(1); // Không giới hạn
+        finalStats.lifesteal = clamp(parseFloat(flatStats.lifesteal + pctStats.lifesteal), 0, 50).toFixed(1);
+        finalStats.speed = clamp(Math.round(finalStats.speed), 0, 500);
 
         window.playerStats = { ...finalStats };
 
