@@ -117,6 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const homeScreen = document.getElementById('home-screen');
     const gameContainer = document.getElementById('game-container');
+    const goldHUD = document.getElementById('gold-container');
 
     const buildingPractice = document.getElementById('building-practice');
     const buildingCampaign = document.getElementById('building-campaign');
@@ -135,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             homeScreen.style.display = 'none';
             gameContainer.style.display = 'block';
+            goldHUD.style.display = 'none';
 
             if (typeof window.game !== 'undefined') {
                 window.game.scene.stop('CampaignScene'); // Dừng Vượt ải (nếu có)
@@ -150,7 +152,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             homeScreen.style.display = 'none';
             gameContainer.style.display = 'block';
-            
+            goldHUD.style.display = 'none';
+                
             if (typeof window.game !== 'undefined') {
                 window.game.scene.stop('default'); // Bắt buộc dừng Scene Tập luyện
                 
@@ -233,6 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             talentScreen.style.display = 'none';
             homeScreen.style.display = 'flex';
+            goldHUD.style.display = 'flex';
             setTimeout(() => { homeScreen.style.opacity = '1'; }, 50);
         }, 500);
     });
@@ -461,7 +465,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             astrolabeScreen.style.display = 'none';
             homeScreen.style.display = 'flex';
-            
+            goldHUD.style.display = 'flex';
+
             setTimeout(() => { 
                 homeScreen.style.opacity = '1'; 
             }, 50);
