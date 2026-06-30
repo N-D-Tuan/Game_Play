@@ -3579,6 +3579,259 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // ==========================================
+    // LOGIC TAB BÁN ĐỒ (SHOP SELL)
+    // ==========================================
+    const shopSellGrid = document.getElementById('shop-sell-grid');
+    const shopSellFilter = document.getElementById('shop-sell-filter');
+    const btnShopSellPrev = document.getElementById('btn-shop-sell-prev');
+    const btnShopSellNext = document.getElementById('btn-shop-sell-next');
+    const shopSellPageInfo = document.getElementById('shop-sell-page-info');
+    
+    let shopSellCurrentPage = 1;
+    const shopSellItemsPerPage = 60; // Lưới shop to nên để 60 món / trang
+    let itemToSell = null;
+    window.currentSellQuantity = 1;
+
+    // Lấy các DOM elements của thanh kéo
+    const sellSlider = document.getElementById('sell-quantity-slider');
+    const sellInput = document.getElementById('sell-quantity-input');
+    const sellGoldAmount = document.getElementById('sell-gold-amount');
+
+    // Sự kiện khi Kéo thanh Slider
+    if (sellSlider && sellInput) {
+        sellSlider.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            sellInput.value = val;
+            window.currentSellQuantity = val;
+            
+            // Cập nhật lại giá tiền ngay lập tức khi kéo
+            if (itemToSell) {
+                let unitPrice = getSellPrice(itemToSell);
+                sellGoldAmount.innerText = (unitPrice * val).toLocaleString('en-US');
+            }
+        });
+
+        // Sự kiện khi Gõ số trực tiếp vào Ô nhập
+        sellInput.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (itemToSell && val > itemToSell.quantity) val = itemToSell.quantity; // Không cho nhập lố số lượng đang có
+            
+            sellSlider.value = val;
+            window.currentSellQuantity = val;
+            
+            if (itemToSell) {
+                let unitPrice = getSellPrice(itemToSell);
+                sellGoldAmount.innerText = (unitPrice * val).toLocaleString('en-US');
+            }
+        });
+    }
+
+    // Hàm tính giá bán giả lập (SAU NÀY DATABASE SẼ TÍNH CHÍNH XÁC HƠN)
+    function getSellPrice(item) {
+        const basePrices = { 'F': 50, 'E': 150, 'D': 500, 'C': 1500, 'B': 5000, 'A': 20000, 'S': 100000 };
+        let price = basePrices[item.rarity] || 10;
+        
+        if (item.upgrade_level && item.upgrade_level > 0) {
+            price += price * (item.upgrade_level * 0.5); 
+        }
+
+        // Định giá một số nguyên liệu cụ thể
+        if (item.item_id === 220) price = 100; // Bụi tinh tú
+        if (item.item_id === 221) price = 1000; // Tinh chất
+        if (item.item_id === 214) price = 500; // Huyết thạch
+
+        return Math.round(price);
+    }
+
+    window.renderShopSell = function() {
+        if (!shopSellGrid) return;
+        shopSellGrid.innerHTML = '';
+        
+        let filterMode = shopSellFilter.value;
+
+        // Lọc đồ trong Balo (Không lấy đồ đang mặc)
+        let filteredItems = myInventory.filter(item => {
+            if (filterMode === 'equip') {
+                return item.slot !== 'material' && item.slot !== 'food' && item.slot !== 'rune' && item.type !== 'rune';
+            } else if (filterMode === 'rune') {
+                return item.slot === 'rune' || item.type === 'rune';
+            } else if (filterMode === 'material') {
+                return item.slot === 'material' || item.slot === 'food';
+            }
+            return true; // 'all'
+        });
+
+        // Sắp xếp ưu tiên rác (Bậc F) lên đầu để dễ dọn dẹp
+        filteredItems.sort((a, b) => RARITY_CONFIG[a.rarity].weight - RARITY_CONFIG[b.rarity].weight);
+
+        // Phân trang
+        let totalPages = Math.ceil(filteredItems.length / shopSellItemsPerPage) || 1;
+        if (shopSellCurrentPage > totalPages) shopSellCurrentPage = totalPages;
+        
+        let startIndex = (shopSellCurrentPage - 1) * shopSellItemsPerPage;
+        let pageItems = filteredItems.slice(startIndex, startIndex + shopSellItemsPerPage);
+
+        shopSellPageInfo.textContent = `Trang ${shopSellCurrentPage} / ${totalPages}`;
+        btnShopSellPrev.disabled = shopSellCurrentPage === 1;
+        btnShopSellNext.disabled = shopSellCurrentPage === totalPages;
+
+        pageItems.forEach(item => {
+            let div = document.createElement('div');
+            div.className = 'inv-item';
+            
+            let itemColor = RARITY_CONFIG[item.rarity].color;
+            let rankTextColor = itemColor;
+            let textShadow = '';
+
+            if (item.rarity === 'S') {
+                textShadow = 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 8px #fff;';
+                itemColor = '#ffffff';
+                rankTextColor = '#000000';
+                div.style.animation = 's-tier-breathing 2s ease-in-out infinite';
+            }
+            
+            let qtyHtml = (item.quantity && item.quantity > 1) 
+                ? `<div style="position: absolute; top: -5px; left: -5px; font-size: 12px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.85); padding: 2px 5px; border-radius: 6px; border: 1px solid #ffcc00; z-index: 5;">x${item.quantity}</div>` 
+                : '';
+            
+            let plusText = '';
+            let lvl = item.upgrade_level || 0;
+            if (lvl > 0) { 
+                let textColor = getUpgradeColor(lvl);
+                plusText = `<span style="position: absolute; bottom: 15px; right: 4px; font-size: 13px; color:${textColor}; font-weight:bold; text-shadow: 1px 1px 2px #000;">+${lvl}</span>`;
+            }
+
+            div.innerHTML = `${qtyHtml}
+                             <img src="../assets/items/${item.icon}" style="width: 40px; height: 40px; object-fit: contain;">
+                             <span class="item-rank" style="color: ${rankTextColor}; ${textShadow}">${item.rarity}</span>
+                             ${plusText}`;
+            
+            div.style.borderColor = itemColor;
+
+            // THÊM DÒNG GIÁ BÁN VÀO TOOLTIP
+            let unitPrice = getSellPrice(item);
+            let totalPrice = unitPrice * (item.quantity || 1);
+            let sellTooltip = buildTooltip(item) + `\n-------------------\n💰 Giá bán: ${totalPrice.toLocaleString('en-US')} Vàng (Click để bán)`;
+            div.setAttribute('data-tooltip', sellTooltip);
+            
+            // CLICK ĐỂ MỞ BẢNG HỎI XÁC NHẬN BÁN
+            div.addEventListener('click', () => {
+                itemToSell = item;
+                window.currentSellQuantity = item.quantity || 1; // Mặc định là bán hết
+                
+                document.getElementById('sell-item-name').innerText = `[Bậc ${item.rarity}] ${item.name}`;
+                document.getElementById('sell-item-name').style.color = RARITY_CONFIG[item.rarity].color;
+                if (item.rarity === 'S') {
+                    document.getElementById('sell-item-name').style.color = '#000000'; 
+                    document.getElementById('sell-item-name').style.textShadow = '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 10px #ffffff';
+                } else {
+                    document.getElementById('sell-item-name').style.color = RARITY_CONFIG[item.rarity].color;
+                    document.getElementById('sell-item-name').style.textShadow = 'none';
+                }
+
+                // BẬT / TẮT THANH CHỌN SỐ LƯỢNG
+                const qtyContainer = document.getElementById('sell-quantity-container');
+                if (item.quantity && item.quantity > 1) {
+                    qtyContainer.style.display = 'block';
+                    sellSlider.max = item.quantity;
+                    sellSlider.value = item.quantity;
+                    sellInput.max = item.quantity;
+                    sellInput.value = item.quantity;
+                } else {
+                    qtyContainer.style.display = 'none';
+                }
+
+                // Cập nhật giá tổng
+                let unitPrice = getSellPrice(item);
+                sellGoldAmount.innerText = (unitPrice * window.currentSellQuantity).toLocaleString('en-US');
+                
+                // Trích xuất HTML của ô vật phẩm để gắn vào Popup cho sinh động
+                let previewBox = document.getElementById('sell-item-preview');
+                previewBox.innerHTML = '';
+                let cloneDiv = div.cloneNode(true);
+                cloneDiv.removeAttribute('data-tooltip'); // Xóa tooltip để ko bị đè
+                cloneDiv.style.width = '70px'; cloneDiv.style.height = '70px';
+                cloneDiv.querySelector('img').style.width = '55px'; cloneDiv.querySelector('img').style.height = '55px';
+                
+                // Ẩn cái số lượng nhỏ nhỏ xX ở góc đi cho đỡ rối mắt trong bảng
+                let qtyBadge = cloneDiv.querySelector('div');
+                if(qtyBadge && qtyBadge.innerText.includes('x')) qtyBadge.style.display = 'none';
+
+                previewBox.appendChild(cloneDiv);
+
+                document.getElementById('sell-confirm-modal').style.display = 'flex';
+            });
+
+            shopSellGrid.appendChild(div);
+        });
+
+        // Điền ô trống cho gọn layout
+        for(let i = pageItems.length; i < shopSellItemsPerPage; i++) {
+            let emptyDiv = document.createElement('div');
+            emptyDiv.className = 'inv-item';
+            emptyDiv.innerHTML = `<span class="slot-label" style="opacity: 0.2">Trống</span>`;
+            shopSellGrid.appendChild(emptyDiv);
+        }
+    };
+
+    // Bắt sự kiện Lọc & Phân trang Tab Bán đồ
+    if (shopSellFilter) shopSellFilter.addEventListener('change', () => { shopSellCurrentPage = 1; renderShopSell(); });
+    if (btnShopSellPrev) btnShopSellPrev.addEventListener('click', () => { if (shopSellCurrentPage > 1) { shopSellCurrentPage--; renderShopSell(); } });
+    if (btnShopSellNext) btnShopSellNext.addEventListener('click', () => { shopSellCurrentPage++; renderShopSell(); });
+
+    // SỬA LẠI SỰ KIỆN CLICK TAB BÁN ĐỒ (Để nó tự động vẽ lưới đồ)
+    // Bạn tìm đoạn tabShopSell.addEventListener cũ ở trên và thay bằng đoạn này:
+    tabShopSell.addEventListener('click', () => {
+        tabShopSell.classList.add('active'); tabShopSell.style.color = '#00ff00'; tabShopSell.style.borderBottomColor = '#00ff00';
+        tabShopBuy.classList.remove('active'); tabShopBuy.style.color = '#888'; tabShopBuy.style.borderBottomColor = 'transparent';
+        viewShopSell.style.display = 'flex'; viewShopBuy.style.display = 'none';
+        
+        renderShopSell(); // Kích hoạt hàm render đồ từ Balo sang Shop
+    });
+
+    // CÁC NÚT ĐỒNG Ý / HỦY BỎ TRONG MODAL BÁN
+    document.getElementById('btn-cancel-sell').addEventListener('click', () => {
+        document.getElementById('sell-confirm-modal').style.display = 'none';
+        itemToSell = null;
+    });
+
+    document.getElementById('btn-confirm-sell').addEventListener('click', () => {
+        if (!itemToSell) return;
+
+        let qtyToSell = window.currentSellQuantity;
+        let unitPrice = getSellPrice(itemToSell);
+        let totalPrice = unitPrice * qtyToSell;
+
+        // LOGIC MỘC: TRỪ ĐỒ THÔNG MINH
+        if (qtyToSell >= (itemToSell.quantity || 1)) {
+            // Trường hợp 1: Bán hết sạch cục đó -> Xóa luôn khỏi Balo
+            myInventory = myInventory.filter(i => i.id !== itemToSell.id);
+        } else {
+            // Trường hợp 2: Bán một phần -> Trừ số lượng và cắt bớt ID thật
+            itemToSell.quantity -= qtyToSell;
+            if (itemToSell.stacked_ids && itemToSell.stacked_ids.length > 0) {
+                // Xóa bớt số lượng ID tương ứng trong mảng gốc
+                itemToSell.stacked_ids.splice(0, qtyToSell); 
+            }
+        }
+
+        // Cộng vàng và kích hoạt Animation chạy số
+        let newGold = window.currentGold + totalPrice;
+        window.animateGoldValue(window.currentGold, newGold);
+        window.currentGold = newGold;
+
+        // Đóng Popup và thông báo
+        document.getElementById('sell-confirm-modal').style.display = 'none';
+        showDarkFantasyAlert(`Bán thành công x${qtyToSell} vật phẩm! Nhận được +${totalPrice.toLocaleString()} Vàng.`);
+        
+        // Vẽ lại lưới để cập nhật số lượng mới
+        renderShopSell();
+
+        itemToSell = null;
+    });
+
     drawRadarChart();
     renderStatsList();
     loadPetsFromServer();
