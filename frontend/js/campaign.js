@@ -1756,11 +1756,11 @@ export class CampaignScene extends Phaser.Scene {
     }
 
     drawHealthBar() {
-        const BX=129, BY=93, BW=307, BH=55, SL=39; 
-        this.hpFrame = this.add.image(10, 50, 'hp_frame').setOrigin(0, 0).setScale(0.35).setDepth(10002).setScrollFactor(0);
+        const BX=219, BY=63, BW=307, BH=55, SL=38; 
+        this.hpFrame = this.add.image(100, 20, 'hp_frame').setOrigin(0, 0).setScale(0.35).setDepth(10002).setScrollFactor(0);
         this.healthBarBg = this.add.graphics().fillStyle(0x222222, 1).setDepth(10000).setScrollFactor(0).beginPath().moveTo(BX+SL,BY).lineTo(BX+BW,BY).lineTo(BX+BW,BY+BH).lineTo(BX,BY+BH).closePath().fillPath();
         this.healthBarFill = this.add.graphics().setDepth(10001).setScrollFactor(0);
-        this.hpText = this.add.text(85, 148, this.playerHealth, { fontSize: '26px', fill: '#ff3333', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(10003).setScrollFactor(0);
+        this.hpText = this.add.text(175, 118, this.playerHealth, { fontSize: '26px', fill: '#ff3333', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(10003).setScrollFactor(0);
         this.updateHealthBarWidth(this.playerHealth);
     }
 
@@ -1779,8 +1779,8 @@ export class CampaignScene extends Phaser.Scene {
         
         let cw = (v / this.maxHealth) * 307; // 307 là chiều dài thanh máu
         this.healthBarFill.fillStyle(0xff0000, 1).beginPath()
-            .moveTo(129+69, 93).lineTo(Math.max(129+69, 129+cw), 93)
-            .lineTo(129+cw, 93+55).lineTo(129, 93+55).closePath().fillPath();
+            .moveTo(219+39, 63).lineTo(Math.max(219+39, 219+cw), 63)
+            .lineTo(219+cw, 63+55).lineTo(219, 63+55).closePath().fillPath();
             
         if(this.hpText) this.hpText.setText(Math.round(v));
     }
@@ -1946,7 +1946,7 @@ export class CampaignScene extends Phaser.Scene {
             });
         this.btnSetting = this.add.text(cx, cy + 110, '[ CÀI ĐẶT ]', { fontSize: '32px', fill: '#00ccff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', (p,x,y,e) => { if(e) e.stopPropagation(); document.getElementById('settings-modal').style.display = 'flex'; this.input.enabled = false; });
         this.btnChangeMap = this.add.text(cx, cy + 180, '[ CHƠI LẠI MÀN 1 ]', { fontSize: '32px', fill: '#ff8800', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.physics.resume(); this.tweens.resumeAll(); this.time.paused = false; if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); this.scene.restart({stage: 1, level: 0, loot: []}); });
-        this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.input.enabled = false; this.setPauseMenuVisible(false); this.physics.resume(); this.tweens.resumeAll(); this.time.paused = false; if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
+        this.btnHome = this.add.text(cx, cy + 250, '[ TRANG CHỦ ]', { fontSize: '32px', fill: '#ffffff', backgroundColor: '#333', padding: {x: 20, y: 10} }).setOrigin(0.5).setDepth(15001).setInteractive({ useHandCursor: true }).setScrollFactor(0).on('pointerdown', () => { this.input.enabled = false; this.setPauseMenuVisible(false); this.physics.resume(); this.tweens.resumeAll(); this.time.paused = false; if (window.activeCampaignBgm) window.activeCampaignBgm.stop(); if (window.bgMusic) window.bgMusic.play(); document.getElementById('home-screen').style.display = 'flex'; document.getElementById('gold-container').style.display = 'flex'; setTimeout(() => { document.getElementById('home-screen').style.opacity = '1'; }, 10); setTimeout(() => { document.getElementById('game-container').style.display = 'none'; this.scene.start('default'); }, 800); });
         this.setPauseMenuVisible(false);
     }
 
