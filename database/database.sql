@@ -42,6 +42,8 @@ ALTER TABLE players
 ADD COLUMN shop_items JSON NULL AFTER gold,
 ADD COLUMN shop_free_refreshes INT DEFAULT 3 AFTER shop_items,
 ADD COLUMN last_shop_refresh_date DATE NULL AFTER shop_free_refreshes;
+ALTER TABLE players 
+ADD COLUMN is_shop_locked TINYINT(1) DEFAULT 0 AFTER last_shop_refresh_date;
 
 -- ==========================================
 -- BẢNG 1: DANH MỤC TRANG BỊ GỐC (MASTER DATA)

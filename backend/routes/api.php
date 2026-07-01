@@ -10,6 +10,9 @@ Route::get('/players/{id}', [PlayerController::class, 'show']);
 
 // Shop
 Route::post('/shop/sell', [PlayerController::class, 'sellItem']);
+Route::post('/shop/get', [PlayerController::class, 'getShopData']);
+Route::post('/shop/refresh', [PlayerController::class, 'refreshShop']);
+Route::post('/shop/toggle-lock', [PlayerController::class, 'toggleLockItem']);
 
 // Rune
 Route::post('/astrolabe/upgrade-core', [PlayerController::class, 'upgradeCore']);
