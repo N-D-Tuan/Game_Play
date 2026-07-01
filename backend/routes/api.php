@@ -8,10 +8,15 @@ use App\Http\Controllers\Api\PlayerController;
 
 Route::get('/players/{id}', [PlayerController::class, 'show']);
 
+// Shop
+Route::post('/shop/sell', [PlayerController::class, 'sellItem']);
+
+// Rune
 Route::post('/astrolabe/upgrade-core', [PlayerController::class, 'upgradeCore']);
 Route::post('/astrolabe/equip', [PlayerController::class, 'equipRune']);
 Route::post('/astrolabe/unequip', [PlayerController::class, 'unequipRune']);
 
+// Talents
 Route::prefix('talents')->group(function () {
     Route::get('/{playerId}', [PlayerController::class, 'getTalents']);
     Route::post('/unlock', [PlayerController::class, 'unlockTalent']);
@@ -20,6 +25,7 @@ Route::prefix('talents')->group(function () {
     Route::post('/save-awakening-locks', [PlayerController::class, 'saveAwakeningLocks']);
 });
 
+// Inventory
 Route::get('/inventory/{playerId}', [InventoryController::class, 'index']);
 Route::post('/equipment/toggle', [InventoryController::class, 'toggleEquip']);
 Route::post('/campaign/save-loot', [InventoryController::class, 'saveLoot']);
@@ -28,6 +34,7 @@ Route::post('/forge/upgrade', [InventoryController::class, 'upgradeItem']);
 Route::post('/forge/merge-runes', [InventoryController::class, 'mergeRunes']);
 Route::post('/forge/dismantle', [InventoryController::class, 'dismantleItems']);
 
+// Pet
 Route::prefix('pets')->group(function () {
     Route::get('/{playerId}', [PetController::class, 'getPlayerPets']);
     Route::post('/hatch', [PetController::class, 'hatchEgg']);
