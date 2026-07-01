@@ -620,7 +620,7 @@ class PlayerController extends Controller
         
         // --- BẬC C, D, E, F ---
         if ($playerItem->item_id == 212) $price = 3000;  // Mảnh trứng (Mua 12k)
-        if ($playerItem->item_id == 217) $price = 3125;  // Trái cấm (Mua 12.5k/viên)
+        if ($playerItem->item_id == 217) $price = 1500;  // Trái cấm (Mua 5k/viên)
         if ($playerItem->item_id == 214) $price = 1000;  // Huyết thạch (Mua 4k/viên)
         if ($playerItem->item_id == 220) $price = 150;   // Bụi tinh tú (Mua 600/viên)
         if ($playerItem->item_id == 215) $price = 1250;  // Hộ thể phù (Mua 5k)
@@ -755,22 +755,22 @@ class PlayerController extends Controller
                 ['item_id' => 225, 'name' => 'Tinh Thạch Lam', 'icon' => 'rune_lam.png', 'qty' => 1, 'price' => 35000, 'rarity' => 'B', 'slot' => 'rune'],
             ],
             'C' => [
-                ['item_id' => 217, 'name' => 'Trái Cấm Địa Đàn', 'icon' => 'food1.png', 'qty' => 2, 'price' => 25000, 'rarity' => 'C', 'slot' => 'food'],
-                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 5, 'price' => 20000, 'rarity' => 'C', 'slot' => 'material'],                
-                ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'C', 'slot' => 'material'],
+                ['item_id' => 217, 'name' => 'Trái Cấm Địa Đàn', 'icon' => 'food1.png', 'qty' => 5, 'price' => 25000, 'rarity' => 'C', 'slot' => 'food'],
+                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 6, 'price' => 24000, 'rarity' => 'C', 'slot' => 'material'],                
+                ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 3, 'price' => 15000, 'rarity' => 'C', 'slot' => 'material'],
             ],
             'D' => [
-                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 12000, 'rarity' => 'D', 'slot' => 'material'],
-                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 2, 'price' => 8500, 'rarity' => 'D', 'slot' => 'material'],
-                ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 1, 'price' => 9000, 'rarity' => 'D', 'slot' => 'material'],
+                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 3, 'price' => 36000, 'rarity' => 'D', 'slot' => 'material'],
+                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 3, 'price' => 12000, 'rarity' => 'D', 'slot' => 'material'],
+                ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'D', 'slot' => 'material'],
             ],
             'E' => [
-                ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 25, 'price' => 15000, 'rarity' => 'E', 'slot' => 'material'],
-                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 1, 'price' => 4500, 'rarity' => 'E', 'slot' => 'material'],
+                ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 30, 'price' => 18000, 'rarity' => 'E', 'slot' => 'material'],
+                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 1, 'price' => 4000, 'rarity' => 'E', 'slot' => 'material'],
             ],
             'F' => [
                 ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 10, 'price' => 6000, 'rarity' => 'F', 'slot' => 'material'],
-                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 4500, 'rarity' => 'F', 'slot' => 'material'],
+                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 12000, 'rarity' => 'F', 'slot' => 'material'],
                 ['item_id' => 217, 'name' => 'Trái Cấm Địa Đàn', 'icon' => 'food1.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'F', 'slot' => 'food'],
             ]
         ];
