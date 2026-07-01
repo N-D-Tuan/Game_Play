@@ -563,4 +563,75 @@ class PlayerController extends Controller
             'message' => 'Đã tháo Tinh Thạch!'
         ]);
     }
+
+    public function sellItem(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $itemIdsToSell = $request->input('item_ids'); // Nhận một mảng ID các món đồ cần bán
+        $quantityToSell = $request->input('quantity'); // Áp dụng cho vật phẩm stackable
+
+        if (!$itemIdsToSell || !is_array($itemIdsToSell) || count($itemIdsToSell) == 0) {
+            return response()->json(['status' => 'error', 'message' => 'Lỗi dữ liệu: Không có vật phẩm nào được chọn!']);
+        }
+
+        $player = Player::find($playerId);
+        if (!$player) {
+            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy người chơi!']);
+        }
+
+        $firstItemId = $itemIdsToSell[0];
+        $playerItem = \Illuminate\Support\Facades\DB::table('player_items')
+            ->join('items', 'player_items.item_id', '=', 'items.id')
+            ->select('player_items.*', 'items.rarity')
+            ->where('player_items.id', $firstItemId)
+            ->where('player_items.player_id', $playerId)
+            ->first();
+
+        if (!$playerItem) {
+            return response()->json(['status' => 'error', 'message' => 'Vật phẩm không tồn tại hoặc không thuộc về bạn!']);
+        }
+
+        if ($playerItem->is_equipped) {
+            return response()->json(['status' => 'error', 'message' => 'Không thể bán trang bị đang mặc!']);
+        }
+
+        // Tính giá trị của 1 vật phẩm (Logic y hệt như Frontend để đồng bộ)
+        $basePrices = ['F' => 50, 'E' => 150, 'D' => 500, 'C' => 1500, 'B' => 5000, 'A' => 20000, 'S' => 100000];
+        $price = $basePrices[$playerItem->rarity] ?? 10;
+        
+        if ($playerItem->upgrade_level > 0) {
+            $price += $price * ($playerItem->upgrade_level * 0.5);
+        }
+
+        // Giá fix cho nguyên liệu đặc biệt
+        if ($playerItem->item_id == 212) $price = 500; // Mảnh trứng
+        if ($playerItem->item_id == 213) $price = 5000; // Trứng pet
+        if ($playerItem->item_id == 214) $price = 500; // Huyết thạch
+        if ($playerItem->item_id == 217) $price = 100; // Trái cấm địa đàn
+        if ($playerItem->item_id == 218) $price = 500; // Miếng cắn vực thẳm
+        if ($playerItem->item_id == 219) $price = 5000; // Tàn tích thần trí
+        if ($playerItem->item_id == 220) $price = 100; // Bụi tinh tú
+        if ($playerItem->item_id == 221) $price = 1000; // Tinh chất ngân hà        
+        if ($playerItem->item_id == 222) $price = 5000; // Tinh thạch đỏ
+        if ($playerItem->item_id == 223) $price = 5000; // Tinh thạch tím
+        if ($playerItem->item_id == 224) $price = 5000; // Tinh thạch lục
+        if ($playerItem->item_id == 225) $price = 5000; // Tinh thạch lam
+
+        $price = round($price);
+        $totalGoldEarned = $price * count($itemIdsToSell);
+
+        // Tiến hành Xóa các vật phẩm khỏi DB
+        \DB::table('player_items')->whereIn('id', $itemIdsToSell)->delete();
+
+        // Cộng vàng cho người chơi
+        $player->gold += $totalGoldEarned;
+        $player->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Bán thành công!',
+            'gold_earned' => $totalGoldEarned,
+            'new_gold' => $player->gold
+        ]);
+    }
 }

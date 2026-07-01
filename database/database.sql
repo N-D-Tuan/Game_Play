@@ -9,17 +9,19 @@ CREATE TABLE players (
 );
 INSERT INTO players (id, username, gold) VALUES (1, 'Player 1', 50000);
 
+-- Lưu trữ skill mà player chọn
 ALTER TABLE players
 ADD COLUMN talent_points INT DEFAULT 0,
 ADD COLUMN unlocked_nodes JSON,
 ADD COLUMN equipped_skills JSON;
 
+-- Thêm vàng cho người chơi
 ALTER TABLE players 
 MODIFY COLUMN gold BIGINT NOT NULL DEFAULT 0;
 
+-- Chức năng lưu chỉ số tế đàn trong Điện thiên phú
 ALTER TABLE players
 ADD COLUMN awakening_stats JSON DEFAULT NULL;
-
 ALTER TABLE players
 ADD COLUMN awakening_locks JSON DEFAULT NULL;
 
@@ -30,9 +32,16 @@ SET talent_points = 50,
     equipped_skills = '[]' 
 WHERE id = 1;
 
+-- Thêm column cho chức năng Tháp tinh tú (Khảm rune)
 ALTER TABLE players
 ADD COLUMN level_star INT NOT NULL DEFAULT 1,
 ADD COLUMN astrolabe_stats JSON DEFAULT NULL;
+
+-- Thêm column cho chức năng shop theo player
+ALTER TABLE players
+ADD COLUMN shop_items JSON NULL AFTER gold,
+ADD COLUMN shop_free_refreshes INT DEFAULT 3 AFTER shop_items,
+ADD COLUMN last_shop_refresh_date DATE NULL AFTER shop_free_refreshes;
 
 -- ==========================================
 -- BẢNG 1: DANH MỤC TRANG BỊ GỐC (MASTER DATA)

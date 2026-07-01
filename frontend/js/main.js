@@ -12,7 +12,8 @@ window.PET_SKILL_DATA = PET_SKILL_DATA;
 
 document.addEventListener("DOMContentLoaded", () => {
     window.isGameBooting = true;
-    setTimeout(() => { window.isGameBooting = false; }, 2000);
+    // Thời gian cho phép khởi động game (3 giây) trước khi cho phép người chơi tương tác
+    setTimeout(() => { window.isGameBooting = false; }, 3000);
 
     localStorage.setItem('playerId', '1');
 
@@ -3638,9 +3639,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Định giá một số nguyên liệu cụ thể
-        if (item.item_id === 220) price = 100; // Bụi tinh tú
-        if (item.item_id === 221) price = 1000; // Tinh chất
+        if (item.item_id === 212) price = 500; // Mảnh trứng
+        if (item.item_id === 213) price = 5000; // Trứng pet
         if (item.item_id === 214) price = 500; // Huyết thạch
+        if (item.item_id === 217) price = 100; // Trái cấm địa đàn
+        if (item.item_id === 218) price = 500; // Miếng cắn vực thẳm
+        if (item.item_id === 219) price = 5000; // Tàn tích thần trí
+        if (item.item_id === 220) price = 100; // Bụi tinh tú
+        if (item.item_id === 221) price = 1000; // Tinh chất ngân hà
+        if (item.item_id === 222) price = 5000; // Tinh thạch đỏ
+        if (item.item_id === 223) price = 5000; // Tinh thạch tím
+        if (item.item_id === 224) price = 5000; // Tinh thạch lục
+        if (item.item_id === 225) price = 5000; // Tinh thạch lam
 
         return Math.round(price);
     }
@@ -3797,39 +3807,67 @@ document.addEventListener("DOMContentLoaded", () => {
         itemToSell = null;
     });
 
-    document.getElementById('btn-confirm-sell').addEventListener('click', () => {
+    document.getElementById('btn-confirm-sell').addEventListener('click', async () => {
         if (!itemToSell) return;
 
-        let qtyToSell = window.currentSellQuantity;
-        let unitPrice = getSellPrice(itemToSell);
-        let totalPrice = unitPrice * qtyToSell;
+        let btnConfirm = document.getElementById('btn-confirm-sell');
+        btnConfirm.innerText = "ĐANG XỬ LÝ...";
+        btnConfirm.disabled = true;
 
-        // LOGIC MỘC: TRỪ ĐỒ THÔNG MINH
-        if (qtyToSell >= (itemToSell.quantity || 1)) {
-            // Trường hợp 1: Bán hết sạch cục đó -> Xóa luôn khỏi Balo
-            myInventory = myInventory.filter(i => i.id !== itemToSell.id);
+        let qtyToSell = window.currentSellQuantity;
+        let playerId = localStorage.getItem('playerId') || 1;
+
+        // Chuẩn bị danh sách ID thực tế cần gửi lên Server để xóa
+        let idsToSell = [];
+        if (itemToSell.stacked_ids && itemToSell.stacked_ids.length > 0) {
+            // Cắt ra đúng số lượng ID cần bán từ mảng gộp
+            idsToSell = itemToSell.stacked_ids.slice(0, qtyToSell);
         } else {
-            // Trường hợp 2: Bán một phần -> Trừ số lượng và cắt bớt ID thật
-            itemToSell.quantity -= qtyToSell;
-            if (itemToSell.stacked_ids && itemToSell.stacked_ids.length > 0) {
-                // Xóa bớt số lượng ID tương ứng trong mảng gốc
-                itemToSell.stacked_ids.splice(0, qtyToSell); 
-            }
+            // Nếu là trang bị lẻ (không gộp), chỉ có 1 ID
+            idsToSell = [itemToSell.id];
         }
 
-        // Cộng vàng và kích hoạt Animation chạy số
-        let newGold = window.currentGold + totalPrice;
-        window.animateGoldValue(window.currentGold, newGold);
-        window.currentGold = newGold;
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/shop/sell', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    player_id: playerId,
+                    item_ids: idsToSell,
+                    quantity: qtyToSell
+                })
+            });
 
-        // Đóng Popup và thông báo
-        document.getElementById('sell-confirm-modal').style.display = 'none';
-        showDarkFantasyAlert(`Bán thành công x${qtyToSell} vật phẩm! Nhận được +${totalPrice.toLocaleString()} Vàng.`);
-        
-        // Vẽ lại lưới để cập nhật số lượng mới
-        renderShopSell();
+            const data = await response.json();
 
-        itemToSell = null;
+            if (data.status === 'success') {
+                // Đóng Popup
+                document.getElementById('sell-confirm-modal').style.display = 'none';
+                
+                // Hiển thị thông báo
+                showDarkFantasyAlert(`Bán thành công x${qtyToSell} vật phẩm! Nhận được +${data.gold_earned.toLocaleString()} Vàng.`);
+                
+                // Gọi API load lại túi đồ từ server để đảm bảo dữ liệu chuẩn 100%
+                await loadInventoryFromServer();
+                
+                // Vẽ lại lưới bán đồ
+                renderShopSell();
+
+                // Animation tiền tăng lên
+                window.animateGoldValue(window.currentGold, data.new_gold);
+                window.currentGold = data.new_gold;
+
+                itemToSell = null;
+            } else {
+                showDarkFantasyAlert(data.message || "Lỗi khi bán vật phẩm!");
+            }
+        } catch (error) {
+            console.error("Lỗi API Bán đồ:", error);
+            showDarkFantasyAlert("Mất kết nối đến máy chủ!");
+        } finally {
+            btnConfirm.innerText = "ĐỒNG Ý BÁN";
+            btnConfirm.disabled = false;
+        }
     });
 
     drawRadarChart();
