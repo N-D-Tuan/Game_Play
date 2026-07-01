@@ -603,19 +603,27 @@ class PlayerController extends Controller
             $price += $price * ($playerItem->upgrade_level * 0.5);
         }
 
-        // Giá fix cho nguyên liệu đặc biệt
-        if ($playerItem->item_id == 212) $price = 500; // Mảnh trứng
-        if ($playerItem->item_id == 213) $price = 5000; // Trứng pet
-        if ($playerItem->item_id == 214) $price = 500; // Huyết thạch
-        if ($playerItem->item_id == 217) $price = 100; // Trái cấm địa đàn
-        if ($playerItem->item_id == 218) $price = 500; // Miếng cắn vực thẳm
-        if ($playerItem->item_id == 219) $price = 5000; // Tàn tích thần trí
-        if ($playerItem->item_id == 220) $price = 100; // Bụi tinh tú
-        if ($playerItem->item_id == 221) $price = 1000; // Tinh chất ngân hà        
-        if ($playerItem->item_id == 222) $price = 5000; // Tinh thạch đỏ
-        if ($playerItem->item_id == 223) $price = 5000; // Tinh thạch tím
-        if ($playerItem->item_id == 224) $price = 5000; // Tinh thạch lục
-        if ($playerItem->item_id == 225) $price = 5000; // Tinh thạch lam
+        // --- BẬC S ---
+        if ($playerItem->item_id == 213) $price = 62500; // Trứng pet (Mua 250k)
+        if ($playerItem->item_id == 216) $price = 50000; // Thánh hộ phù (Mua 200k)        
+        
+        // --- BẬC A ---
+        if ($playerItem->item_id == 219) $price = 20000; // Tàn tích thần trí (Mua 80k)
+        if ($playerItem->item_id == 221) $price = 30000; // Tinh chất ngân hà (Mua 120k)
+        if ($playerItem->item_id == 222) $price = 15000; // Tinh thạch đỏ (Mua 60k)
+        if ($playerItem->item_id == 223) $price = 15000; // Tinh thạch tím (Mua 60k)
+        
+        // --- BẬC B ---
+        if ($playerItem->item_id == 218) $price = 11250; // Miếng cắn vực thẳm (Mua 45k)
+        if ($playerItem->item_id == 224) $price = 8750;  // Tinh thạch lục (Mua 35k)
+        if ($playerItem->item_id == 225) $price = 8750;  // Tinh thạch lam (Mua 35k)
+        
+        // --- BẬC C, D, E, F ---
+        if ($playerItem->item_id == 212) $price = 3000;  // Mảnh trứng (Mua 12k)
+        if ($playerItem->item_id == 217) $price = 3125;  // Trái cấm (Mua 12.5k/viên)
+        if ($playerItem->item_id == 214) $price = 1000;  // Huyết thạch (Mua 4k/viên)
+        if ($playerItem->item_id == 220) $price = 150;   // Bụi tinh tú (Mua 600/viên)
+        if ($playerItem->item_id == 215) $price = 1250;  // Hộ thể phù (Mua 5k)
 
         $price = round($price);
         $totalGoldEarned = $price * count($itemIdsToSell);
@@ -632,6 +640,157 @@ class PlayerController extends Controller
             'message' => 'Bán thành công!',
             'gold_earned' => $totalGoldEarned,
             'new_gold' => $player->gold
+        ]);
+    }
+
+    public function getShopData(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $player = Player::find($playerId);
+
+        if (!$player) {
+            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy tài khoản!']);
+        }
+
+        $today = date('Y-m-d');
+        $needsRefresh = false;
+
+        // KIỂM TRA RESET QUA NGÀY
+        if ($player->last_shop_refresh_date !== $today) {
+            $player->shop_free_refreshes = 3;
+            $player->last_shop_refresh_date = $today;
+            if (!$player->is_shop_locked) {
+                $needsRefresh = true;
+            }
+        }
+
+        if (!$player->shop_items || $needsRefresh) {
+            $player->shop_items = $this->generateShopItems();
+            $player->save();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'shop_items' => json_decode($player->shop_items),
+            'free_refreshes' => $player->shop_free_refreshes,
+            'gold' => $player->gold,
+            'is_shop_locked' => (bool)$player->is_shop_locked
+        ]);
+    }
+
+    public function refreshShop(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $player = Player::find($playerId);
+
+        if ($player->is_shop_locked) {
+            return response()->json(['status' => 'error', 'message' => 'Shop đang bị khóa! Phải mở khóa mới được Làm Mới.']);
+        }
+
+        $cost = 5000; // Giá làm mới bằng Vàng khi hết lượt Free
+
+        if ($player->shop_free_refreshes > 0) {
+            $player->shop_free_refreshes -= 1;
+        } else {
+            if ($player->gold < $cost) {
+                return response()->json(['status' => 'error', 'message' => 'Không đủ 5.000 Vàng để làm mới!']);
+            }
+            $player->gold -= $cost; // Trừ Vàng
+        }
+
+        $player->shop_items = $this->generateShopItems();
+        $player->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Đã làm mới Cửa Hàng!',
+            'shop_items' => json_decode($player->shop_items),
+            'free_refreshes' => $player->shop_free_refreshes,
+            'new_gold' => $player->gold
+        ]);
+    }
+
+    private function generateShopItems($currentItems = null)
+    {
+        $items = [];
+        for ($i = 0; $i < 9; $i++) {
+            $rand = mt_rand(1, 10000); 
+            
+            if ($rand <= 10) {             $rarity = 'S'; $color = '#ffffff';
+            } elseif ($rand <= 50) {       $rarity = 'A'; $color = '#ff0000';
+            } elseif ($rand <= 300) {      $rarity = 'B'; $color = '#ffd700';
+            } elseif ($rand <= 1000) {     $rarity = 'C'; $color = '#a335ee';
+            } elseif ($rand <= 2500) {     $rarity = 'D'; $color = '#00aaff';
+            } elseif ($rand <= 5000) {     $rarity = 'E'; $color = '#00ff00';
+            } else {                       $rarity = 'F'; $color = '#ffffff'; }
+
+            $pool = $this->getShopPoolByRarity($rarity);
+            $selectedItem = $pool[array_rand($pool)]; 
+            
+            $selectedItem['color'] = $color;
+            $selectedItem['index_key'] = $i; 
+            $selectedItem['is_bought'] = false;
+            
+            $items[] = $selectedItem;
+        }
+        return json_encode($items);
+    }
+
+    private function getShopPoolByRarity($rarity)
+    {
+        $pools = [
+            'S' => [
+                ['item_id' => 213, 'name' => 'Trứng Thú Cưng', 'icon' => 'egg.png', 'qty' => 1, 'price' => 250000, 'rarity' => 'S', 'slot' => 'material'],
+                ['item_id' => 216, 'name' => 'Thánh Hộ Phù', 'icon' => 'charm_holy.png', 'qty' => 1, 'price' => 200000, 'rarity' => 'S', 'slot' => 'material'],           
+            ],
+            'A' => [
+                ['item_id' => 219, 'name' => 'Tàn Tích Thần Trí', 'icon' => 'food3.png', 'qty' => 1, 'price' => 80000, 'rarity' => 'A', 'slot' => 'material'],
+                ['item_id' => 221, 'name' => 'Tinh Chất Ngân Hà', 'icon' => 'galaxy_stardust.png', 'qty' => 1, 'price' => 120000, 'rarity' => 'A', 'slot' => 'material'],
+                ['item_id' => 222, 'name' => 'Tinh Thạch Đỏ', 'icon' => 'rune_do.png', 'qty' => 1, 'price' => 60000, 'rarity' => 'A', 'slot' => 'rune'],
+                ['item_id' => 223, 'name' => 'Tinh Thạch Tím', 'icon' => 'rune_tim.png', 'qty' => 1, 'price' => 60000, 'rarity' => 'A', 'slot' => 'rune'],
+            ],
+            'B' => [
+                ['item_id' => 218, 'name' => 'Miếng Cắn Vực Thẳm', 'icon' => 'food2.png', 'qty' => 1, 'price' => 45000, 'rarity' => 'B', 'slot' => 'material'],
+                ['item_id' => 224, 'name' => 'Tinh Thạch Lục', 'icon' => 'rune_luc.png', 'qty' => 1, 'price' => 35000, 'rarity' => 'B', 'slot' => 'rune'],
+                ['item_id' => 225, 'name' => 'Tinh Thạch Lam', 'icon' => 'rune_lam.png', 'qty' => 1, 'price' => 35000, 'rarity' => 'B', 'slot' => 'rune'],
+            ],
+            'C' => [
+                ['item_id' => 217, 'name' => 'Trái Cấm Địa Đàn', 'icon' => 'food1.png', 'qty' => 2, 'price' => 25000, 'rarity' => 'C', 'slot' => 'food'],
+                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 5, 'price' => 20000, 'rarity' => 'C', 'slot' => 'material'],                
+                ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'C', 'slot' => 'material'],
+            ],
+            'D' => [
+                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 12000, 'rarity' => 'D', 'slot' => 'material'],
+                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 2, 'price' => 8500, 'rarity' => 'D', 'slot' => 'material'],
+                ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 1, 'price' => 9000, 'rarity' => 'D', 'slot' => 'material'],
+            ],
+            'E' => [
+                ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 25, 'price' => 15000, 'rarity' => 'E', 'slot' => 'material'],
+                ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 1, 'price' => 4500, 'rarity' => 'E', 'slot' => 'material'],
+            ],
+            'F' => [
+                ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 10, 'price' => 6000, 'rarity' => 'F', 'slot' => 'material'],
+                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 4500, 'rarity' => 'F', 'slot' => 'material'],
+                ['item_id' => 217, 'name' => 'Trái Cấm Địa Đàn', 'icon' => 'food1.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'F', 'slot' => 'food'],
+            ]
+        ];
+        return $pools[$rarity] ?? $pools['F'];
+    }
+
+    public function toggleLockItem(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $player = Player::find($playerId);
+        
+        $player->is_shop_locked = !$player->is_shop_locked;
+        $player->save();
+
+        $msg = $player->is_shop_locked ? 'Đã KHÓA toàn bộ Cửa Hàng!' : 'Đã MỞ KHÓA Cửa Hàng!';
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $msg,
+            'is_shop_locked' => (bool)$player->is_shop_locked
         ]);
     }
 }

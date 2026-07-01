@@ -18,7 +18,11 @@ class Player extends Model
         'equipped_skills',
         'awakening_stats',
         'level_star',
-        'astrolabe_stats'
+        'astrolabe_stats',
+        'shop_items',
+        'shop_free_refreshes',
+        'last_shop_refresh_date',
+        'is_shop_locked'
     ];
 
     protected $casts = [

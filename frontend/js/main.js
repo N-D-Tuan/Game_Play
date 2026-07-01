@@ -3508,9 +3508,7 @@ document.addEventListener("DOMContentLoaded", () => {
         buildingShop.addEventListener('click', () => {
             window.playHomeClickSound();
             shopModal.style.display = 'flex';
-            
-            // Vẽ 9 món đồ giả ra màn hình để xem UI
-            renderMockShopItems(); 
+            fetchShopData(); // Gọi API Data thật thay vì MockData
         });
     }
 
@@ -3534,51 +3532,197 @@ document.addEventListener("DOMContentLoaded", () => {
         viewShopSell.style.display = 'flex'; viewShopBuy.style.display = 'none';
     });
 
-    // Hàm tạo 9 vật phẩm giả để Test Giao Diện
-    function renderMockShopItems() {
+    // ==========================================
+    // LOGIC TAB MUA ĐỒ (CỬA HÀNG)
+    // ==========================================
+    window.shopBuyItems = [];
+    window.shopFreeRefreshes = 3;
+
+    // 1. Hàm gọi API lấy dữ liệu Shop
+    window.fetchShopData = async function() {
+        let playerId = localStorage.getItem('playerId') || '1';
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/shop/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: playerId })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                window.shopBuyItems = data.shop_items;
+                window.shopFreeRefreshes = data.free_refreshes;
+                window.isShopLocked = data.is_shop_locked;
+                renderShopBuyItems();
+            }
+        } catch (error) {
+            console.error("Lỗi tải Shop:", error);
+        }
+    };
+
+    // 2. Sự kiện bấm nút LÀM MỚI (Refresh)
+    document.getElementById('btn-refresh-shop').addEventListener('click', async () => {
+        let playerId = localStorage.getItem('playerId') || '1';
+        let btn = document.getElementById('btn-refresh-shop');
+        
+        // Kiểm tra tiền trước khi gửi
+        if (window.shopFreeRefreshes <= 0 && window.currentGold < 5000) {
+            return showDarkFantasyAlert("Không đủ 5,000 Vàng để làm mới!");
+        }
+
+        btn.disabled = true;
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/shop/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: playerId })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                window.shopBuyItems = data.shop_items;
+                window.shopFreeRefreshes = data.free_refreshes;
+                
+                // Trừ tiền mượt mà nếu có tốn tiền
+                if (data.new_gold !== undefined && data.new_gold !== window.currentGold) {
+                    window.animateGoldValue(window.currentGold, data.new_gold);
+                    window.currentGold = data.new_gold;
+                }
+                
+                renderShopBuyItems();
+                showDarkFantasyAlert(data.message);
+            } else {
+                showDarkFantasyAlert(data.message);
+            }
+        } catch (error) {
+            showDarkFantasyAlert("Lỗi hệ thống khi làm mới Cửa Hàng!");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // 3. Hàm vẽ Giao Diện Cửa Hàng dựa trên Dữ liệu thật
+    function renderShopBuyItems() {
         const grid = document.getElementById('shop-items-grid');
-        grid.innerHTML = ''; // Xóa đồ cũ
+        grid.innerHTML = ''; 
 
-        // Tạo 9 món đồ ngẫu nhiên
-        const mockItems = [
-            { name: "Bụi Tinh Tú", icon: "stardust.png", price: 5000, rarity: "C", color: "#a335ee", qty: 10 },
-            { name: "Huyết Thạch", icon: "bloodstone.png", price: 15000, rarity: "A", color: "#ff0000", qty: 5 },
-            { name: "Trứng Thú Cưng", icon: "egg.png", price: 50000, rarity: "S", color: "#ffffff", qty: 1 },
-            { name: "Tinh Chất Ngân Hà", icon: "galaxy_stardust.png", price: 20000, rarity: "B", color: "#ffd700", qty: 2 },
-            { name: "Hộ Thể Phù", icon: "charm_normal.png", price: 12000, rarity: "D", color: "#00aaff", qty: 3 },
-            { name: "Tinh Thạch Đỏ", icon: "rune_do.png", price: 8000, rarity: "S", color: "#ffffff", qty: 1 },
-            { name: "Mảnh Trứng", icon: "egg_piece.png", price: 4500, rarity: "D", color: "#00aaff", qty: 1 },
-            { name: "Trái Cấm Địa Đàn", icon: "food1.png", price: 2000, rarity: "B", color: "#ffd700", qty: 5 },
-            { name: "Thánh Hộ Phù", icon: "charm_holy.png", price: 85000, rarity: "S", color: "#ffffff", qty: 1 },
-        ];
+        // Cập nhật Nút Làm Mới
+        let refreshText = window.shopFreeRefreshes > 0 ? `(${window.shopFreeRefreshes}/3 Miễn phí)` : `(5,000 Vàng)`;
+        let refreshColor = window.shopFreeRefreshes > 0 ? '#00ff00' : '#ffcc00';
+        document.getElementById('shop-refresh-cost').innerHTML = `<span style="color: ${refreshColor}; font-size: 16px;">${refreshText}</span>`;
 
-        mockItems.forEach(item => {
+        // LÀM MỜ NÚT REFRESH NẾU ĐANG KHÓA
+        const btnRefresh = document.getElementById('btn-refresh-shop');
+        if (window.isShopLocked) {
+            btnRefresh.style.filter = 'grayscale(100%) opacity(0.5)';
+            btnRefresh.style.cursor = 'not-allowed';
+            document.getElementById('shop-items-grid').style.border = '2px solid #ffcc00'; // Hiệu ứng viền vàng quanh shop
+            document.getElementById('shop-items-grid').style.boxShadow = '0 0 20px rgba(255, 204, 0, 0.2)';
+        } else {
+            btnRefresh.style.filter = 'none';
+            btnRefresh.style.cursor = 'pointer';
+            document.getElementById('shop-items-grid').style.border = 'none';
+            document.getElementById('shop-items-grid').style.boxShadow = 'none';
+        }
+
+        // Cập nhật giao diện Nút Khóa Toàn Cục
+        const btnLock = document.getElementById('btn-lock-shop');
+        if (window.isShopLocked) {
+            btnLock.innerHTML = '<i class="fa-solid fa-lock-open"></i> MỞ KHÓA';
+            btnLock.style.borderColor = '#ffcc00';
+            btnLock.style.color = '#ffcc00';
+            btnLock.style.background = 'linear-gradient(90deg, transparent, #553300, transparent)';
+        } else {
+            btnLock.innerHTML = '<i class="fa-solid fa-lock"></i> KHÓA LẠI';
+            btnLock.style.borderColor = '#be2b2b6f';
+            btnLock.style.color = '#a59696';
+            btnLock.style.background = 'linear-gradient(90deg, transparent, #c92020, transparent)';
+        }
+
+        window.shopBuyItems.forEach((item, index) => {
             let card = document.createElement('div');
-            card.className = 'shop-item-card';
+            card.className = 'shop-item-card ' + (item.rarity === 'S' ? 's-tier-card' : '');
             
-            // Xử lý viền S
+            let isBought = item.is_bought;
+            let filterStyle = isBought ? 'filter: grayscale(100%) opacity(0.4); pointer-events: none;' : '';
+            let boughtStamp = isBought ? `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-15deg); color:#ff0000; border: 2px solid #ff0000; padding: 5px; font-weight:bold; font-size: 20px; z-index: 10; text-shadow: 0 0 5px #000;">ĐÃ MUA</div>` : '';
             let shadowStyle = item.rarity === 'S' ? 'box-shadow: 0 0 10px #fff;' : '';
-            
+
             card.innerHTML = `
-                <div class="shop-item-icon-box" style="border-color: ${item.color}; ${shadowStyle}">
-                    <img src="../assets/items/${item.icon}" style="width: 45px; height: 45px; object-fit: contain;">
-                    <span style="position: absolute; bottom: 2px; right: 4px; font-size: 11px; font-weight: bold; color: ${item.rarity === 'S' ? '#000' : item.color}; ${item.rarity === 'S' ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;' : ''}">${item.rarity}</span>
-                </div>
-                <div class="shop-item-info">
-                    <span class="shop-item-name" style="color: ${item.rarity === 'S' ? '#fff' : item.color};">${item.name} x${item.qty}</span>
-                    <span class="shop-item-price">
-                        <img src="../assets/gold.png" style="width: 16px;"> ${item.price.toLocaleString('en-US')}
-                    </span>
+                <div style="width: 100%; height: 100%; display: flex; gap: 12px; align-items: center; ${filterStyle}">
+                    <div class="shop-item-icon-box" style="border-color: ${item.color}; ${shadowStyle}">
+                        <img src="../assets/items/${item.icon}" style="width: 45px; height: 45px; object-fit: contain;">
+                        <span style="
+                            position: absolute;
+                            bottom: 2px;
+                            right: 4px;
+                            font-size: 11px;
+                            font-weight: bold;
+                            color: ${item.rarity === 'S' ? '#000' : item.color};
+                            ${item.rarity === 'S'
+                                ? `
+                                    text-shadow:
+                                    -1px -1px 0 #fff,
+                                    1px -1px 0 #fff,
+                                    -1px  1px 0 #fff,
+                                    1px  1px 0 #fff;
+                                `
+                                : ''
+                            }
+                        ">${item.rarity}</span>
+                    </div>
+                    <div class="shop-item-info">
+                        <span class="shop-item-name"
+                            style="
+                                color: ${item.rarity === 'S' ? '#000' : item.color};
+                                ${item.rarity === 'S'
+                                    ? 'text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;'
+                                    : ''
+                                }
+                            ">
+                            ${item.name} x${item.qty}
+                        </span>
+                        <span class="shop-item-price">
+                            <img src="../assets/gold.png" style="width: 16px;"> ${item.price.toLocaleString('en-US')}
+                        </span>
+                    </div>
+                    ${boughtStamp}
                 </div>
             `;
             
-            card.onclick = () => {
-                showDarkFantasyAlert(`Bạn muốn mua ${item.name} với giá ${item.price} Vàng? (Chức năng đang xây dựng)`);
-            };
-
+            if (!isBought) {
+                card.onclick = (e) => {
+                    showDarkFantasyAlert(`Đang gọi API mua ${item.name}...`);
+                };
+            }
             grid.appendChild(card);
         });
     }
+
+    document.getElementById('btn-lock-shop').addEventListener('click', async () => {
+        let playerId = localStorage.getItem('playerId') || '1';
+        let btn = document.getElementById('btn-lock-shop');
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/shop/toggle-lock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: playerId })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                window.isShopLocked = data.is_shop_locked;
+                showDarkFantasyAlert(data.message);
+                renderShopBuyItems(); // Vẽ lại giao diện 2 nút
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            btn.disabled = false;
+        }
+    });
 
     // ==========================================
     // LOGIC TAB BÁN ĐỒ (SHOP SELL)
@@ -3638,19 +3782,15 @@ document.addEventListener("DOMContentLoaded", () => {
             price += price * (item.upgrade_level * 0.5); 
         }
 
-        // Định giá một số nguyên liệu cụ thể
-        if (item.item_id === 212) price = 500; // Mảnh trứng
-        if (item.item_id === 213) price = 5000; // Trứng pet
-        if (item.item_id === 214) price = 500; // Huyết thạch
-        if (item.item_id === 217) price = 100; // Trái cấm địa đàn
-        if (item.item_id === 218) price = 500; // Miếng cắn vực thẳm
-        if (item.item_id === 219) price = 5000; // Tàn tích thần trí
-        if (item.item_id === 220) price = 100; // Bụi tinh tú
-        if (item.item_id === 221) price = 1000; // Tinh chất ngân hà
-        if (item.item_id === 222) price = 5000; // Tinh thạch đỏ
-        if (item.item_id === 223) price = 5000; // Tinh thạch tím
-        if (item.item_id === 224) price = 5000; // Tinh thạch lục
-        if (item.item_id === 225) price = 5000; // Tinh thạch lam
+        const sellPrices = {
+            213: 62500, 216: 50000, 219: 20000, 221: 30000, 222: 15000, 223: 15000,
+            218: 11250, 224: 8750,  225: 8750,  217: 3125,  214: 1000,  215: 1250,
+            212: 3000,  220: 150
+        };
+
+        if (sellPrices[item.item_id]) {
+            price = sellPrices[item.item_id];
+        }
 
         return Math.round(price);
     }

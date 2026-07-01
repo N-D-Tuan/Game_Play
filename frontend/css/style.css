@@ -764,6 +764,10 @@ body, html {
     100% { box-shadow: 0 0 5px #ffffff; border-color: #aaaaaa; }
 }
 
+.shop-item-card.s-tier-card {
+    animation: s-tier-breathing 2s ease-in-out infinite;
+}
+
 #talent-screen {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
     background: url('../assets/bg_treeskill.jpg') no-repeat center center;
