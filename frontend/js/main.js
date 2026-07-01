@@ -3508,7 +3508,7 @@ document.addEventListener("DOMContentLoaded", () => {
         buildingShop.addEventListener('click', () => {
             window.playHomeClickSound();
             shopModal.style.display = 'flex';
-            fetchShopData(); // Gọi API Data thật thay vì MockData
+            fetchShopData();
         });
     }
 
