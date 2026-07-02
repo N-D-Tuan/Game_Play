@@ -654,11 +654,13 @@ class PlayerController extends Controller
 
         $today = date('Y-m-d');
         $needsRefresh = false;
+        $isDataChanged = false;
 
         // KIỂM TRA RESET QUA NGÀY
         if ($player->last_shop_refresh_date !== $today) {
             $player->shop_free_refreshes = 3;
             $player->last_shop_refresh_date = $today;
+            $isDataChanged = true;
             if (!$player->is_shop_locked) {
                 $needsRefresh = true;
             }
@@ -666,6 +668,10 @@ class PlayerController extends Controller
 
         if (!$player->shop_items || $needsRefresh) {
             $player->shop_items = $this->generateShopItems();
+            $isDataChanged = true;
+        }
+
+        if ($isDataChanged) {
             $player->save();
         }
 
