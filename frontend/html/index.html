@@ -508,7 +508,7 @@
                 
                 <div class="panel-tabs" style="margin-bottom: 0;">
                     <button id="tab-shop-buy" class="panel-tab-btn active" style="color: #a335ee; border-bottom-color: #a335ee;">Mua Vật Phẩm</button>
-                    <button id="tab-shop-sell" class="panel-tab-btn">Bán Đồ Khảm</button>
+                    <button id="tab-shop-sell" class="panel-tab-btn">Bán Đồ</button>
                 </div>
             </div>
 
@@ -666,6 +666,23 @@
             </div>
             
             <p style="font-size: 13px; color: #ffaa00; text-align: center; margin-top: 25px; font-weight: bold; border-top: 1px dashed #555; padding-top: 15px;">⚠️ Tế Đàn sử dụng thuật toán Lũy Thừa. Việc ra được màu Đỏ đã hiếm (0.5%), nhưng để chạm vào đúng con số tuyệt đối bên trên lại khó hơn gấp ngàn lần!</p>
+        </div>
+    </div>
+
+    <div id="buy-confirm-modal" class="modal-overlay" style="display: none; z-index: 999999 !important;">
+        <div style="background: #111; border: 2px solid #a335ee; padding: 25px; border-radius: 10px; text-align: center; color: white; width: 350px;">
+            <h3 style="color: #a335ee; margin-top: 0; font-family: 'MedievalSharp', cursive; font-size: 24px; text-shadow: 0 0 10px #a335ee;">XÁC NHẬN MUA</h3>
+            
+            <div id="buy-item-preview" style="display: flex; justify-content: center; align-items: center; margin: 15px 0;"></div>
+            
+            <p style="font-size: 16px; margin-bottom: 10px;">Bạn muốn mua <b id="buy-item-name" style="color: #fff;">Vật phẩm</b>?</p>
+            
+            <p style="font-size: 18px; color: #ffd700; font-weight: bold; margin-bottom: 20px;">Giá: <img src="../assets/gold.png" style="width: 20px; vertical-align: middle;"> <span id="buy-gold-cost">0</span></p>
+            
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="btn-confirm-buy" class="forge-action-btn" style="width: auto; margin: 0; padding: 10px 20px; background: linear-gradient(90deg, transparent, #0055aa, transparent); border-color: #00aaff; color: white; cursor: pointer;">ĐỒNG Ý MUA</button>
+                <button id="btn-cancel-buy" class="forge-action-btn" style="width: auto; margin: 0; padding: 10px 20px; background: linear-gradient(90deg, transparent, #880000, transparent); border-color: #ff3333; color: white; cursor: pointer;">HỦY BỎ</button>
+            </div>
         </div>
     </div>
 

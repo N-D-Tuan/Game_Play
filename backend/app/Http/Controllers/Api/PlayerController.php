@@ -155,7 +155,7 @@ class PlayerController extends Controller
         elseif ($lockedCount == 7) $cost = 100;
 
         // 2. KIỂM TRA ĐIỀU KIỆN
-        $player = \Illuminate\Support\Facades\DB::table('players')->where('id', $playerId)->first();
+        $player = DB::table('players')->where('id', $playerId)->first();
         if (!$player) {
             return response()->json(['status' => 'error', 'message' => 'Không tìm thấy người chơi!']);
         }
@@ -305,7 +305,7 @@ class PlayerController extends Controller
 
         // 6. LƯU KẾT QUẢ VÀ TRỪ ĐIỂM
         $newPoints = $player->talent_points - $cost;
-        \Illuminate\Support\Facades\DB::table('players')->where('id', $playerId)->update([
+        DB::table('players')->where('id', $playerId)->update([
             'talent_points' => $newPoints,
             'awakening_stats' => json_encode($newStats)
         ]);
@@ -324,7 +324,7 @@ class PlayerController extends Controller
         $locks = $request->input('locks');
 
         if (is_array($locks)) {
-            \Illuminate\Support\Facades\DB::table('players')
+            DB::table('players')
                 ->where('id', $playerId)
                 ->update(['awakening_locks' => json_encode($locks)]);
         }
@@ -580,7 +580,7 @@ class PlayerController extends Controller
         }
 
         $firstItemId = $itemIdsToSell[0];
-        $playerItem = \Illuminate\Support\Facades\DB::table('player_items')
+        $playerItem = DB::table('player_items')
             ->join('items', 'player_items.item_id', '=', 'items.id')
             ->select('player_items.*', 'items.rarity')
             ->where('player_items.id', $firstItemId)
@@ -760,7 +760,7 @@ class PlayerController extends Controller
                 ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 3, 'price' => 15000, 'rarity' => 'C', 'slot' => 'material'],
             ],
             'D' => [
-                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 3, 'price' => 36000, 'rarity' => 'D', 'slot' => 'material'],
+                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 30000, 'rarity' => 'D', 'slot' => 'material'],
                 ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 3, 'price' => 12000, 'rarity' => 'D', 'slot' => 'material'],
                 ['item_id' => 215, 'name' => 'Hộ Thể Phù', 'icon' => 'charm_normal.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'D', 'slot' => 'material'],
             ],
@@ -769,8 +769,7 @@ class PlayerController extends Controller
                 ['item_id' => 214, 'name' => 'Huyết Thạch', 'icon' => 'bloodstone.png', 'qty' => 1, 'price' => 4000, 'rarity' => 'E', 'slot' => 'material'],
             ],
             'F' => [
-                ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 10, 'price' => 6000, 'rarity' => 'F', 'slot' => 'material'],
-                ['item_id' => 212, 'name' => 'Mảnh Trứng', 'icon' => 'egg_piece.png', 'qty' => 1, 'price' => 12000, 'rarity' => 'F', 'slot' => 'material'],
+                ['item_id' => 220, 'name' => 'Bụi Tinh Tú', 'icon' => 'stardust.png', 'qty' => 10, 'price' => 6000, 'rarity' => 'F', 'slot' => 'material'],       
                 ['item_id' => 217, 'name' => 'Trái Cấm Địa Đàn', 'icon' => 'food1.png', 'qty' => 1, 'price' => 5000, 'rarity' => 'F', 'slot' => 'food'],
             ]
         ];
@@ -791,6 +790,70 @@ class PlayerController extends Controller
             'status' => 'success',
             'message' => $msg,
             'is_shop_locked' => (bool)$player->is_shop_locked
+        ]);
+    }
+
+    public function buyItem(Request $request)
+    {
+        $playerId = $request->input('player_id');
+        $indexKey = $request->input('index_key'); // Vị trí của món đồ trên lưới (0 đến 8)
+
+        $player = Player::find($playerId);
+        if (!$player || !$player->shop_items) {
+            return response()->json(['status' => 'error', 'message' => 'Dữ liệu Cửa hàng không hợp lệ!']);
+        }
+
+        // Decode mảng 9 món đồ từ JSON sang Array để xử lý
+        $shopItems = json_decode($player->shop_items, true);
+
+        // Kiểm tra xem vị trí món đồ có tồn tại không
+        if (!isset($shopItems[$indexKey])) {
+            return response()->json(['status' => 'error', 'message' => 'Vật phẩm không tồn tại!']);
+        }
+
+        $itemToBuy = $shopItems[$indexKey];
+
+        // 1. Kiểm tra xem đã mua chưa
+        if (isset($itemToBuy['is_bought']) && $itemToBuy['is_bought'] == true) {
+            return response()->json(['status' => 'error', 'message' => 'Vật phẩm này đã được mua rồi!']);
+        }
+
+        // 2. Kiểm tra Vàng
+        $price = $itemToBuy['price'];
+        if ($player->gold < $price) {
+            return response()->json(['status' => 'error', 'message' => 'Không đủ Vàng để mua vật phẩm này!']);
+        }
+
+        // 3. Tiến hành trừ Vàng
+        $player->gold -= $price;
+
+        // 4. INSERT đồ vào Kho
+        $insertData = [];
+        $quantityToGive = $itemToBuy['qty'] ?? 1;
+
+        for ($i = 0; $i < $quantityToGive; $i++) {
+            $insertData[] = [
+                'player_id' => $playerId,
+                'item_id'   => $itemToBuy['item_id'],
+                'is_equipped' => 0 // Mặc định mua về là cất trong balo
+            ];
+        }
+
+        // Dùng insert() của Query Builder để thêm nhiều dòng cùng lúc (Tối ưu hiệu suất DB)
+        DB::table('player_items')->insert($insertData);
+
+        // 5. Cập nhật lại trạng thái món đồ trong Shop
+        $shopItems[$indexKey]['is_bought'] = true;
+
+        // Lưu lại vào bảng Players
+        $player->shop_items = json_encode($shopItems);
+        $player->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Mua thành công ' . $itemToBuy['name'] . ' x' . $quantityToGive,
+            'new_gold' => $player->gold,
+            'shop_items' => $shopItems
         ]);
     }
 }

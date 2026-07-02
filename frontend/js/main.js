@@ -3685,18 +3685,104 @@ document.addEventListener("DOMContentLoaded", () => {
                         <span class="shop-item-price">
                             <img src="../assets/gold.png" style="width: 16px;"> ${item.price.toLocaleString('en-US')}
                         </span>
-                    </div>
-                    ${boughtStamp}
+                    </div>                   
                 </div>
+                ${boughtStamp}
             `;
             
             if (!isBought) {
-                card.onclick = (e) => {
-                    showDarkFantasyAlert(`Đang gọi API mua ${item.name}...`);
+                card.onclick = () => {
+                    window.pendingBuyItem = { index: index, item: item };
+
+                    document.getElementById('buy-item-name').innerText = `[Bậc ${item.rarity}] ${item.name} x${item.qty}`;
+                    document.getElementById('buy-item-name').style.color = item.rarity === 'S' ? '#ffffff' : item.color;
+                    document.getElementById('buy-gold-cost').innerText = item.price.toLocaleString('en-US');
+
+                    let previewBox = document.getElementById('buy-item-preview');
+                    previewBox.innerHTML = '';
+                    let cloneIcon = card.querySelector('.shop-item-icon-box').cloneNode(true);
+                    cloneIcon.style.width = '60px'; cloneIcon.style.height = '60px';
+                    cloneIcon.querySelector('img').style.width = '45px'; cloneIcon.querySelector('img').style.height = '45px';
+                    previewBox.appendChild(cloneIcon);
+
+                    // Hiển thị Popup
+                    document.getElementById('buy-confirm-modal').style.display = 'flex';
                 };
             }
             grid.appendChild(card);
         });
+    }
+
+    document.getElementById('btn-cancel-buy').addEventListener('click', () => {
+        document.getElementById('buy-confirm-modal').style.display = 'none';
+        window.pendingBuyItem = null;
+    });
+
+    document.getElementById('btn-confirm-buy').addEventListener('click', async () => {
+        if (!window.pendingBuyItem) return;
+        
+        let indexToBuy = window.pendingBuyItem.index;
+        let itemData = window.pendingBuyItem.item;
+        
+        let btnConfirm = document.getElementById('btn-confirm-buy');
+        btnConfirm.innerText = "ĐANG MUA...";
+        btnConfirm.disabled = true;
+
+        try {
+            // Đóng Modal ngay cho mượt
+            document.getElementById('buy-confirm-modal').style.display = 'none';
+            
+            // Gọi lại hàm API Mua
+            await buyShopItem(indexToBuy, itemData.price, itemData.name);
+            
+        } catch (error) {
+            console.error(error);
+        } finally {
+            btnConfirm.innerText = "ĐỒNG Ý MUA";
+            btnConfirm.disabled = false;
+            window.pendingBuyItem = null;
+        }
+    });
+
+    // HÀM GỌI API MUA ĐỒ
+    async function buyShopItem(indexKey, price, itemName) {
+        if (window.currentGold < price) {
+            return showDarkFantasyAlert(`Không đủ ${price.toLocaleString()} Vàng để mua ${itemName}!`);
+        }
+
+        let playerId = localStorage.getItem('playerId') || '1';
+        
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/shop/buy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: playerId, index_key: indexKey })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // 1. Trừ vàng và chạy Animation nhảy số
+                window.animateGoldValue(window.currentGold, data.new_gold);
+                window.currentGold = data.new_gold;
+
+                // 2. Cập nhật lại lưới Shop (Đóng mộc ĐÃ MUA lên đồ)
+                window.shopBuyItems = data.shop_items;
+                renderShopBuyItems();
+
+                // 3. Tải lại balo từ Server để cập nhật nguyên liệu mới mua vào túi
+                if (typeof loadInventoryFromServer === 'function') {
+                    await loadInventoryFromServer();
+                }
+
+                // 4. Báo thành công
+                showDarkFantasyAlert(data.message);
+            } else {
+                showDarkFantasyAlert(data.message);
+            }
+        } catch (error) {
+            console.error("Lỗi khi mua hàng:", error);
+            showDarkFantasyAlert("Mất kết nối đến Server Shop!");
+        }
     }
 
     document.getElementById('btn-lock-shop').addEventListener('click', async () => {
