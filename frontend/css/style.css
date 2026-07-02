@@ -509,7 +509,8 @@ body, html {
     z-index: 999999; pointer-events: none; font-size: 13px; line-height: 1.6;
     box-shadow: 0 4px 10px rgba(0,0,0,0.8); text-align: left;
 }
-#inventory-grid .inv-item:nth-child(n+29)[data-tooltip]:hover::after {
+#inventory-grid .inv-item:nth-child(n+29)[data-tooltip]:hover::after,
+#shop-sell-grid .inv-item:nth-child(n+25)[data-tooltip]:hover::after {
     top: auto;
     bottom: 115%;
 }
