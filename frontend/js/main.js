@@ -149,25 +149,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
     buildingCampaign.addEventListener('click', () => {
         window.playHomeClickSound();
-        homeScreen.style.opacity = '0';
-        setTimeout(() => {
-            homeScreen.style.display = 'none';
-            gameContainer.style.display = 'block';
-            goldHUD.style.display = 'none';
+
+        const fade = document.getElementById('fade-overlay');
+            if (fade) fade.style.opacity = '1';
+            
+            setTimeout(() => {
+                window.location.href = 'lobbyPvE.html';
+            }, 500);
+        // homeScreen.style.opacity = '0';
+        // setTimeout(() => {
+        //     homeScreen.style.display = 'none';
+        //     gameContainer.style.display = 'block';
+        //     goldHUD.style.display = 'none';
                 
-            if (typeof window.game !== 'undefined') {
-                window.game.scene.stop('default'); // Bắt buộc dừng Scene Tập luyện
+        //     if (typeof window.game !== 'undefined') {
+        //         window.game.scene.stop('default'); // Bắt buộc dừng Scene Tập luyện
                 
-                // Nếu bộ máy Game chưa biết CampaignScene là gì thì thêm nó vào
-                if (!window.game.scene.keys['CampaignScene']) {
-                    window.game.scene.add('CampaignScene', CampaignScene, false);
-                }
+        //         // Nếu bộ máy Game chưa biết CampaignScene là gì thì thêm nó vào
+        //         if (!window.game.scene.keys['CampaignScene']) {
+        //             window.game.scene.add('CampaignScene', CampaignScene, false);
+        //         }
                 
-                // Khởi động Vượt ải
-                window.game.scene.start('CampaignScene', { stage: 1, level: 0, loot: [] });
-            }
-            window.dispatchEvent(new Event('resize')); 
-        }, 1000);
+        //         // Khởi động Vượt ải
+        //         window.game.scene.start('CampaignScene', { stage: 1, level: 0, loot: [] });
+        //     }
+        //     window.dispatchEvent(new Event('resize')); 
+        // }, 1000);
     });
 
     const talentScreen = document.getElementById('talent-screen');
