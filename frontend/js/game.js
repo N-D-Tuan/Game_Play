@@ -63,6 +63,7 @@ let moveState = { up: false, down: false, left: false, right: false };
 function preload() {
     this.load.image('bg', '../assets/bg.png');
     this.load.audio('bgm', '../assets/bg_music.ogg');
+    this.load.audio('bgm_lobby', '../assets/lobby_music.ogg');
     this.load.audio('homeClick', '../assets/home_click.mp3'); 
     this.load.image('player', '../assets/player.png'); 
     this.load.image('monster', '../assets/monster.png'); 
@@ -100,6 +101,14 @@ function create() {
             volume: volSlider ? parseFloat(volSlider.value) : 0.5 
         });
         window.bgMusic.play();
+    }
+
+    if (!this.sound.get('bgm_lobby')) {
+        let volSlider = document.getElementById('volume-slider');
+        window.lobbyMusic = this.sound.add('bgm_lobby', { 
+            loop: true,
+            volume: volSlider ? parseFloat(volSlider.value) : 0.5 
+        });
     }
 
     this.homeClickSound = this.sound.add('homeClick', {

@@ -147,14 +147,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 1000);
     });
 
+    const fadeOverlay = document.getElementById('fade-overlay');
+
     buildingCampaign.addEventListener('click', () => {
         window.playHomeClickSound();
-
-        const fade = document.getElementById('fade-overlay');
-            if (fade) fade.style.opacity = '1';
+            
+            // Kéo màn đen xuống
+            fadeOverlay.style.opacity = '1';
             
             setTimeout(() => {
-                window.location.href = 'lobbyPvE.html';
+                document.getElementById('home-screen').style.display = 'none';
+                document.getElementById('lobby-screen').style.display = 'flex';
+                document.getElementById('gold-container').style.display = 'none';
+                
+                if (window.bgMusic && window.bgMusic.isPlaying) {
+                    window.bgMusic.stop();
+                }
+                
+                if (window.lobbyMusic) {
+                    window.lobbyMusic.stop();
+                    window.lobbyMusic.play();
+                }
+
+                syncLobbyStats();               
+                fadeOverlay.style.opacity = '0';
             }, 500);
         // homeScreen.style.opacity = '0';
         // setTimeout(() => {
@@ -176,6 +192,47 @@ document.addEventListener("DOMContentLoaded", () => {
         //     window.dispatchEvent(new Event('resize')); 
         // }, 1000);
     });
+
+    function syncLobbyStats() {
+        try {
+            // Cập nhật Lực Chiến (Lấy từ Toast Lực chiến hoặc thẻ hiển thị lực chiến của bạn)
+            let lcValue = document.getElementById('player-combat-power') ? document.getElementById('player-combat-power').innerText : '0';
+            document.getElementById('lobby-cp').innerText = lcValue;
+
+            // Cập nhật 8 Chỉ số phụ (Thay các ID 'stat-hp', 'stat-atk' bằng ID thật trong Balo của bạn)
+            document.getElementById('lobby-stat-hp').innerText = document.getElementById('stat-hp') ? document.getElementById('stat-hp').innerText : '0';
+            document.getElementById('lobby-stat-regen').innerText = document.getElementById('stat-hpRegen') ? document.getElementById('stat-hpRegen').innerText : '0';
+            document.getElementById('lobby-stat-atk').innerText = document.getElementById('stat-atk') ? document.getElementById('stat-atk').innerText : '0';
+            document.getElementById('lobby-stat-dodge').innerText = document.getElementById('stat-dodge') ? document.getElementById('stat-dodge').innerText : '0%';
+            document.getElementById('lobby-stat-crit-rate').innerText = document.getElementById('stat-critRate') ? document.getElementById('stat-critRate').innerText : '0%';
+            document.getElementById('lobby-stat-crit-dmg').innerText = document.getElementById('stat-critDamage') ? document.getElementById('stat-critDamage').innerText : '0%';
+            document.getElementById('lobby-stat-lifesteal').innerText = document.getElementById('stat-lifesteal') ? document.getElementById('stat-lifesteal').innerText : '0%';
+            document.getElementById('lobby-stat-speed').innerText = document.getElementById('stat-speed') ? document.getElementById('stat-speed').innerText : '0';
+        } catch (e) {
+            console.warn("Lỗi khi đồng bộ chỉ số sang Lobby:", e);
+        }
+    }
+
+    // Hàm gọi khi bấm Nút Trở Về
+    window.exitLobby = function() {
+        fadeOverlay.style.opacity = '1';
+        
+        setTimeout(() => {
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('home-screen').style.display = 'flex';
+            document.getElementById('gold-container').style.display = 'flex';
+
+            if (window.lobbyMusic && window.lobbyMusic.isPlaying) {
+                window.lobbyMusic.stop();
+            }
+
+            if (window.bgMusic) {
+                window.bgMusic.play();
+            }
+
+            fadeOverlay.style.opacity = '0';
+        }, 500);
+    };
 
     const talentScreen = document.getElementById('talent-screen');
     const btnCloseTalent = document.getElementById('btn-close-talent');
@@ -1997,13 +2054,14 @@ document.addEventListener("DOMContentLoaded", () => {
         else { muteBtn.textContent = '💀'; }
     });
 
-    // Hàm cập nhật đúng luồng nhạc (Phân biệt Luyện tập và Vượt ải)
+    // Hàm cài đặt âm lượng Game
     const updateGameVolume = (vol) => {
         let isCampaignActive = window.game && window.game.scene.isActive('CampaignScene');
         if (isCampaignActive) {
             if (window.activeCampaignBgm) window.activeCampaignBgm.setVolume(vol); // Nhạc map sinh tồn
         } else {
-            if (window.bgMusic) window.bgMusic.setVolume(vol); // Nhạc bg_music.mp3
+            if (window.bgMusic) window.bgMusic.setVolume(vol);
+            if (window.lobbyMusic) window.lobbyMusic.setVolume(vol);
         }
     };
 
