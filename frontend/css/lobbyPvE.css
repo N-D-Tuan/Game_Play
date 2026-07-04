@@ -118,29 +118,73 @@ body, html {
    ========================================== */
 .lobby-action-buttons {
     display: flex; 
-    justify-content: flex-end; /* Ép nút sát lề phải */
+    justify-content: center;
     align-items: center;
-    gap: 15px;
-    height: 60px; /* Khoanh vùng cố định chiều cao cho khu vực này */
-    flex-shrink: 0; /* Tuyệt đối không cho nội dung bên trên đè xuống */
+    gap: 15px; /* Tăng khoảng cách ra một chút vì ảnh thường bành trướng hơn */
+    height: 80px; /* Tăng chiều cao khay để chứa vừa ảnh */
+    padding: 0 25px;
+    flex-shrink: 0; 
+    margin-top: 10px;
+    
+    /* Nền giả Da có chiều sâu */
+    background: linear-gradient(180deg, #3a1c12, #170903); 
+    border: 3px solid #110500;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.8), inset 0 2px 5px rgba(255,255,255,0.1);
 }
 
-.gunny-circle-btn {
-    width: 55px; height: 55px; border-radius: 50%;
-    background: linear-gradient(145deg, #1a0505, #000); border: 2px solid #550000;
-    color: #ffcc00; font-size: 22px; cursor: pointer;
-    display: flex; justify-content: center; align-items: center; position: relative;
-    box-shadow: 0 0 15px rgba(0,0,0,0.9); transition: 0.2s ease-in-out;
+/* Đường chỉ may đứt khúc bao quanh khay */
+.lobby-action-buttons::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px; right: 3px; bottom: 3px;
+    border: 1px dashed #8b5a33; 
+    border-radius: 8px;
+    pointer-events: none; 
 }
 
-.gunny-circle-btn:hover { background: #330000; border-color: #ff3333; color: #fff; box-shadow: 0 0 20px rgba(255,0,0,0.6); }
+/* NÚT BẤM BẰNG ẢNH TRONG SUỐT */
+.gunny-image-btn {
+    width: 60px; height: 60px; 
+    background: transparent; /* Hoàn toàn xóa nền CSS */
+    border: none; /* Hoàn toàn xóa viền CSS */
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    z-index: 2; 
+    transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
 
-/* Tooltip nằm trên đầu nút */
-.gunny-circle-btn[data-tooltip]:hover::after {
-    content: attr(data-tooltip); position: absolute;
-    bottom: 65px; left: 50%; transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.95); border: 1px solid #ffcc00; color: #fff;
-    padding: 6px 12px; border-radius: 4px; white-space: nowrap;
-    font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; pointer-events: none;
-    z-index: 10;
+/* Ảnh của nút */
+.gunny-image-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* Dùng filter đổ bóng cho chính nét viền của bức ảnh */
+    filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.8)); 
+    transition: 0.2s;
+}
+
+/* Hover: Toàn bộ ảnh nảy lên và phát sáng nhẹ */
+.gunny-image-btn:hover { 
+    transform: translateY(-8px) scale(1.1); 
+}
+
+.gunny-image-btn:hover img {
+    filter: drop-shadow(0px 8px 8px rgba(0,0,0,1)) brightness(1.2);
+}
+
+/* Tooltip hiển thị tên nút */
+.gunny-image-btn[data-tooltip]:hover::after {
+    content: attr(data-tooltip); 
+    position: absolute;
+    bottom: 75px; left: 50%; transform: translateX(-50%);
+    background: rgba(10, 5, 5, 0.95); 
+    border: 2px solid #ffcc00; color: #fff;
+    padding: 6px 12px; border-radius: 6px; white-space: nowrap;
+    font-family: 'MedievalSharp', Arial, sans-serif; font-size: 13px; font-weight: bold; 
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.8);
 }

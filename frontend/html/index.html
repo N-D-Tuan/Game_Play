@@ -120,14 +120,20 @@
             </div>
 
             <div class="lobby-action-buttons">
-                <button class="gunny-circle-btn" data-tooltip="Kho Đồ" onclick="document.getElementById('inventory-modal').style.display='flex'">
-                    <i class="fa-solid fa-briefcase"></i>
+                <button class="gunny-image-btn" data-tooltip="Cửa Hàng" onclick="document.getElementById('shop-modal').style.display='flex'; document.getElementById('tab-shop-buy').click();">
+                    <img src="../assets/icon_shop.png" alt="Shop">
                 </button>
-                <button class="gunny-circle-btn" data-tooltip="Cài Đặt" onclick="document.getElementById('settings-modal').style.display='flex'">
-                    <i class="fa-solid fa-gear"></i>
+                <button class="gunny-image-btn" data-tooltip="Kho Đồ" onclick="document.getElementById('inventory-modal').style.display='flex'; document.getElementById('tab-equip-btn').click();">
+                    <img src="../assets/icon_bag.png" alt="Bag">
                 </button>
-                <button class="gunny-circle-btn" data-tooltip="Trở Về" onclick="exitLobby()">
-                    <i class="fa-solid fa-door-open"></i>
+                <button class="gunny-image-btn" data-tooltip="Thú Cưng" onclick="document.getElementById('inventory-modal').style.display='flex'; document.getElementById('tab-pet-btn').click();">
+                    <img src="../assets/icon_pet.png" alt="Pet">
+                </button>
+                <button class="gunny-image-btn" data-tooltip="Cài Đặt" onclick="document.getElementById('settings-modal').style.display='flex'">
+                    <img src="../assets/icon_setting.png" alt="Setting">
+                </button>
+                <button class="gunny-image-btn" data-tooltip="Trở Về" onclick="exitLobby()">
+                    <img src="../assets/icon_exit.png" alt="Exit">
                 </button>
             </div>
         </div>

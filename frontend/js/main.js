@@ -1902,7 +1902,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeSettings = document.getElementById('close-settings');
     
     // Đóng mở Cài đặt
-    btnSettings.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
+    btnSettings.addEventListener('click', () => { settingsModal.style.display = 'flex'; tabAudio.click(); });
     
     closeSettings.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1918,7 +1918,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         isWaitingForKey = false;
 
-        // [FIX LỖI ĐƠ PAUSE]: Bật lại tương tác cho TẤT CẢ các scene đang chạy
+        // Bật lại tương tác cho TẤT CẢ các scene đang chạy
         if (typeof window.game !== 'undefined') {
             window.game.scene.scenes.forEach(scene => {
                 if (scene.sys.isActive() && scene.input) {
@@ -3573,6 +3573,7 @@ document.addEventListener("DOMContentLoaded", () => {
         buildingShop.addEventListener('click', () => {
             window.playHomeClickSound();
             shopModal.style.display = 'flex';
+            tabShopBuy.click();
             fetchShopData();
         });
     }
@@ -4164,4 +4165,5 @@ document.addEventListener("DOMContentLoaded", () => {
     drawRadarChart();
     renderStatsList();
     loadPetsFromServer();
+    fetchShopData();
 });
